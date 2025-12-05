@@ -147,7 +147,7 @@ export function useCampaignStats(campaignId: string | null) {
       
       const { data, error } = await supabase
         .from('email_events')
-        .select('event_type')
+        .select('event_type, email')
         .eq('campaign_id', campaignId);
       
       if (error) throw error;
@@ -161,14 +161,21 @@ export function useCampaignStats(campaignId: string | null) {
         unsubscribed: 0,
       };
 
+      // Track unique opens/clicks by email
+      const uniqueOpens = new Set<string>();
+      const uniqueClicks = new Set<string>();
+
       data.forEach((event) => {
         if (event.event_type === 'sent') stats.sent++;
         else if (event.event_type === 'delivered') stats.delivered++;
-        else if (event.event_type === 'opened') stats.opened++;
-        else if (event.event_type === 'clicked') stats.clicked++;
+        else if (event.event_type === 'opened') uniqueOpens.add(event.email);
+        else if (event.event_type === 'clicked') uniqueClicks.add(event.email);
         else if (event.event_type === 'bounced') stats.bounced++;
         else if (event.event_type === 'unsubscribed') stats.unsubscribed++;
       });
+
+      stats.opened = uniqueOpens.size;
+      stats.clicked = uniqueClicks.size;
 
       return stats;
     },

@@ -20,20 +20,22 @@ export default function Dashboard() {
 
       const { data, error } = await supabase
         .from('email_events')
-        .select('event_type')
+        .select('event_type, email')
         .gte('created_at', thirtyDaysAgo.toISOString());
 
       if (error) throw error;
 
       const sent = data.filter(e => e.event_type === 'sent').length;
-      const opened = data.filter(e => e.event_type === 'opened').length;
-      const clicked = data.filter(e => e.event_type === 'clicked').length;
+      
+      // Count unique opens/clicks by email address
+      const uniqueOpens = new Set(data.filter(e => e.event_type === 'opened').map(e => e.email));
+      const uniqueClicks = new Set(data.filter(e => e.event_type === 'clicked').map(e => e.email));
 
       return {
         sent,
-        opened,
-        clicked,
-        openRate: sent > 0 ? ((opened / sent) * 100).toFixed(1) : '0',
+        opened: uniqueOpens.size,
+        clicked: uniqueClicks.size,
+        openRate: sent > 0 ? ((uniqueOpens.size / sent) * 100).toFixed(1) : '0',
       };
     },
   });
