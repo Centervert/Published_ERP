@@ -23,6 +23,7 @@ export interface CampaignStats {
   sent: number;
   delivered: number;
   opened: number;
+  openedHuman: number; // Excluding bots
   clicked: number;
   bounced: number;
   unsubscribed: number;
@@ -147,7 +148,7 @@ export function useCampaignStats(campaignId: string | null) {
       
       const { data, error } = await supabase
         .from('email_events')
-        .select('event_type, email')
+        .select('event_type, email, is_bot')
         .eq('campaign_id', campaignId);
       
       if (error) throw error;
@@ -156,25 +157,33 @@ export function useCampaignStats(campaignId: string | null) {
         sent: 0,
         delivered: 0,
         opened: 0,
+        openedHuman: 0,
         clicked: 0,
         bounced: 0,
         unsubscribed: 0,
       };
 
-      // Track unique opens/clicks by email
-      const uniqueOpens = new Set<string>();
+      // Track unique opens/clicks by email (all and human-only)
+      const uniqueOpensAll = new Set<string>();
+      const uniqueOpensHuman = new Set<string>();
       const uniqueClicks = new Set<string>();
 
-      data.forEach((event) => {
+      data.forEach((event: { event_type: string; email: string; is_bot: boolean | null }) => {
         if (event.event_type === 'sent') stats.sent++;
         else if (event.event_type === 'delivered') stats.delivered++;
-        else if (event.event_type === 'opened') uniqueOpens.add(event.email);
+        else if (event.event_type === 'opened') {
+          uniqueOpensAll.add(event.email);
+          if (!event.is_bot) {
+            uniqueOpensHuman.add(event.email);
+          }
+        }
         else if (event.event_type === 'clicked') uniqueClicks.add(event.email);
         else if (event.event_type === 'bounced') stats.bounced++;
         else if (event.event_type === 'unsubscribed') stats.unsubscribed++;
       });
 
-      stats.opened = uniqueOpens.size;
+      stats.opened = uniqueOpensAll.size;
+      stats.openedHuman = uniqueOpensHuman.size;
       stats.clicked = uniqueClicks.size;
 
       return stats;

@@ -211,6 +211,7 @@ export type Database = {
           event_type: string
           id: string
           ip_address: string | null
+          is_bot: boolean | null
           link_url: string | null
           user_agent: string | null
         }
@@ -222,6 +223,7 @@ export type Database = {
           event_type: string
           id?: string
           ip_address?: string | null
+          is_bot?: boolean | null
           link_url?: string | null
           user_agent?: string | null
         }
@@ -233,6 +235,7 @@ export type Database = {
           event_type?: string
           id?: string
           ip_address?: string | null
+          is_bot?: boolean | null
           link_url?: string | null
           user_agent?: string | null
         }
