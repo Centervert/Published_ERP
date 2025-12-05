@@ -1,8 +1,17 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Plus, Upload } from 'lucide-react';
+import { ContactsTable } from '@/components/contacts/ContactsTable';
+import { AddContactDialog } from '@/components/contacts/AddContactDialog';
+import { ImportCSVDialog } from '@/components/contacts/ImportCSVDialog';
+import { ListsManager } from '@/components/contacts/ListsManager';
+import { TagsManager } from '@/components/contacts/TagsManager';
 
 export default function Contacts() {
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -13,30 +22,39 @@ export default function Contacts() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline">
+          <Button variant="outline" onClick={() => setImportDialogOpen(true)}>
             <Upload className="mr-2 h-4 w-4" />
             Import CSV
           </Button>
-          <Button>
+          <Button onClick={() => setAddDialogOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
             Add Contact
           </Button>
         </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>All Contacts</CardTitle>
-          <CardDescription>
-            A list of all your contacts and their subscription status
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex h-64 items-center justify-center text-muted-foreground">
-            No contacts yet. Import a CSV or add contacts manually.
-          </div>
-        </CardContent>
-      </Card>
+      <Tabs defaultValue="contacts" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="contacts">All Contacts</TabsTrigger>
+          <TabsTrigger value="lists">Lists</TabsTrigger>
+          <TabsTrigger value="tags">Tags</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="contacts">
+          <ContactsTable />
+        </TabsContent>
+
+        <TabsContent value="lists">
+          <ListsManager />
+        </TabsContent>
+
+        <TabsContent value="tags">
+          <TagsManager />
+        </TabsContent>
+      </Tabs>
+
+      <AddContactDialog open={addDialogOpen} onOpenChange={setAddDialogOpen} />
+      <ImportCSVDialog open={importDialogOpen} onOpenChange={setImportDialogOpen} />
     </div>
   );
 }
