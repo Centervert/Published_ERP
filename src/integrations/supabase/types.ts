@@ -53,6 +53,7 @@ export type Database = {
           html_content: string
           id: string
           name: string
+          reply_to_email: string | null
           scheduled_at: string | null
           sent_at: string | null
           status: Database["public"]["Enums"]["campaign_status"] | null
@@ -69,6 +70,7 @@ export type Database = {
           html_content: string
           id?: string
           name: string
+          reply_to_email?: string | null
           scheduled_at?: string | null
           sent_at?: string | null
           status?: Database["public"]["Enums"]["campaign_status"] | null
@@ -85,6 +87,7 @@ export type Database = {
           html_content?: string
           id?: string
           name?: string
+          reply_to_email?: string | null
           scheduled_at?: string | null
           sent_at?: string | null
           status?: Database["public"]["Enums"]["campaign_status"] | null

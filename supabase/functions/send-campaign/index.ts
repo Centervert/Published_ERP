@@ -122,6 +122,7 @@ serve(async (req) => {
         subject: campaign.subject,
         from_name: campaign.from_name,
         from_email: campaign.from_email,
+        reply_to_email: campaign.reply_to_email || null,
         html_content: personalizedHtml,
         contact_first_name: contact.first_name,
         contact_last_name: contact.last_name,

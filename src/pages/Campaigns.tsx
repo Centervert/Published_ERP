@@ -57,6 +57,7 @@ export default function Campaigns() {
   const [subject, setSubject] = useState('');
   const [fromName, setFromName] = useState('');
   const [fromEmail, setFromEmail] = useState('');
+  const [replyToEmail, setReplyToEmail] = useState('');
   const [templateId, setTemplateId] = useState<string>('');
   const [htmlContent, setHtmlContent] = useState('');
 
@@ -67,6 +68,7 @@ export default function Campaigns() {
       subject: subject || template?.subject || 'No Subject',
       from_name: fromName,
       from_email: fromEmail,
+      reply_to_email: replyToEmail || undefined,
       html_content: htmlContent || template?.html_content || '',
       template_id: templateId || undefined,
     });
@@ -96,6 +98,7 @@ export default function Campaigns() {
     setSubject('');
     setFromName('');
     setFromEmail('');
+    setReplyToEmail('');
     setTemplateId('');
     setHtmlContent('');
   };
@@ -242,6 +245,19 @@ export default function Campaigns() {
                   onChange={(e) => setFromEmail(e.target.value)}
                 />
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="reply-to-email">Reply-To Email (optional)</Label>
+              <Input
+                id="reply-to-email"
+                type="email"
+                placeholder="replies@example.com"
+                value={replyToEmail}
+                onChange={(e) => setReplyToEmail(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                If set, replies will go to this address instead of the From Email
+              </p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="subject">Subject Line *</Label>

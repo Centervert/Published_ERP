@@ -9,6 +9,7 @@ export interface Campaign {
   subject: string;
   from_name: string;
   from_email: string;
+  reply_to_email: string | null;
   template_id: string | null;
   html_content: string;
   status: 'draft' | 'scheduled' | 'sending' | 'sent' | 'failed';
@@ -53,6 +54,7 @@ export function useCampaigns() {
       subject: string;
       from_name: string;
       from_email: string;
+      reply_to_email?: string;
       html_content: string;
       template_id?: string;
     }) => {
