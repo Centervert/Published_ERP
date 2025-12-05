@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { Resend } from "https://esm.sh/resend@2.0.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -18,14 +17,13 @@ serve(async (req) => {
   }
 
   try {
-    const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const { campaignId, listIds }: SendCampaignRequest = await req.json();
     
-    console.log(`[send-campaign] Starting campaign ${campaignId} to lists: ${listIds.join(", ")}`);
+    console.log(`[send-campaign] Queueing campaign ${campaignId} to lists: ${listIds.join(", ")}`);
 
     // Get campaign details
     const { data: campaign, error: campaignError } = await supabase
@@ -80,7 +78,7 @@ serve(async (req) => {
       throw new Error("No active contacts found in selected lists");
     }
 
-    console.log(`[send-campaign] Found ${contacts.length} contacts to send to`);
+    console.log(`[send-campaign] Found ${contacts.length} contacts to queue`);
 
     // Update total recipients
     await supabase
@@ -88,125 +86,63 @@ serve(async (req) => {
       .update({ total_recipients: contacts.length })
       .eq("id", campaignId);
 
-    // Add contacts to email queue
-    const queueEntries = contacts.map(contact => ({
-      campaign_id: campaignId,
-      contact_id: contact.id,
-      email: contact.email,
-      status: "pending",
-    }));
+    // Prepare queue entries with all data needed for sending
+    const queueEntries = contacts.map(contact => {
+      // Personalize HTML content
+      let personalizedHtml = campaign.html_content
+        .replace(/\{\{FIRST_NAME\}\}/g, contact.first_name || "there")
+        .replace(/\{\{LAST_NAME\}\}/g, contact.last_name || "")
+        .replace(/\{\{EMAIL\}\}/g, contact.email);
 
-    await supabase.from("email_queue").insert(queueEntries);
+      // Add tracking pixel
+      const trackingPixelUrl = `${supabaseUrl}/functions/v1/track-pixel?c=${campaignId}&t=${contact.id}&e=${encodeURIComponent(contact.email)}`;
+      personalizedHtml = personalizedHtml.replace(
+        "</body>",
+        `<img src="${trackingPixelUrl}" width="1" height="1" style="display:none;" alt="" /></body>`
+      );
 
-    // Process emails in batches
-    const batchSize = 10;
-    let sentCount = 0;
-    let failedCount = 0;
+      // Wrap links for click tracking
+      const linkRegex = /<a\s+([^>]*href=["'])([^"']+)(["'][^>]*)>/gi;
+      personalizedHtml = personalizedHtml.replace(linkRegex, (match: string, pre: string, url: string, post: string) => {
+        // Skip tracking for unsubscribe links
+        if (url.includes("unsubscribe")) return match;
+        const trackedUrl = `${supabaseUrl}/functions/v1/track-click?c=${campaignId}&t=${contact.id}&e=${encodeURIComponent(contact.email)}&u=${encodeURIComponent(url)}`;
+        return `<a ${pre}${trackedUrl}${post}>`;
+      });
 
-    for (let i = 0; i < contacts.length; i += batchSize) {
-      const batch = contacts.slice(i, i + batchSize);
+      // Add unsubscribe link
+      const unsubscribeUrl = `${supabaseUrl}/functions/v1/unsubscribe?c=${campaignId}&t=${contact.id}&e=${encodeURIComponent(contact.email)}`;
+      personalizedHtml = personalizedHtml.replace(/\{\{UNSUBSCRIBE_URL\}\}/g, unsubscribeUrl);
 
-      for (const contact of batch) {
-        try {
-          // Personalize HTML content
-          let personalizedHtml = campaign.html_content
-            .replace(/\{\{FIRST_NAME\}\}/g, contact.first_name || "there")
-            .replace(/\{\{LAST_NAME\}\}/g, contact.last_name || "")
-            .replace(/\{\{EMAIL\}\}/g, contact.email);
+      return {
+        campaign_id: campaignId,
+        contact_id: contact.id,
+        email: contact.email,
+        status: "pending",
+        subject: campaign.subject,
+        from_name: campaign.from_name,
+        from_email: campaign.from_email,
+        html_content: personalizedHtml,
+        contact_first_name: contact.first_name,
+        contact_last_name: contact.last_name,
+      };
+    });
 
-          // Add tracking pixel
-          const trackingPixelUrl = `${supabaseUrl}/functions/v1/track-pixel?c=${campaignId}&t=${contact.id}&e=${encodeURIComponent(contact.email)}`;
-          personalizedHtml = personalizedHtml.replace(
-            "</body>",
-            `<img src="${trackingPixelUrl}" width="1" height="1" style="display:none;" alt="" /></body>`
-          );
-
-          // Wrap links for click tracking
-          const linkRegex = /<a\s+([^>]*href=["'])([^"']+)(["'][^>]*)>/gi;
-          personalizedHtml = personalizedHtml.replace(linkRegex, (match: string, pre: string, url: string, post: string) => {
-            // Skip tracking for unsubscribe links
-            if (url.includes("unsubscribe")) return match;
-            const trackedUrl = `${supabaseUrl}/functions/v1/track-click?c=${campaignId}&t=${contact.id}&e=${encodeURIComponent(contact.email)}&u=${encodeURIComponent(url)}`;
-            return `<a ${pre}${trackedUrl}${post}>`;
-          });
-
-          // Add unsubscribe link placeholder if not present
-          const unsubscribeUrl = `${supabaseUrl}/functions/v1/unsubscribe?c=${campaignId}&t=${contact.id}&e=${encodeURIComponent(contact.email)}`;
-          personalizedHtml = personalizedHtml.replace(/\{\{UNSUBSCRIBE_URL\}\}/g, unsubscribeUrl);
-
-          // Send email via Resend
-          const emailResult = await resend.emails.send({
-            from: `${campaign.from_name} <${campaign.from_email}>`,
-            to: [contact.email],
-            subject: campaign.subject,
-            html: personalizedHtml,
-          });
-
-          if (emailResult.error) {
-            throw new Error(emailResult.error.message);
-          }
-
-          // Log sent event
-          await supabase.from("email_events").insert({
-            campaign_id: campaignId,
-            contact_id: contact.id,
-            email: contact.email,
-            event_type: "sent",
-          });
-
-          // Update queue status
-          await supabase
-            .from("email_queue")
-            .update({ status: "sent", processed_at: new Date().toISOString() })
-            .eq("campaign_id", campaignId)
-            .eq("contact_id", contact.id);
-
-          sentCount++;
-          console.log(`[send-campaign] Sent to ${contact.email}`);
-
-        } catch (emailError: unknown) {
-          const errorMessage = emailError instanceof Error ? emailError.message : 'Unknown error';
-          console.error(`[send-campaign] Failed to send to ${contact.email}:`, emailError);
-          
-          await supabase
-            .from("email_queue")
-            .update({ 
-              status: "failed", 
-              last_error: errorMessage,
-              attempts: 1,
-              processed_at: new Date().toISOString() 
-            })
-            .eq("campaign_id", campaignId)
-            .eq("contact_id", contact.id);
-
-          failedCount++;
-        }
-      }
-
-      // Rate limiting: wait 1 second between batches
-      if (i + batchSize < contacts.length) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      }
+    // Insert all emails into the queue
+    const { error: insertError } = await supabase.from("email_queue").insert(queueEntries);
+    
+    if (insertError) {
+      console.error("[send-campaign] Failed to insert queue entries:", insertError);
+      throw new Error(`Failed to queue emails: ${insertError.message}`);
     }
 
-    // Update campaign status
-    const finalStatus = failedCount === contacts.length ? "failed" : "sent";
-    await supabase
-      .from("campaigns")
-      .update({ 
-        status: finalStatus, 
-        sent_at: new Date().toISOString() 
-      })
-      .eq("id", campaignId);
-
-    console.log(`[send-campaign] Completed. Sent: ${sentCount}, Failed: ${failedCount}`);
+    console.log(`[send-campaign] Successfully queued ${contacts.length} emails for VPS worker to process`);
 
     return new Response(
       JSON.stringify({ 
         success: true, 
-        sent: sentCount, 
-        failed: failedCount,
-        total: contacts.length 
+        queued: contacts.length,
+        message: "Emails queued for sending. VPS worker will process them."
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
