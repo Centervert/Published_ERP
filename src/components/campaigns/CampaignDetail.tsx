@@ -2,7 +2,7 @@ import { Campaign, useCampaignStats } from '@/hooks/useCampaigns';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, Send, Eye, MousePointer, UserMinus, AlertTriangle, Loader2 } from 'lucide-react';
+import { ArrowLeft, Send, Eye, MousePointer, UserMinus, AlertTriangle, Loader2, Bot } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface CampaignDetailProps {
@@ -21,11 +21,12 @@ const statusColors: Record<string, string> = {
 export function CampaignDetail({ campaign, onBack }: CampaignDetailProps) {
   const { data: stats, isLoading: statsLoading } = useCampaignStats(campaign.id);
 
+  // Use human opens for accurate rate calculation
   const openRate = stats && stats.sent > 0 
-    ? ((stats.opened / stats.sent) * 100).toFixed(1) 
+    ? ((stats.openedHuman / stats.sent) * 100).toFixed(1) 
     : '0';
-  const clickRate = stats && stats.opened > 0 
-    ? ((stats.clicked / stats.opened) * 100).toFixed(1) 
+  const clickRate = stats && stats.openedHuman > 0 
+    ? ((stats.clicked / stats.openedHuman) * 100).toFixed(1) 
     : '0';
 
   return (
@@ -128,9 +129,15 @@ export function CampaignDetail({ campaign, onBack }: CampaignDetailProps) {
             <CardContent className="pt-6">
               <div className="flex items-center gap-2">
                 <Eye className="h-4 w-4 text-blue-500" />
-                <span className="text-sm text-muted-foreground">Opened</span>
+                <span className="text-sm text-muted-foreground">Opened (Human)</span>
               </div>
-              <div className="text-2xl font-bold mt-1">{stats.opened}</div>
+              <div className="text-2xl font-bold mt-1">{stats.openedHuman}</div>
+              {stats.opened !== stats.openedHuman && (
+                <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
+                  <Bot className="h-3 w-3" />
+                  <span>+{stats.opened - stats.openedHuman} bot</span>
+                </div>
+              )}
             </CardContent>
           </Card>
           <Card>
