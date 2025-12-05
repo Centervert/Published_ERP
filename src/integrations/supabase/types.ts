@@ -257,35 +257,53 @@ export type Database = {
         Row: {
           attempts: number | null
           campaign_id: string | null
+          contact_first_name: string | null
           contact_id: string | null
+          contact_last_name: string | null
           created_at: string | null
           email: string
+          from_email: string | null
+          from_name: string | null
+          html_content: string | null
           id: string
           last_error: string | null
           processed_at: string | null
           status: string | null
+          subject: string | null
         }
         Insert: {
           attempts?: number | null
           campaign_id?: string | null
+          contact_first_name?: string | null
           contact_id?: string | null
+          contact_last_name?: string | null
           created_at?: string | null
           email: string
+          from_email?: string | null
+          from_name?: string | null
+          html_content?: string | null
           id?: string
           last_error?: string | null
           processed_at?: string | null
           status?: string | null
+          subject?: string | null
         }
         Update: {
           attempts?: number | null
           campaign_id?: string | null
+          contact_first_name?: string | null
           contact_id?: string | null
+          contact_last_name?: string | null
           created_at?: string | null
           email?: string
+          from_email?: string | null
+          from_name?: string | null
+          html_content?: string | null
           id?: string
           last_error?: string | null
           processed_at?: string | null
           status?: string | null
+          subject?: string | null
         }
         Relationships: [
           {
