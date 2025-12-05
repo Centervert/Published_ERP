@@ -24,7 +24,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Plus, Send, Trash2, Loader2, MoreHorizontal, Eye } from 'lucide-react';
+import { Plus, Send, Trash2, Loader2, MoreHorizontal } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -147,7 +147,11 @@ export default function Campaigns() {
       ) : (
         <div className="grid gap-4">
           {campaigns.map((campaign) => (
-            <Card key={campaign.id} className="hover:shadow-sm transition-shadow">
+            <Card 
+              key={campaign.id} 
+              className="hover:shadow-md transition-shadow cursor-pointer"
+              onClick={() => setViewingCampaign(campaign)}
+            >
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between">
                   <div className="space-y-1">
@@ -160,25 +164,21 @@ export default function Campaigns() {
                     <CardDescription>{campaign.subject}</CardDescription>
                   </div>
                   <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
+                    <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                       <Button variant="ghost" size="icon">
                         <MoreHorizontal className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => setViewingCampaign(campaign)}>
-                        <Eye className="mr-2 h-4 w-4" />
-                        View Details
-                      </DropdownMenuItem>
                       {campaign.status === 'draft' && (
-                        <DropdownMenuItem onClick={() => openSendDialog(campaign)}>
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openSendDialog(campaign); }}>
                           <Send className="mr-2 h-4 w-4" />
                           Send Campaign
                         </DropdownMenuItem>
                       )}
                       <DropdownMenuItem
                         className="text-destructive"
-                        onClick={() => handleDelete(campaign)}
+                        onClick={(e) => { e.stopPropagation(); handleDelete(campaign); }}
                       >
                         <Trash2 className="mr-2 h-4 w-4" />
                         Delete
