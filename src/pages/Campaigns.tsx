@@ -51,6 +51,7 @@ export default function Campaigns() {
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
   const [viewingCampaign, setViewingCampaign] = useState<Campaign | null>(null);
   const [selectedListIds, setSelectedListIds] = useState<string[]>([]);
+  const [statusFilter, setStatusFilter] = useState<string>('active');
 
   // Form state
   const [name, setName] = useState('');
@@ -133,6 +134,21 @@ export default function Campaigns() {
         </Button>
       </div>
 
+      <div className="flex items-center gap-2">
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Filter by status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Campaigns</SelectItem>
+            <SelectItem value="active">Active (Draft/Sending)</SelectItem>
+            <SelectItem value="draft">Draft Only</SelectItem>
+            <SelectItem value="sent">Sent Only</SelectItem>
+            <SelectItem value="failed">Failed Only</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
       {isLoading ? (
         <div className="flex items-center justify-center h-64">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -149,7 +165,13 @@ export default function Campaigns() {
         </Card>
       ) : (
         <div className="grid gap-4">
-          {campaigns.map((campaign) => (
+          {campaigns
+            .filter(campaign => {
+              if (statusFilter === 'all') return true;
+              if (statusFilter === 'active') return campaign.status === 'draft' || campaign.status === 'sending';
+              return campaign.status === statusFilter;
+            })
+            .map((campaign) => (
             <Card 
               key={campaign.id} 
               className="hover:shadow-md transition-shadow cursor-pointer"
