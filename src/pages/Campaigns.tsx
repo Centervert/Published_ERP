@@ -57,10 +57,21 @@ export default function Campaigns() {
   const [name, setName] = useState('');
   const [subject, setSubject] = useState('');
   const [fromName, setFromName] = useState('');
-  const [fromEmail, setFromEmail] = useState('');
+  const [fromEmailOption, setFromEmailOption] = useState('');
+  const [customFromEmail, setCustomFromEmail] = useState('');
   const [replyToEmail, setReplyToEmail] = useState('');
   const [templateId, setTemplateId] = useState<string>('');
   const [htmlContent, setHtmlContent] = useState('');
+
+  const fromEmailOptions = [
+    { value: 'xulon@news.authorservices.com', label: 'Xulon' },
+    { value: 'millcity@news.authorservices.com', label: 'MillCity' },
+    { value: 'lhp@news.authorservices.com', label: 'LHP' },
+    { value: 'deals@news.authorservices.com', label: 'Deals' },
+    { value: 'custom', label: 'Custom Email' },
+  ];
+
+  const fromEmail = fromEmailOption === 'custom' ? customFromEmail : fromEmailOption;
 
   const handleCreate = async () => {
     const template = templates.find(t => t.id === templateId);
@@ -98,7 +109,8 @@ export default function Campaigns() {
     setName('');
     setSubject('');
     setFromName('');
-    setFromEmail('');
+    setFromEmailOption('');
+    setCustomFromEmail('');
     setReplyToEmail('');
     setTemplateId('');
     setHtmlContent('');
@@ -258,14 +270,28 @@ export default function Campaigns() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="from-email">From Email *</Label>
-                <Input
-                  id="from-email"
-                  type="email"
-                  placeholder="hello@example.com"
-                  value={fromEmail}
-                  onChange={(e) => setFromEmail(e.target.value)}
-                />
+                <Label>From Email *</Label>
+                <Select value={fromEmailOption} onValueChange={setFromEmailOption}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select sender email" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {fromEmailOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label} {option.value !== 'custom' && `(${option.value})`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {fromEmailOption === 'custom' && (
+                  <Input
+                    type="email"
+                    placeholder="your@email.com"
+                    value={customFromEmail}
+                    onChange={(e) => setCustomFromEmail(e.target.value)}
+                    className="mt-2"
+                  />
+                )}
               </div>
             </div>
             <div className="space-y-2">
