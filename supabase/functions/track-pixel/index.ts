@@ -34,6 +34,7 @@ const BOT_PATTERNS = [
   /python-requests/i,
   /axios/i,
   /node-fetch/i,
+  /^node$/i,  // Plain "node" user-agent
   
   // Email security scanners
   /barracuda/i,
