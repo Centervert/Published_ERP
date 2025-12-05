@@ -376,41 +376,52 @@ export default function Campaigns() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            {lists.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                No lists available. Create a list first or send to all contacts.
-              </p>
-            ) : (
-              <div className="space-y-2">
-                <Label>Select Lists</Label>
-                <div className="space-y-2 max-h-[200px] overflow-y-auto">
-                  {lists.map((list) => (
-                    <div key={list.id} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={list.id}
-                        checked={selectedListIds.includes(list.id)}
-                        onCheckedChange={(checked) => {
-                          if (checked) {
-                            setSelectedListIds([...selectedListIds, list.id]);
-                          } else {
-                            setSelectedListIds(selectedListIds.filter(id => id !== list.id));
-                          }
-                        }}
-                      />
-                      <label
-                        htmlFor={list.id}
-                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                      >
-                        {list.name}
-                      </label>
-                    </div>
-                  ))}
+            <div className="space-y-2">
+              <Label>Select Recipients</Label>
+              <div className="space-y-2 max-h-[250px] overflow-y-auto">
+                <div className="flex items-center space-x-2 pb-2 border-b">
+                  <Checkbox
+                    id="all-contacts"
+                    checked={selectedListIds.length === 0}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        setSelectedListIds([]);
+                      }
+                    }}
+                  />
+                  <label
+                    htmlFor="all-contacts"
+                    className="text-sm font-medium leading-none"
+                  >
+                    All Contacts
+                  </label>
                 </div>
+                {lists.map((list) => (
+                  <div key={list.id} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={list.id}
+                      checked={selectedListIds.includes(list.id)}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setSelectedListIds([...selectedListIds, list.id]);
+                        } else {
+                          setSelectedListIds(selectedListIds.filter(id => id !== list.id));
+                        }
+                      }}
+                    />
+                    <label
+                      htmlFor={list.id}
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    >
+                      {list.name}
+                    </label>
+                  </div>
+                ))}
               </div>
-            )}
+            </div>
             <p className="text-xs text-muted-foreground">
               {selectedListIds.length === 0
-                ? 'No lists selected - will send to all active contacts'
+                ? 'Sending to all active contacts'
                 : `Sending to ${selectedListIds.length} list(s)`}
             </p>
           </div>
