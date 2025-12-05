@@ -274,6 +274,7 @@ export type Database = {
           id: string
           last_error: string | null
           processed_at: string | null
+          reply_to_email: string | null
           status: string | null
           subject: string | null
         }
@@ -291,6 +292,7 @@ export type Database = {
           id?: string
           last_error?: string | null
           processed_at?: string | null
+          reply_to_email?: string | null
           status?: string | null
           subject?: string | null
         }
@@ -308,6 +310,7 @@ export type Database = {
           id?: string
           last_error?: string | null
           processed_at?: string | null
+          reply_to_email?: string | null
           status?: string | null
           subject?: string | null
         }
