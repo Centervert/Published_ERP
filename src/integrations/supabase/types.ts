@@ -14,6 +14,95 @@ export type Database = {
   }
   public: {
     Tables: {
+      campaign_lists: {
+        Row: {
+          campaign_id: string
+          list_id: string
+        }
+        Insert: {
+          campaign_id: string
+          list_id: string
+        }
+        Update: {
+          campaign_id?: string
+          list_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_lists_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_lists_list_id_fkey"
+            columns: ["list_id"]
+            isOneToOne: false
+            referencedRelation: "lists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaigns: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          from_email: string
+          from_name: string
+          html_content: string
+          id: string
+          name: string
+          scheduled_at: string | null
+          sent_at: string | null
+          status: Database["public"]["Enums"]["campaign_status"] | null
+          subject: string
+          template_id: string | null
+          total_recipients: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          from_email: string
+          from_name: string
+          html_content: string
+          id?: string
+          name: string
+          scheduled_at?: string | null
+          sent_at?: string | null
+          status?: Database["public"]["Enums"]["campaign_status"] | null
+          subject: string
+          template_id?: string | null
+          total_recipients?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          from_email?: string
+          from_name?: string
+          html_content?: string
+          id?: string
+          name?: string
+          scheduled_at?: string | null
+          sent_at?: string | null
+          status?: Database["public"]["Enums"]["campaign_status"] | null
+          subject?: string
+          template_id?: string | null
+          total_recipients?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaigns_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contact_lists: {
         Row: {
           added_at: string | null
@@ -149,7 +238,65 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "fk_email_events_campaign"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "fk_email_events_contact"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_queue: {
+        Row: {
+          attempts: number | null
+          campaign_id: string | null
+          contact_id: string | null
+          created_at: string | null
+          email: string
+          id: string
+          last_error: string | null
+          processed_at: string | null
+          status: string | null
+        }
+        Insert: {
+          attempts?: number | null
+          campaign_id?: string | null
+          contact_id?: string | null
+          created_at?: string | null
+          email: string
+          id?: string
+          last_error?: string | null
+          processed_at?: string | null
+          status?: string | null
+        }
+        Update: {
+          attempts?: number | null
+          campaign_id?: string | null
+          contact_id?: string | null
+          created_at?: string | null
+          email?: string
+          id?: string
+          last_error?: string | null
+          processed_at?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_queue_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_queue_contact_id_fkey"
             columns: ["contact_id"]
             isOneToOne: false
             referencedRelation: "contacts"
@@ -235,6 +382,39 @@ export type Database = {
         }
         Relationships: []
       }
+      templates: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          html_content: string
+          id: string
+          name: string
+          preview_text: string | null
+          subject: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          html_content?: string
+          id?: string
+          name: string
+          preview_text?: string | null
+          subject?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          html_content?: string
+          id?: string
+          name?: string
+          preview_text?: string | null
+          subject?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string | null
@@ -271,6 +451,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "member"
+      campaign_status: "draft" | "scheduled" | "sending" | "sent" | "failed"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -399,6 +580,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "member"],
+      campaign_status: ["draft", "scheduled", "sending", "sent", "failed"],
     },
   },
 } as const

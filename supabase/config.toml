@@ -11,3 +11,7 @@ verify_jwt = false
 # Unsubscribe handler - public, no auth required
 [functions.unsubscribe]
 verify_jwt = false
+
+# Send campaign - requires auth
+[functions.send-campaign]
+verify_jwt = true
