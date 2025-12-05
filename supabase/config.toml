@@ -1,1 +1,13 @@
 project_id = "rifdcupojdwfsteoqtpw"
+
+# Tracking pixel - public, no auth required
+[functions.track-pixel]
+verify_jwt = false
+
+# Click tracker/redirector - public, no auth required  
+[functions.track-click]
+verify_jwt = false
+
+# Unsubscribe handler - public, no auth required
+[functions.unsubscribe]
+verify_jwt = false
