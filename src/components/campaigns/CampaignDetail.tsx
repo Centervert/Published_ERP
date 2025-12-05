@@ -56,6 +56,12 @@ export function CampaignDetail({ campaign, onBack }: CampaignDetailProps) {
               <span className="text-muted-foreground">From</span>
               <span>{campaign.from_name} &lt;{campaign.from_email}&gt;</span>
             </div>
+            {campaign.reply_to_email && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Reply-To</span>
+                <span>{campaign.reply_to_email}</span>
+              </div>
+            )}
             <div className="flex justify-between">
               <span className="text-muted-foreground">Created</span>
               <span>{format(new Date(campaign.created_at), 'MMM d, yyyy h:mm a')}</span>
