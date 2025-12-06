@@ -73,6 +73,7 @@ export function CampaignDetail({ campaign, onBack }: CampaignDetailProps) {
   // Edit dialogs
   const [emailBuilderOpen, setEmailBuilderOpen] = useState(false);
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
+  const [isEditingName, setIsEditingName] = useState(false);
   
   // Form states
   const [selectedListIds, setSelectedListIds] = useState<string[]>([]);
@@ -81,6 +82,7 @@ export function CampaignDetail({ campaign, onBack }: CampaignDetailProps) {
   const [fromEmail, setFromEmail] = useState(campaign.from_email);
   const [replyToEmail, setReplyToEmail] = useState(campaign.reply_to_email || '');
   const [subject, setSubject] = useState(campaign.subject);
+  const [campaignName, setCampaignName] = useState(campaign.name);
   
   // Send time state (UI only)
   const [sendTimeOption, setSendTimeOption] = useState<'now' | 'scheduled'>('now');
@@ -136,6 +138,15 @@ export function CampaignDetail({ campaign, onBack }: CampaignDetailProps) {
       subject,
     });
     setSubjectOpen(false);
+  };
+
+  const handleUpdateName = async () => {
+    if (!campaignName.trim()) return;
+    await updateCampaign.mutateAsync({
+      id: campaign.id,
+      name: campaignName.trim(),
+    });
+    setIsEditingName(false);
   };
 
   const handleSaveContent = async (html: string) => {
@@ -335,8 +346,36 @@ export function CampaignDetail({ campaign, onBack }: CampaignDetailProps) {
             <Badge variant="secondary" className="bg-muted text-muted-foreground">
               Draft
             </Badge>
-            <span className="text-sm text-muted-foreground">{campaign.name}</span>
-            <button className="text-sm text-primary hover:underline">Edit name</button>
+            {isEditingName ? (
+              <div className="flex items-center gap-2">
+                <Input
+                  value={campaignName}
+                  onChange={(e) => setCampaignName(e.target.value)}
+                  className="h-7 w-48 text-sm"
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleUpdateName();
+                    if (e.key === 'Escape') {
+                      setCampaignName(campaign.name);
+                      setIsEditingName(false);
+                    }
+                  }}
+                />
+                <Button size="sm" variant="ghost" className="h-7 px-2" onClick={handleUpdateName}>
+                  <Check className="h-3 w-3" />
+                </Button>
+              </div>
+            ) : (
+              <>
+                <span className="text-sm text-muted-foreground">{campaign.name}</span>
+                <button 
+                  className="text-sm text-primary hover:underline"
+                  onClick={() => setIsEditingName(true)}
+                >
+                  Edit name
+                </button>
+              </>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-3">
