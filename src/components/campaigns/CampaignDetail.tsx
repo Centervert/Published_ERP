@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import {
   Dialog,
   DialogContent,
@@ -36,7 +37,10 @@ import {
   CheckCircle2,
   Circle,
   Search,
-  Mail
+  Mail,
+  Clock,
+  ExternalLink,
+  Check
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -64,6 +68,7 @@ export function CampaignDetail({ campaign, onBack }: CampaignDetailProps) {
   const [editFromOpen, setEditFromOpen] = useState(false);
   const [editSubjectOpen, setEditSubjectOpen] = useState(false);
   const [editContentOpen, setEditContentOpen] = useState(false);
+  const [editSendTimeOpen, setEditSendTimeOpen] = useState(false);
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
   
   // Form states
@@ -75,6 +80,9 @@ export function CampaignDetail({ campaign, onBack }: CampaignDetailProps) {
   const [subject, setSubject] = useState(campaign.subject);
   const [htmlContent, setHtmlContent] = useState(campaign.html_content);
   const [templateId, setTemplateId] = useState<string>('');
+  
+  // Send time state (UI only)
+  const [sendTimeOption, setSendTimeOption] = useState<'now' | 'scheduled'>('now');
 
   const fromEmailOptions = [
     { value: 'xulon@news.authorservices.com', label: 'Xulon' },
@@ -298,148 +306,212 @@ export function CampaignDetail({ campaign, onBack }: CampaignDetailProps) {
   // For draft campaigns, show builder/checklist view
   return (
     <div className="max-w-6xl">
+      {/* Status Banner */}
+      <div className={`rounded-lg p-4 mb-6 ${isReadyToSend ? 'bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800' : 'bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800'}`}>
+        <div className="flex items-center gap-2">
+          {isReadyToSend ? (
+            <>
+              <CheckCircle2 className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+              <span className="font-medium text-emerald-800 dark:text-emerald-300">It's go time! Your email is ready to send.</span>
+            </>
+          ) : (
+            <>
+              <Clock className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+              <span className="font-medium text-amber-800 dark:text-amber-300">Complete all items below to send your campaign.</span>
+            </>
+          )}
+        </div>
+      </div>
+
       {/* Header */}
-      <div className="flex items-center gap-4 mb-8">
-        <Button variant="ghost" size="icon" onClick={onBack}>
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
+      <div className="flex items-start justify-between mb-8">
         <div className="flex-1">
-          <h1 className="text-2xl font-semibold tracking-tight">{campaign.name}</h1>
-          <button className="text-sm text-primary hover:underline">Edit name</button>
+          {/* Campaign Subject as Hero */}
+          <h1 className="text-3xl font-semibold tracking-tight mb-2">
+            {campaign.subject || 'Untitled Campaign'}
+          </h1>
+          <div className="flex items-center gap-3">
+            <Badge variant="secondary" className="bg-muted text-muted-foreground">
+              Draft
+            </Badge>
+            <span className="text-sm text-muted-foreground">{campaign.name}</span>
+            <button className="text-sm text-primary hover:underline">Edit name</button>
+          </div>
         </div>
         <div className="flex items-center gap-3">
-          <Button variant="outline" size="sm">
-            <Search className="mr-2 h-4 w-4" />
-            Preview
+          <Button variant="ghost" onClick={onBack}>
+            Finish later
           </Button>
           <Button 
-            size="sm" 
             onClick={() => setSendDialogOpen(true)}
             disabled={!isReadyToSend}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white"
           >
             <Send className="mr-2 h-4 w-4" />
-            Send Campaign
+            Schedule
           </Button>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
         {/* Checklist Section */}
-        <div className="lg:col-span-3">
-          <Card>
-            <CardContent className="divide-y p-0">
-              {/* To (Recipients) */}
-              <div className="flex items-start justify-between p-6">
-                <div className="flex gap-4">
-                  <div className="mt-0.5">
-                    {hasRecipients ? (
-                      <CheckCircle2 className="h-5 w-5 text-primary" />
-                    ) : (
-                      <Circle className="h-5 w-5 text-muted-foreground" />
-                    )}
-                  </div>
-                  <div>
-                    <h3 className="font-medium">To</h3>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      All active contacts
-                    </p>
+        <div className="lg:col-span-3 space-y-1">
+          {/* To (Recipients) */}
+          <Card className="overflow-hidden">
+            <div className="flex items-start justify-between p-5">
+              <div className="flex gap-4">
+                <div className="mt-0.5">
+                  {hasRecipients ? (
+                    <div className="h-6 w-6 rounded-full bg-primary flex items-center justify-center">
+                      <Check className="h-4 w-4 text-primary-foreground" />
+                    </div>
+                  ) : (
+                    <Circle className="h-6 w-6 text-muted-foreground" />
+                  )}
+                </div>
+                <div>
+                  <h3 className="font-semibold text-base">To</h3>
+                  <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1">
+                    {selectedListIds.length === 0 ? 'All contacts' : `${selectedListIds.length} list(s) selected`}
+                    <ExternalLink className="h-3 w-3" />
+                  </p>
+                </div>
+              </div>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setEditRecipientsOpen(true)}
+              >
+                Edit recipients
+              </Button>
+            </div>
+          </Card>
+
+          {/* From */}
+          <Card className="overflow-hidden">
+            <div className="flex items-start justify-between p-5">
+              <div className="flex gap-4">
+                <div className="mt-0.5">
+                  {hasFrom ? (
+                    <div className="h-6 w-6 rounded-full bg-primary flex items-center justify-center">
+                      <Check className="h-4 w-4 text-primary-foreground" />
+                    </div>
+                  ) : (
+                    <Circle className="h-6 w-6 text-muted-foreground" />
+                  )}
+                </div>
+                <div>
+                  <h3 className="font-semibold text-base">From</h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {campaign.from_name} &lt;{campaign.from_email}&gt;
+                  </p>
+                  {campaign.reply_to_email && (
                     <p className="text-xs text-muted-foreground mt-1">
-                      Your 'To' field is personalized with *|FNAME|*.
+                      Replies go to: {campaign.reply_to_email}
                     </p>
-                  </div>
+                  )}
                 </div>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => setEditRecipientsOpen(true)}
-                >
-                  Edit recipients
-                </Button>
               </div>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setEditFromOpen(true)}
+              >
+                Edit from
+              </Button>
+            </div>
+          </Card>
 
-              {/* From */}
-              <div className="flex items-start justify-between p-6">
-                <div className="flex gap-4">
-                  <div className="mt-0.5">
-                    {hasFrom ? (
-                      <CheckCircle2 className="h-5 w-5 text-primary" />
-                    ) : (
-                      <Circle className="h-5 w-5 text-muted-foreground" />
-                    )}
-                  </div>
-                  <div>
-                    <h3 className="font-medium">From</h3>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {campaign.from_name} • {campaign.from_email}
-                    </p>
-                    {campaign.reply_to_email && (
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Replies go to: {campaign.reply_to_email}
-                      </p>
-                    )}
-                  </div>
+          {/* Subject */}
+          <Card className="overflow-hidden">
+            <div className="flex items-start justify-between p-5">
+              <div className="flex gap-4">
+                <div className="mt-0.5">
+                  {hasSubject ? (
+                    <div className="h-6 w-6 rounded-full bg-primary flex items-center justify-center">
+                      <Check className="h-4 w-4 text-primary-foreground" />
+                    </div>
+                  ) : (
+                    <Circle className="h-6 w-6 text-muted-foreground" />
+                  )}
                 </div>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => setEditFromOpen(true)}
-                >
-                  Edit from
-                </Button>
+                <div>
+                  <h3 className="font-semibold text-base">Subject</h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {campaign.subject || 'No subject set'}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Preview text: {campaign.html_content ? campaign.html_content.replace(/<[^>]*>/g, '').substring(0, 50) + '...' : 'Add preview text'}
+                  </p>
+                </div>
               </div>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setEditSubjectOpen(true)}
+              >
+                Edit subject
+              </Button>
+            </div>
+          </Card>
 
-              {/* Subject */}
-              <div className="flex items-start justify-between p-6">
-                <div className="flex gap-4">
-                  <div className="mt-0.5">
-                    {hasSubject ? (
-                      <CheckCircle2 className="h-5 w-5 text-primary" />
-                    ) : (
-                      <Circle className="h-5 w-5 text-muted-foreground" />
-                    )}
-                  </div>
-                  <div>
-                    <h3 className="font-medium">Subject</h3>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {campaign.subject || 'No subject set'}
-                    </p>
+          {/* Send Time */}
+          <Card className="overflow-hidden">
+            <div className="flex items-start justify-between p-5">
+              <div className="flex gap-4">
+                <div className="mt-0.5">
+                  <div className="h-6 w-6 rounded-full bg-primary flex items-center justify-center">
+                    <Check className="h-4 w-4 text-primary-foreground" />
                   </div>
                 </div>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => setEditSubjectOpen(true)}
-                >
-                  Edit subject
-                </Button>
+                <div>
+                  <h3 className="font-semibold text-base">Send time</h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {sendTimeOption === 'now' ? 'Send immediately' : 'Scheduled for later'}
+                  </p>
+                </div>
               </div>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setEditSendTimeOpen(true)}
+              >
+                Edit send time
+              </Button>
+            </div>
+          </Card>
 
-              {/* Content */}
-              <div className="flex items-start justify-between p-6">
-                <div className="flex gap-4">
-                  <div className="mt-0.5">
-                    {hasContent ? (
-                      <CheckCircle2 className="h-5 w-5 text-primary" />
-                    ) : (
-                      <Circle className="h-5 w-5 text-muted-foreground" />
-                    )}
-                  </div>
-                  <div>
-                    <h3 className="font-medium">Content</h3>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {hasContent ? 'Email content ready' : 'No content added yet'}
-                    </p>
-                  </div>
+          {/* Content */}
+          <Card className="overflow-hidden">
+            <div className="flex items-start justify-between p-5">
+              <div className="flex gap-4">
+                <div className="mt-0.5">
+                  {hasContent ? (
+                    <div className="h-6 w-6 rounded-full bg-primary flex items-center justify-center">
+                      <Check className="h-4 w-4 text-primary-foreground" />
+                    </div>
+                  ) : (
+                    <Circle className="h-6 w-6 text-muted-foreground" />
+                  )}
                 </div>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => setEditContentOpen(true)}
-                >
-                  Edit design
-                </Button>
+                <div>
+                  <h3 className="font-semibold text-base">Content</h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {hasContent ? 'Email content ready' : 'No content added yet'}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    A plain-text version will be automatically included. <button className="text-primary hover:underline">Edit</button>
+                  </p>
+                </div>
               </div>
-            </CardContent>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setEditContentOpen(true)}
+              >
+                Edit design
+              </Button>
+            </div>
           </Card>
         </div>
 
@@ -447,16 +519,16 @@ export function CampaignDetail({ campaign, onBack }: CampaignDetailProps) {
         <div className="lg:col-span-2">
           <div className="sticky top-6">
             <div className="flex items-center justify-end gap-4 mb-4">
-              <button className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1">
-                <Search className="h-4 w-4" />
+              <button className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1.5">
+                <Eye className="h-4 w-4" />
                 Preview
               </button>
-              <button className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1">
+              <button className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1.5">
                 <Mail className="h-4 w-4" />
                 Send a Test Email
               </button>
             </div>
-            <Card className="overflow-hidden">
+            <Card className="overflow-hidden border-2">
               <CardContent className="p-0">
                 {campaign.html_content ? (
                   <iframe
@@ -678,6 +750,44 @@ export function CampaignDetail({ campaign, onBack }: CampaignDetailProps) {
             </Button>
             <Button onClick={handleUpdateContent} disabled={updateCampaign.isPending}>
               {updateCampaign.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Send Time Dialog */}
+      <Dialog open={editSendTimeOpen} onOpenChange={setEditSendTimeOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Send Time</DialogTitle>
+            <DialogDescription>
+              Choose when to send your campaign.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <RadioGroup value={sendTimeOption} onValueChange={(v) => setSendTimeOption(v as 'now' | 'scheduled')}>
+              <div className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-muted/50 cursor-pointer">
+                <RadioGroupItem value="now" id="send-now" />
+                <Label htmlFor="send-now" className="flex-1 cursor-pointer">
+                  <div className="font-medium">Send now</div>
+                  <div className="text-sm text-muted-foreground">Send immediately when you click Schedule</div>
+                </Label>
+              </div>
+              <div className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-muted/50 cursor-pointer opacity-50">
+                <RadioGroupItem value="scheduled" id="send-later" disabled />
+                <Label htmlFor="send-later" className="flex-1 cursor-pointer">
+                  <div className="font-medium">Schedule for later</div>
+                  <div className="text-sm text-muted-foreground">Coming soon - schedule your campaign for a specific date and time</div>
+                </Label>
+              </div>
+            </RadioGroup>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditSendTimeOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={() => setEditSendTimeOpen(false)}>
               Save
             </Button>
           </DialogFooter>
