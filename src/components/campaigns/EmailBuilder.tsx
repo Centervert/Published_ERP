@@ -7,6 +7,7 @@ import { EmailPreview } from './EmailPreview';
 import { useToast } from '@/hooks/use-toast';
 import { X, Check } from 'lucide-react';
 import { Imprint } from '@/hooks/useImprints';
+import { supabase } from '@/integrations/supabase/client';
 
 interface EmailBuilderProps {
   open: boolean;
@@ -29,6 +30,7 @@ export function EmailBuilder({
   const [isLoading, setIsLoading] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [hasGenerated, setHasGenerated] = useState(false);
   const [lastPromptData, setLastPromptData] = useState<EmailPromptData | null>(null);
 
@@ -162,6 +164,57 @@ export function EmailBuilder({
       });
     } finally {
       setIsGeneratingImage(false);
+    }
+  };
+
+  const handleUploadImage = async (file: File) => {
+    setIsUploadingImage(true);
+
+    try {
+      const timestamp = Date.now();
+      const randomId = crypto.randomUUID().slice(0, 8);
+      const ext = file.name.split('.').pop() || 'png';
+      const fileName = `uploads/${timestamp}-${randomId}.${ext}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('email-assets')
+        .upload(fileName, file, {
+          contentType: file.type,
+          cacheControl: '3600',
+        });
+
+      if (uploadError) {
+        throw new Error(uploadError.message);
+      }
+
+      const { data: publicUrlData } = supabase.storage
+        .from('email-assets')
+        .getPublicUrl(fileName);
+
+      const imageUrl = publicUrlData.publicUrl;
+
+      const userMsgId = crypto.randomUUID();
+      setMessages(prev => [...prev, {
+        id: userMsgId,
+        role: 'user',
+        content: 'Uploaded image',
+        isImage: true,
+        imageUrl,
+      }]);
+
+      toast({
+        title: "Image uploaded",
+        description: "Click 'Insert into Email' to add it to your design.",
+      });
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      toast({
+        title: "Error uploading image",
+        description: error instanceof Error ? error.message : "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploadingImage(false);
     }
   };
 
@@ -422,9 +475,11 @@ export function EmailBuilder({
                 onRegenerate={handleRegenerate}
                 onGenerateImage={handleGenerateImage}
                 onInsertImage={handleInsertImage}
+                onUploadImage={handleUploadImage}
                 isLoading={isLoading}
                 isStreaming={isStreaming}
                 isGeneratingImage={isGeneratingImage}
+                isUploadingImage={isUploadingImage}
               />
             )}
           </div>
