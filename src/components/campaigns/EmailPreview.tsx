@@ -35,6 +35,7 @@ export function EmailPreview({ html, isStreaming }: EmailPreviewProps) {
           className={`mx-auto transition-all duration-300 ${
             view === 'desktop' ? 'max-w-[600px]' : 'max-w-[375px]'
           }`}
+          style={{ width: view === 'mobile' ? '375px' : '600px' }}
         >
           {html ? (
             <div className="bg-white rounded-lg shadow-lg overflow-hidden">
@@ -56,13 +57,14 @@ export function EmailPreview({ html, isStreaming }: EmailPreviewProps) {
                 style={{ maxHeight: view === 'desktop' ? '600px' : '700px' }}
               >
                 <iframe
-                  srcDoc={html}
+                  srcDoc={`<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"><style>body{margin:0;padding:0;overflow-x:hidden;} img{max-width:100%!important;height:auto!important;} table{max-width:100%!important;} *{box-sizing:border-box;}</style></head><body>${html}</body></html>`}
                   className={`w-full border-0 transition-opacity ${
                     isStreaming ? 'opacity-70' : 'opacity-100'
                   }`}
                   style={{ 
                     minHeight: view === 'desktop' ? '600px' : '700px',
-                    height: 'auto'
+                    height: 'auto',
+                    width: '100%'
                   }}
                   title="Email Preview"
                   onLoad={(e) => {
