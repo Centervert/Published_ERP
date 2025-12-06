@@ -90,7 +90,12 @@ BLOCK TYPES AVAILABLE:
 EXAMPLE OUTPUT:
 {"blocks":[{"type":"header","logoUrl":"${imprint.logo_url || ''}","backgroundColor":"#ffffff"},{"type":"heading","content":"Welcome!","level":1,"color":"${imprint.primary_color || '#2563eb'}","align":"center"},{"type":"text","content":"Your message here...","fontSize":16,"color":"${imprint.text_color || '#333333'}"},{"type":"button","text":"Learn More","url":"#","backgroundColor":"${imprint.primary_color || '#2563eb'}"},{"type":"footer","content":"© ${imprint.name}","showUnsubscribe":true}]}
 
-RULES:
+CRITICAL FORMATTING RULES:
+- NEVER use markdown formatting like **bold**, *italic*, __underline__, or any asterisks
+- NEVER use markdown bullet points (-, *, •)
+- For emphasis, create separate heading blocks or use ALL CAPS sparingly
+- For lists, create multiple text blocks - one for each item
+- Write plain text only - no special formatting characters
 - Use generic greetings (no personalization tags)
 - Apply brand colors consistently
 - Include header with logo if available
