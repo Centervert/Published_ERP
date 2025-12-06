@@ -86,7 +86,7 @@ export default function Campaigns() {
 
   const handleCreate = async () => {
     const template = templates.find(t => t.id === templateId);
-    await createCampaign.mutateAsync({
+    const newCampaign = await createCampaign.mutateAsync({
       name,
       subject: subject || template?.subject || 'No Subject',
       from_name: fromName,
@@ -97,6 +97,10 @@ export default function Campaigns() {
     });
     resetForm();
     setCreateDialogOpen(false);
+    // Navigate to the campaign builder view after creation
+    if (newCampaign) {
+      setViewingCampaign(newCampaign);
+    }
   };
 
   const handleSend = async () => {
