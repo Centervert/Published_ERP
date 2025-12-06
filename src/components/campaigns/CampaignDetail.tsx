@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Campaign, useCampaignStats, useCampaigns } from '@/hooks/useCampaigns';
 import { useLists } from '@/hooks/useContacts';
 import { useTemplates } from '@/hooks/useTemplates';
+import { useImprints } from '@/hooks/useImprints';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -63,6 +64,7 @@ export function CampaignDetail({ campaign, onBack }: CampaignDetailProps) {
   const { data: stats, isLoading: statsLoading } = useCampaignStats(campaign.id);
   const { lists } = useLists();
   const { templates } = useTemplates();
+  const { imprints } = useImprints();
   const { sendCampaign, updateCampaign } = useCampaigns();
   
   // Collapsible section states
@@ -77,9 +79,9 @@ export function CampaignDetail({ campaign, onBack }: CampaignDetailProps) {
   
   // Form states
   const [selectedListIds, setSelectedListIds] = useState<string[]>([]);
+  const [selectedImprintId, setSelectedImprintId] = useState<string>('');
   const [fromName, setFromName] = useState(campaign.from_name);
-  const [fromEmailOption, setFromEmailOption] = useState(campaign.from_email);
-  const [customFromEmail, setCustomFromEmail] = useState('');
+  const [fromEmail, setFromEmail] = useState(campaign.from_email);
   const [replyToEmail, setReplyToEmail] = useState(campaign.reply_to_email || '');
   const [subject, setSubject] = useState(campaign.subject);
   const [htmlContent, setHtmlContent] = useState(campaign.html_content);
@@ -88,15 +90,16 @@ export function CampaignDetail({ campaign, onBack }: CampaignDetailProps) {
   // Send time state (UI only)
   const [sendTimeOption, setSendTimeOption] = useState<'now' | 'scheduled'>('now');
 
-  const fromEmailOptions = [
-    { value: 'xulon@news.authorservices.com', label: 'Xulon' },
-    { value: 'millcity@news.authorservices.com', label: 'MillCity' },
-    { value: 'lhp@news.authorservices.com', label: 'LHP' },
-    { value: 'deals@news.authorservices.com', label: 'Deals' },
-    { value: 'custom', label: 'Custom Email' },
-  ];
-
-  const fromEmail = fromEmailOption === 'custom' ? customFromEmail : fromEmailOption;
+  // Handle imprint selection
+  const handleImprintChange = (imprintId: string) => {
+    setSelectedImprintId(imprintId);
+    const imprint = imprints.find(i => i.id === imprintId);
+    if (imprint) {
+      setFromName(imprint.from_name);
+      setFromEmail(imprint.from_email);
+      setReplyToEmail(imprint.reply_to_email || '');
+    }
+  };
 
   // Check completion status
   const hasRecipients = true; // Always has recipients (all contacts or specific lists)
@@ -461,6 +464,33 @@ export function CampaignDetail({ campaign, onBack }: CampaignDetailProps) {
                 <div className="px-5 pb-5 pt-0 border-t">
                   <div className="space-y-4 py-4">
                     <div className="space-y-2">
+                      <Label>Imprint</Label>
+                      <Select value={selectedImprintId} onValueChange={handleImprintChange}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select an imprint" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {imprints.map((imprint) => (
+                            <SelectItem key={imprint.id} value={imprint.id}>
+                              <div className="flex items-center gap-2">
+                                {imprint.logo_url ? (
+                                  <img src={imprint.logo_url} alt="" className="h-4 w-4 object-contain" />
+                                ) : (
+                                  <div 
+                                    className="h-4 w-4 rounded text-[8px] text-white flex items-center justify-center font-bold"
+                                    style={{ backgroundColor: imprint.primary_color }}
+                                  >
+                                    {imprint.name.charAt(0)}
+                                  </div>
+                                )}
+                                {imprint.name}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
                       <Label htmlFor="from-name">From Name</Label>
                       <Input
                         id="from-name"
@@ -470,28 +500,14 @@ export function CampaignDetail({ campaign, onBack }: CampaignDetailProps) {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>From Email</Label>
-                      <Select value={fromEmailOption} onValueChange={setFromEmailOption}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select sender email" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {fromEmailOptions.map((option) => (
-                            <SelectItem key={option.value} value={option.value}>
-                              {option.label} {option.value !== 'custom' && `(${option.value})`}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      {fromEmailOption === 'custom' && (
-                        <Input
-                          type="email"
-                          placeholder="your@email.com"
-                          value={customFromEmail}
-                          onChange={(e) => setCustomFromEmail(e.target.value)}
-                          className="mt-2"
-                        />
-                      )}
+                      <Label htmlFor="from-email">From Email</Label>
+                      <Input
+                        id="from-email"
+                        type="email"
+                        value={fromEmail}
+                        onChange={(e) => setFromEmail(e.target.value)}
+                        placeholder="email@example.com"
+                      />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="reply-to">Reply-To Email (optional)</Label>
