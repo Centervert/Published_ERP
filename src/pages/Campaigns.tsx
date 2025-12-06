@@ -1,11 +1,9 @@
 import { useState } from 'react';
 import { useCampaigns, Campaign } from '@/hooks/useCampaigns';
 import { useLists } from '@/hooks/useContacts';
-import { useTemplates } from '@/hooks/useTemplates';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import {
@@ -16,13 +14,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { 
   Plus, 
@@ -54,8 +45,6 @@ const statusColors: Record<string, string> = {
 export default function Campaigns() {
   const { campaigns, isLoading, createCampaign, deleteCampaign, sendCampaign } = useCampaigns();
   const { lists } = useLists();
-  const { templates } = useTemplates();
-  const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
   const [viewingCampaign, setViewingCampaign] = useState<Campaign | null>(null);
@@ -64,40 +53,15 @@ export default function Campaigns() {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'name'>('newest');
 
-  // Form state
-  const [name, setName] = useState('');
-  const [subject, setSubject] = useState('');
-  const [fromName, setFromName] = useState('');
-  const [fromEmailOption, setFromEmailOption] = useState('');
-  const [customFromEmail, setCustomFromEmail] = useState('');
-  const [replyToEmail, setReplyToEmail] = useState('');
-  const [templateId, setTemplateId] = useState<string>('');
-  const [htmlContent, setHtmlContent] = useState('');
-
-  const fromEmailOptions = [
-    { value: 'xulon@news.authorservices.com', label: 'Xulon' },
-    { value: 'millcity@news.authorservices.com', label: 'MillCity' },
-    { value: 'lhp@news.authorservices.com', label: 'LHP' },
-    { value: 'deals@news.authorservices.com', label: 'Deals' },
-    { value: 'custom', label: 'Custom Email' },
-  ];
-
-  const fromEmail = fromEmailOption === 'custom' ? customFromEmail : fromEmailOption;
-
-  const handleCreate = async () => {
-    const template = templates.find(t => t.id === templateId);
+  const handleQuickCreate = async () => {
+    // Create a draft campaign with defaults and immediately open builder
     const newCampaign = await createCampaign.mutateAsync({
-      name,
-      subject: subject || template?.subject || 'No Subject',
-      from_name: fromName,
-      from_email: fromEmail,
-      reply_to_email: replyToEmail || undefined,
-      html_content: htmlContent || template?.html_content || '',
-      template_id: templateId || undefined,
+      name: `Campaign ${format(new Date(), 'MMM d, yyyy')}`,
+      subject: '',
+      from_name: '',
+      from_email: 'xulon@news.authorservices.com',
+      html_content: '',
     });
-    resetForm();
-    setCreateDialogOpen(false);
-    // Navigate to the campaign builder view after creation
     if (newCampaign) {
       setViewingCampaign(newCampaign);
     }
@@ -118,17 +82,6 @@ export default function Campaigns() {
     if (confirm(`Delete campaign "${campaign.name}"?`)) {
       await deleteCampaign.mutateAsync(campaign.id);
     }
-  };
-
-  const resetForm = () => {
-    setName('');
-    setSubject('');
-    setFromName('');
-    setFromEmailOption('');
-    setCustomFromEmail('');
-    setReplyToEmail('');
-    setTemplateId('');
-    setHtmlContent('');
   };
 
   const openSendDialog = (campaign: Campaign) => {
@@ -168,8 +121,12 @@ export default function Campaigns() {
             <BarChart3 className="mr-2 h-4 w-4" />
             View analytics
           </Button>
-          <Button onClick={() => setCreateDialogOpen(true)} size="sm">
-            <Plus className="mr-2 h-4 w-4" />
+          <Button onClick={handleQuickCreate} size="sm" disabled={createCampaign.isPending}>
+            {createCampaign.isPending ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Plus className="mr-2 h-4 w-4" />
+            )}
             Create
           </Button>
         </div>
@@ -255,7 +212,10 @@ export default function Campaigns() {
               {searchQuery || statusFilter !== 'all' ? 'No campaigns match your filters' : 'No campaigns yet'}
             </p>
             {!searchQuery && statusFilter === 'all' && (
-              <Button onClick={() => setCreateDialogOpen(true)}>
+              <Button onClick={handleQuickCreate} disabled={createCampaign.isPending}>
+                {createCampaign.isPending ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : null}
                 Create your first campaign
               </Button>
             )}
@@ -362,132 +322,6 @@ export default function Campaigns() {
           </CardContent>
         </Card>
       )}
-
-      {/* Create Campaign Dialog */}
-      <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Create Campaign</DialogTitle>
-            <DialogDescription>
-              Set up your email campaign details.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
-            <div className="space-y-2">
-              <Label htmlFor="campaign-name">Campaign Name *</Label>
-              <Input
-                id="campaign-name"
-                placeholder="e.g., March Newsletter"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="from-name">From Name *</Label>
-                <Input
-                  id="from-name"
-                  placeholder="Your Company"
-                  value={fromName}
-                  onChange={(e) => setFromName(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>From Email *</Label>
-                <Select value={fromEmailOption} onValueChange={setFromEmailOption}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select sender email" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {fromEmailOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label} {option.value !== 'custom' && `(${option.value})`}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {fromEmailOption === 'custom' && (
-                  <Input
-                    type="email"
-                    placeholder="your@email.com"
-                    value={customFromEmail}
-                    onChange={(e) => setCustomFromEmail(e.target.value)}
-                    className="mt-2"
-                  />
-                )}
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="reply-to-email">Reply-To Email (optional)</Label>
-              <Input
-                id="reply-to-email"
-                type="email"
-                placeholder="replies@example.com"
-                value={replyToEmail}
-                onChange={(e) => setReplyToEmail(e.target.value)}
-              />
-              <p className="text-xs text-muted-foreground">
-                If set, replies will go to this address instead of the From Email
-              </p>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="subject">Subject Line *</Label>
-              <Input
-                id="subject"
-                placeholder="Your email subject"
-                value={subject}
-                onChange={(e) => setSubject(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Template (optional)</Label>
-              <Select value={templateId} onValueChange={(v) => {
-                setTemplateId(v);
-                const template = templates.find(t => t.id === v);
-                if (template) {
-                  setHtmlContent(template.html_content);
-                  if (template.subject && !subject) {
-                    setSubject(template.subject);
-                  }
-                }
-              }}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a template" />
-                </SelectTrigger>
-                <SelectContent>
-                  {templates.map((template) => (
-                    <SelectItem key={template.id} value={template.id}>
-                      {template.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="html-content">Email Content (HTML)</Label>
-              <Textarea
-                id="html-content"
-                className="min-h-[200px] font-mono text-sm"
-                placeholder="Paste your HTML email content here..."
-                value={htmlContent}
-                onChange={(e) => setHtmlContent(e.target.value)}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => { resetForm(); setCreateDialogOpen(false); }}>
-              Cancel
-            </Button>
-            <Button
-              onClick={handleCreate}
-              disabled={!name || !fromName || !fromEmail || !subject || createCampaign.isPending}
-            >
-              {createCampaign.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Create Campaign
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Send Campaign Dialog */}
       <Dialog open={sendDialogOpen} onOpenChange={setSendDialogOpen}>
