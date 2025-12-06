@@ -7,6 +7,7 @@ import {
   SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
@@ -16,6 +17,11 @@ import {
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
+import {
   LayoutDashboard,
   Users,
   Send,
@@ -24,14 +30,24 @@ import {
   LogOut,
   PenLine,
   Building2,
+  ChevronDown,
+  Megaphone,
+  UserCog,
 } from 'lucide-react';
 import authorServicesLogo from '@/assets/author-services-logo.png';
 
-const navItems = [
-  { title: 'Home', url: '/', icon: LayoutDashboard },
+const homeItem = { title: 'Home', url: '/', icon: LayoutDashboard };
+
+const marketingItems = [
   { title: 'Campaigns', url: '/campaigns', icon: Send },
-  { title: 'Audience', url: '/contacts', icon: Users },
   { title: 'Templates', url: '/templates', icon: FileText },
+];
+
+const audienceItems = [
+  { title: 'Contacts', url: '/contacts', icon: Users },
+];
+
+const configItems = [
   { title: 'Imprints', url: '/imprints', icon: Building2 },
   { title: 'Settings', url: '/settings', icon: Settings },
 ];
@@ -48,6 +64,64 @@ export function AppSidebar() {
     return user.email.charAt(0).toUpperCase();
   };
 
+  const isGroupActive = (items: typeof marketingItems) => 
+    items.some(item => location.pathname === item.url);
+
+  const renderNavItem = (item: typeof homeItem) => (
+    <SidebarMenuItem key={item.title}>
+      <SidebarMenuButton
+        asChild
+        isActive={location.pathname === item.url}
+        tooltip={item.title}
+        className="h-10"
+      >
+        <NavLink
+          to={item.url}
+          end={item.url === '/'}
+          className="flex items-center gap-3 px-3 rounded-lg transition-colors"
+          activeClassName="bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+        >
+          <item.icon className="h-5 w-5" />
+          <span className="text-sm">{item.title}</span>
+        </NavLink>
+      </SidebarMenuButton>
+    </SidebarMenuItem>
+  );
+
+  const renderCollapsibleGroup = (
+    label: string,
+    icon: React.ElementType,
+    items: typeof marketingItems
+  ) => {
+    const Icon = icon;
+    const isActive = isGroupActive(items);
+
+    return (
+      <Collapsible defaultOpen={isActive} className="group/collapsible">
+        <SidebarGroup className="p-0">
+          <CollapsibleTrigger asChild>
+            <SidebarGroupLabel className="h-10 px-3 cursor-pointer hover:bg-sidebar-accent/50 rounded-lg transition-colors flex items-center justify-between text-sidebar-foreground/70 hover:text-sidebar-foreground">
+              <div className="flex items-center gap-3">
+                <Icon className="h-5 w-5" />
+                {!collapsed && <span className="text-sm font-medium">{label}</span>}
+              </div>
+              {!collapsed && (
+                <ChevronDown className="h-4 w-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-180" />
+              )}
+            </SidebarGroupLabel>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <SidebarGroupContent className={collapsed ? '' : 'pl-4'}>
+              <SidebarMenu className="space-y-1">
+                {items.map(renderNavItem)}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </CollapsibleContent>
+        </SidebarGroup>
+      </Collapsible>
+    );
+  };
+
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="p-3">
@@ -59,7 +133,6 @@ export function AppSidebar() {
           />
         </div>
         
-        {/* Create Button */}
         <Button 
           onClick={() => navigate('/campaigns')}
           className={`w-full mt-3 bg-primary hover:bg-primary/90 text-primary-foreground ${
@@ -73,32 +146,23 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent className="px-2">
-        <SidebarGroup>
+        {/* Home - standalone */}
+        <SidebarGroup className="p-0">
           <SidebarGroupContent>
             <SidebarMenu className="space-y-1">
-              {navItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={location.pathname === item.url}
-                    tooltip={item.title}
-                    className="h-10"
-                  >
-                    <NavLink
-                      to={item.url}
-                      end={item.url === '/'}
-                      className="flex items-center gap-3 px-3 rounded-lg transition-colors"
-                      activeClassName="bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-                    >
-                      <item.icon className="h-5 w-5" />
-                      <span className="text-sm">{item.title}</span>
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              {renderNavItem(homeItem)}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {/* Marketing Group */}
+        {renderCollapsibleGroup('Marketing', Megaphone, marketingItems)}
+
+        {/* Audience Group */}
+        {renderCollapsibleGroup('Audience', UserCog, audienceItems)}
+
+        {/* Configuration Group */}
+        {renderCollapsibleGroup('Configuration', Settings, configItems)}
       </SidebarContent>
 
       <SidebarFooter className="p-3 border-t border-sidebar-border">
