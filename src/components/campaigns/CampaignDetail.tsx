@@ -98,10 +98,10 @@ export function CampaignDetail({ campaign, onBack }: CampaignDetailProps) {
     }
   };
 
-  // Check completion status
+  // Check completion status - use local state for hasFrom so it updates immediately when selecting imprint
   const hasRecipients = true; // Always has recipients (all contacts or specific lists)
-  const hasFrom = !!campaign.from_name && !!campaign.from_email;
-  const hasSubject = !!campaign.subject;
+  const hasFrom = !!fromName && !!fromEmail;
+  const hasSubject = !!campaign.subject || !!subject;
   const hasContent = !!campaign.html_content;
   const isReadyToSend = hasRecipients && hasFrom && hasSubject && hasContent;
 
