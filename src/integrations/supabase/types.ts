@@ -46,6 +46,7 @@ export type Database = {
       }
       campaigns: {
         Row: {
+          blocks_json: Json | null
           created_at: string | null
           created_by: string | null
           from_email: string
@@ -63,6 +64,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          blocks_json?: Json | null
           created_at?: string | null
           created_by?: string | null
           from_email: string
@@ -80,6 +82,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          blocks_json?: Json | null
           created_at?: string | null
           created_by?: string | null
           from_email?: string
