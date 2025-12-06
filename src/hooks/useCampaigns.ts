@@ -93,6 +93,7 @@ export function useCampaigns() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['campaigns'] });
+      toast({ title: 'Campaign updated' });
     },
     onError: (error: Error) => {
       toast({ title: 'Error updating campaign', description: error.message, variant: 'destructive' });
