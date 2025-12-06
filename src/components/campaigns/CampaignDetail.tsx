@@ -1,14 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Campaign, useCampaignStats, useCampaigns } from '@/hooks/useCampaigns';
 import { useLists } from '@/hooks/useContacts';
-import { useTemplates } from '@/hooks/useTemplates';
 import { useImprints } from '@/hooks/useImprints';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -38,7 +36,6 @@ import {
   Bot,
   CheckCircle2,
   Circle,
-  Search,
   Mail,
   Clock,
   ExternalLink,
@@ -46,6 +43,7 @@ import {
   ChevronDown
 } from 'lucide-react';
 import { format } from 'date-fns';
+import { EmailBuilder } from './EmailBuilder';
 
 interface CampaignDetailProps {
   campaign: Campaign;
@@ -63,7 +61,6 @@ const statusColors: Record<string, string> = {
 export function CampaignDetail({ campaign, onBack }: CampaignDetailProps) {
   const { data: stats, isLoading: statsLoading } = useCampaignStats(campaign.id);
   const { lists } = useLists();
-  const { templates } = useTemplates();
   const { imprints } = useImprints();
   const { sendCampaign, updateCampaign } = useCampaigns();
   
@@ -73,8 +70,8 @@ export function CampaignDetail({ campaign, onBack }: CampaignDetailProps) {
   const [subjectOpen, setSubjectOpen] = useState(false);
   const [sendTimeOpen, setSendTimeOpen] = useState(false);
   
-  // Edit dialogs (only for content now)
-  const [editContentOpen, setEditContentOpen] = useState(false);
+  // Edit dialogs
+  const [emailBuilderOpen, setEmailBuilderOpen] = useState(false);
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
   
   // Form states
@@ -84,8 +81,6 @@ export function CampaignDetail({ campaign, onBack }: CampaignDetailProps) {
   const [fromEmail, setFromEmail] = useState(campaign.from_email);
   const [replyToEmail, setReplyToEmail] = useState(campaign.reply_to_email || '');
   const [subject, setSubject] = useState(campaign.subject);
-  const [htmlContent, setHtmlContent] = useState(campaign.html_content);
-  const [templateId, setTemplateId] = useState<string>('');
   
   // Send time state (UI only)
   const [sendTimeOption, setSendTimeOption] = useState<'now' | 'scheduled'>('now');
@@ -143,12 +138,11 @@ export function CampaignDetail({ campaign, onBack }: CampaignDetailProps) {
     setSubjectOpen(false);
   };
 
-  const handleUpdateContent = async () => {
+  const handleSaveContent = async (html: string) => {
     await updateCampaign.mutateAsync({
       id: campaign.id,
-      html_content: htmlContent,
+      html_content: html,
     });
-    setEditContentOpen(false);
   };
 
   // For sent campaigns, show analytics view
@@ -658,7 +652,7 @@ export function CampaignDetail({ campaign, onBack }: CampaignDetailProps) {
               <Button 
                 variant="outline" 
                 size="sm"
-                onClick={() => setEditContentOpen(true)}
+                onClick={() => setEmailBuilderOpen(true)}
               >
                 Edit design
               </Button>
@@ -701,59 +695,14 @@ export function CampaignDetail({ campaign, onBack }: CampaignDetailProps) {
         </div>
       </div>
 
-      {/* Edit Content Dialog */}
-      <Dialog open={editContentOpen} onOpenChange={setEditContentOpen}>
-        <DialogContent className="max-w-3xl">
-          <DialogHeader>
-            <DialogTitle>Edit Content</DialogTitle>
-            <DialogDescription>
-              Edit your email content or select a template.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
-            <div className="space-y-2">
-              <Label>Template (optional)</Label>
-              <Select value={templateId} onValueChange={(v) => {
-                setTemplateId(v);
-                const template = templates.find(t => t.id === v);
-                if (template) {
-                  setHtmlContent(template.html_content);
-                }
-              }}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a template" />
-                </SelectTrigger>
-                <SelectContent>
-                  {templates.map((template) => (
-                    <SelectItem key={template.id} value={template.id}>
-                      {template.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="html-content-edit">Email Content (HTML)</Label>
-              <Textarea
-                id="html-content-edit"
-                className="min-h-[300px] font-mono text-sm"
-                placeholder="Paste your HTML email content here..."
-                value={htmlContent}
-                onChange={(e) => setHtmlContent(e.target.value)}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditContentOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleUpdateContent} disabled={updateCampaign.isPending}>
-              {updateCampaign.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Save
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Email Builder Sheet */}
+      <EmailBuilder
+        open={emailBuilderOpen}
+        onOpenChange={setEmailBuilderOpen}
+        imprint={imprints.find(i => i.id === selectedImprintId) || null}
+        initialHtml={campaign.html_content}
+        onSave={handleSaveContent}
+      />
 
       {/* Send Campaign Dialog */}
       <Dialog open={sendDialogOpen} onOpenChange={setSendDialogOpen}>
