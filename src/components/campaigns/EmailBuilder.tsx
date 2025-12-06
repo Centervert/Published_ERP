@@ -28,6 +28,7 @@ export function EmailBuilder({
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
+  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const [hasGenerated, setHasGenerated] = useState(false);
   const [lastPromptData, setLastPromptData] = useState<EmailPromptData | null>(null);
 
@@ -114,6 +115,99 @@ export function EmailBuilder({
     return fullHtml;
   }, []);
 
+  const handleGenerateImage = async (prompt: string) => {
+    const userMsgId = crypto.randomUUID();
+    setMessages(prev => [...prev, { id: userMsgId, role: 'user', content: prompt }]);
+    
+    setIsGeneratingImage(true);
+
+    try {
+      const IMAGE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-image`;
+      
+      const resp = await fetch(IMAGE_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({ prompt }),
+      });
+
+      if (!resp.ok) {
+        const error = await resp.json();
+        throw new Error(error.error || `Error: ${resp.status}`);
+      }
+
+      const data = await resp.json();
+      
+      const assistantMsgId = crypto.randomUUID();
+      setMessages(prev => [...prev, {
+        id: assistantMsgId,
+        role: 'assistant',
+        content: data.description || 'Image generated successfully',
+        isImage: true,
+        imageUrl: data.imageUrl,
+      }]);
+
+      toast({
+        title: "Image generated",
+        description: "Click 'Insert into Email' to add it to your design.",
+      });
+    } catch (error) {
+      console.error('Error generating image:', error);
+      toast({
+        title: "Error generating image",
+        description: error instanceof Error ? error.message : "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGeneratingImage(false);
+    }
+  };
+
+  const handleInsertImage = (imageUrl: string) => {
+    if (!html) {
+      toast({
+        title: "No email content",
+        description: "Generate an email first, then insert images.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Insert image after the logo/header section or at the beginning of body
+    const imgTag = `<tr><td align="center" style="padding: 20px 0;"><img src="${imageUrl}" alt="Email hero image" style="max-width: 100%; height: auto; display: block; border-radius: 8px;" /></td></tr>`;
+    
+    let newHtml = html;
+    
+    // Try to find a good insertion point after logo or at start of body
+    const bodyMatch = html.match(/<body[^>]*>/i);
+    const logoMatch = html.match(/<img[^>]*logo[^>]*>/i);
+    
+    if (logoMatch) {
+      // Insert after the row containing the logo
+      const logoIndex = html.indexOf(logoMatch[0]);
+      const nextTrClose = html.indexOf('</tr>', logoIndex);
+      if (nextTrClose !== -1) {
+        newHtml = html.slice(0, nextTrClose + 5) + imgTag + html.slice(nextTrClose + 5);
+      }
+    } else if (bodyMatch) {
+      // Insert after first <table> or <tbody>
+      const tbodyMatch = html.match(/<tbody[^>]*>/i);
+      if (tbodyMatch) {
+        const index = html.indexOf(tbodyMatch[0]) + tbodyMatch[0].length;
+        newHtml = html.slice(0, index) + imgTag + html.slice(index);
+      }
+    }
+    
+    setHtml(newHtml);
+    
+    toast({
+      title: "Image inserted",
+      description: "The image has been added to your email.",
+    });
+  };
+
   const handleInitialSubmit = async (data: EmailPromptData) => {
     if (!imprint) {
       toast({
@@ -199,7 +293,7 @@ export function EmailBuilder({
       // Build conversation history
       const conversationHistory = messages.map(m => ({
         role: m.role,
-        content: m.isHtml ? `[Previous email HTML was generated]` : m.content,
+        content: m.isHtml ? `[Previous email HTML was generated]` : m.isImage ? `[Image was generated: ${m.imageUrl}]` : m.content,
       }));
 
       // Add current HTML as context
@@ -326,8 +420,11 @@ export function EmailBuilder({
                 messages={messages}
                 onSendMessage={handleChatMessage}
                 onRegenerate={handleRegenerate}
+                onGenerateImage={handleGenerateImage}
+                onInsertImage={handleInsertImage}
                 isLoading={isLoading}
                 isStreaming={isStreaming}
+                isGeneratingImage={isGeneratingImage}
               />
             )}
           </div>
