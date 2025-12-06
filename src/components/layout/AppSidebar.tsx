@@ -23,6 +23,7 @@ import {
   Settings,
   LogOut,
   PenLine,
+  Building2,
 } from 'lucide-react';
 import authorServicesLogo from '@/assets/author-services-logo.png';
 
@@ -31,6 +32,7 @@ const navItems = [
   { title: 'Campaigns', url: '/campaigns', icon: Send },
   { title: 'Audience', url: '/contacts', icon: Users },
   { title: 'Templates', url: '/templates', icon: FileText },
+  { title: 'Imprints', url: '/imprints', icon: Building2 },
   { title: 'Settings', url: '/settings', icon: Settings },
 ];
 

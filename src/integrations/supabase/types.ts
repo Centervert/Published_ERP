@@ -331,6 +331,87 @@ export type Database = {
           },
         ]
       }
+      imprints: {
+        Row: {
+          accent_color: string | null
+          background_color: string | null
+          body_font: string | null
+          brand_voice: string | null
+          created_at: string | null
+          created_by: string | null
+          footer_image_url: string | null
+          from_email: string
+          from_name: string
+          header_image_url: string | null
+          heading_font: string | null
+          icon_url: string | null
+          id: string
+          logo_dark_url: string | null
+          logo_url: string | null
+          name: string
+          primary_color: string | null
+          reply_to_email: string | null
+          secondary_color: string | null
+          slug: string
+          tagline: string | null
+          text_color: string | null
+          updated_at: string | null
+          website_url: string | null
+        }
+        Insert: {
+          accent_color?: string | null
+          background_color?: string | null
+          body_font?: string | null
+          brand_voice?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          footer_image_url?: string | null
+          from_email: string
+          from_name: string
+          header_image_url?: string | null
+          heading_font?: string | null
+          icon_url?: string | null
+          id?: string
+          logo_dark_url?: string | null
+          logo_url?: string | null
+          name: string
+          primary_color?: string | null
+          reply_to_email?: string | null
+          secondary_color?: string | null
+          slug: string
+          tagline?: string | null
+          text_color?: string | null
+          updated_at?: string | null
+          website_url?: string | null
+        }
+        Update: {
+          accent_color?: string | null
+          background_color?: string | null
+          body_font?: string | null
+          brand_voice?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          footer_image_url?: string | null
+          from_email?: string
+          from_name?: string
+          header_image_url?: string | null
+          heading_font?: string | null
+          icon_url?: string | null
+          id?: string
+          logo_dark_url?: string | null
+          logo_url?: string | null
+          name?: string
+          primary_color?: string | null
+          reply_to_email?: string | null
+          secondary_color?: string | null
+          slug?: string
+          tagline?: string | null
+          text_color?: string | null
+          updated_at?: string | null
+          website_url?: string | null
+        }
+        Relationships: []
+      }
       lists: {
         Row: {
           created_at: string | null
