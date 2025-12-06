@@ -31,6 +31,7 @@ interface GenerateEmailRequest {
   tone: string;
   conversationHistory?: Array<{ role: string; content: string }>;
   followUpMessage?: string;
+  outputFormat?: 'html' | 'blocks';
 }
 
 serve(async (req) => {
@@ -47,7 +48,8 @@ serve(async (req) => {
       callToAction, 
       tone,
       conversationHistory,
-      followUpMessage 
+      followUpMessage,
+      outputFormat = 'blocks'
     }: GenerateEmailRequest = await req.json();
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
@@ -55,97 +57,68 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    // Build Google Fonts URL if custom fonts are specified
     const headingFont = imprint.heading_font || 'Arial';
     const bodyFont = imprint.body_font || 'Arial';
-    const googleFontsUrl = (headingFont !== 'Arial' || bodyFont !== 'Arial') 
-      ? `https://fonts.googleapis.com/css2?family=${encodeURIComponent(headingFont).replace(/%20/g, '+')}:wght@400;600;700&family=${encodeURIComponent(bodyFont).replace(/%20/g, '+')}:wght@400;600&display=swap`
-      : null;
 
-    // Build system prompt with imprint context
-    const systemPrompt = `You are an expert email designer and copywriter. You create beautiful, responsive HTML emails.
+    // System prompt for block-based output
+    const blockSystemPrompt = `You are an expert email designer. You create email content as structured JSON blocks.
 
 BRAND CONTEXT:
 - Brand Name: ${imprint.name}
 ${imprint.tagline ? `- Tagline: ${imprint.tagline}` : ''}
 ${imprint.brand_voice ? `- Brand Voice: ${imprint.brand_voice}` : ''}
-${imprint.website_url ? `- Website: ${imprint.website_url}` : ''}
 
 BRAND COLORS:
-${imprint.primary_color ? `- Primary: ${imprint.primary_color}` : '- Primary: #2563eb'}
-${imprint.secondary_color ? `- Secondary: ${imprint.secondary_color}` : ''}
-${imprint.accent_color ? `- Accent: ${imprint.accent_color}` : ''}
-${imprint.background_color ? `- Background: ${imprint.background_color}` : '- Background: #ffffff'}
-${imprint.text_color ? `- Text: ${imprint.text_color}` : '- Text: #1f2937'}
+- Primary: ${imprint.primary_color || '#2563eb'}
+- Secondary: ${imprint.secondary_color || '#16213e'}
+- Background: ${imprint.background_color || '#ffffff'}
+- Text: ${imprint.text_color || '#1f2937'}
 
-TYPOGRAPHY - CRITICAL:
-- Heading Font: "${headingFont}" - USE THIS EXACT FONT for all headings (h1, h2, h3)
-- Body Font: "${bodyFont}" - USE THIS EXACT FONT for all body text and paragraphs
-${googleFontsUrl ? `- Google Fonts URL to include: ${googleFontsUrl}` : ''}
+OUTPUT FORMAT:
+You MUST output ONLY a valid JSON object with a "blocks" array. No markdown, no code fences, no explanations.
 
-ASSETS:
-${imprint.logo_url ? `- Logo URL: ${imprint.logo_url}` : ''}
-${imprint.header_image_url ? `- Header Image: ${imprint.header_image_url}` : ''}
-${imprint.footer_image_url ? `- Footer Image: ${imprint.footer_image_url}` : ''}
+BLOCK TYPES AVAILABLE:
+- header: { type: "header", logoUrl?: string, backgroundColor?: string }
+- heading: { type: "heading", content: string, level: 1|2|3, color?: string, align?: "left"|"center"|"right" }
+- text: { type: "text", content: string, fontSize?: number, color?: string, align?: "left"|"center"|"right" }
+- image: { type: "image", src: string, alt?: string, width?: number|"full", align?: "left"|"center"|"right" }
+- button: { type: "button", text: string, url: string, backgroundColor?: string, textColor?: string }
+- divider: { type: "divider", color?: string }
+- spacer: { type: "spacer", height: number }
+- footer: { type: "footer", content: string, showUnsubscribe: true }
 
-REQUIREMENTS:
-1. Generate ONLY valid HTML email code - no markdown, no code blocks, no explanations
-2. Use inline CSS styles (email clients don't support external stylesheets)
-3. Use table-based layouts for maximum email client compatibility
-4. Include the brand logo if URL is provided
-5. Use the brand colors consistently
-6. Make the email responsive (max-width: 600px centered)
-7. Include an unsubscribe link placeholder: {{unsubscribe_url}}
-8. Ensure text is readable (minimum 14px font size for body)
-9. Add proper alt text to all images
-10. The output should be ONLY the HTML - start with <!DOCTYPE html> and end with </html>
+EXAMPLE OUTPUT:
+{"blocks":[{"type":"header","logoUrl":"${imprint.logo_url || ''}","backgroundColor":"#ffffff"},{"type":"heading","content":"Welcome!","level":1,"color":"${imprint.primary_color || '#2563eb'}","align":"center"},{"type":"text","content":"Your message here...","fontSize":16,"color":"${imprint.text_color || '#333333'}"},{"type":"button","text":"Learn More","url":"#","backgroundColor":"${imprint.primary_color || '#2563eb'}"},{"type":"footer","content":"© ${imprint.name}","showUnsubscribe":true}]}
 
-CRITICAL PERSONALIZATION RULES:
-- DO NOT use any personalization merge tags like {{first_name}}, {{last_name}}, [first_name], %FIRST_NAME% etc.
-- DO NOT include "Hello [Name]" or "Dear [Name]" greetings - our system does not support personalization
-- Use generic greetings instead, such as: "Hello," or "Hi there," or jump straight into the content
-- Never assume the email system can replace any placeholder variables for names
+RULES:
+- Use generic greetings (no personalization tags)
+- Apply brand colors consistently
+- Include header with logo if available
+- Always end with footer block with showUnsubscribe: true
+- Output ONLY the JSON object, nothing else`;
 
-CRITICAL FONT REQUIREMENTS:
-${googleFontsUrl ? `- You MUST include this Google Fonts import in the <head>:
-  <link href="${googleFontsUrl}" rel="stylesheet">` : ''}
-- All headings (h1, h2, h3, titles) MUST use: font-family: '${headingFont}', sans-serif;
-- All body text and paragraphs MUST use: font-family: '${bodyFont}', sans-serif;
-- Apply fonts using inline styles on EVERY text element - do not rely on inheritance in emails`;
-
-
-    // Build messages array
     const messages: Array<{ role: string; content: string }> = [
-      { role: "system", content: systemPrompt }
+      { role: "system", content: blockSystemPrompt }
     ];
 
-    // If this is an initial generation (not a follow-up)
     if (!followUpMessage) {
-      const userPrompt = `Create an email with the following specifications:
-
-EMAIL TYPE: ${emailType}
-
+      const userPrompt = `Create email blocks for:
+TYPE: ${emailType}
 DESCRIPTION: ${description}
-
-KEY POINTS:
-${keyPoints}
-
+KEY POINTS: ${keyPoints}
 CALL TO ACTION: ${callToAction}
-
 TONE: ${tone}
 
-Generate a beautiful, on-brand HTML email now.`;
-
+Output the JSON blocks now.`;
       messages.push({ role: "user", content: userPrompt });
     } else {
-      // Add conversation history
       if (conversationHistory && conversationHistory.length > 0) {
         messages.push(...conversationHistory);
       }
       messages.push({ role: "user", content: followUpMessage });
     }
 
-    console.log("Generating email with Lovable AI...");
+    console.log("Generating email blocks with Lovable AI...");
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -154,7 +127,7 @@ Generate a beautiful, on-brand HTML email now.`;
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-pro-preview",
+        model: "google/gemini-2.5-flash",
         messages,
         stream: true,
       }),
@@ -178,7 +151,6 @@ Generate a beautiful, on-brand HTML email now.`;
       throw new Error(`AI gateway error: ${response.status}`);
     }
 
-    // Stream the response back
     return new Response(response.body, {
       headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
     });
