@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import {
   Dialog,
@@ -40,7 +41,8 @@ import {
   Mail,
   Clock,
   ExternalLink,
-  Check
+  Check,
+  ChevronDown
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -63,12 +65,14 @@ export function CampaignDetail({ campaign, onBack }: CampaignDetailProps) {
   const { templates } = useTemplates();
   const { sendCampaign, updateCampaign } = useCampaigns();
   
-  // Edit dialogs
-  const [editRecipientsOpen, setEditRecipientsOpen] = useState(false);
-  const [editFromOpen, setEditFromOpen] = useState(false);
-  const [editSubjectOpen, setEditSubjectOpen] = useState(false);
+  // Collapsible section states
+  const [toOpen, setToOpen] = useState(false);
+  const [fromOpen, setFromOpen] = useState(false);
+  const [subjectOpen, setSubjectOpen] = useState(false);
+  const [sendTimeOpen, setSendTimeOpen] = useState(false);
+  
+  // Edit dialogs (only for content now)
   const [editContentOpen, setEditContentOpen] = useState(false);
-  const [editSendTimeOpen, setEditSendTimeOpen] = useState(false);
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
   
   // Form states
@@ -125,7 +129,7 @@ export function CampaignDetail({ campaign, onBack }: CampaignDetailProps) {
       from_email: fromEmail,
       reply_to_email: replyToEmail || undefined,
     });
-    setEditFromOpen(false);
+    setFromOpen(false);
   };
 
   const handleUpdateSubject = async () => {
@@ -133,7 +137,7 @@ export function CampaignDetail({ campaign, onBack }: CampaignDetailProps) {
       id: campaign.id,
       subject,
     });
-    setEditSubjectOpen(false);
+    setSubjectOpen(false);
   };
 
   const handleUpdateContent = async () => {
@@ -355,131 +359,262 @@ export function CampaignDetail({ campaign, onBack }: CampaignDetailProps) {
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
         {/* Checklist Section */}
-        <div className="lg:col-span-3 space-y-1">
+        <div className="lg:col-span-3 space-y-2">
           {/* To (Recipients) */}
-          <Card className="overflow-hidden">
-            <div className="flex items-start justify-between p-5">
-              <div className="flex gap-4">
-                <div className="mt-0.5">
-                  {hasRecipients ? (
-                    <div className="h-6 w-6 rounded-full bg-primary flex items-center justify-center">
-                      <Check className="h-4 w-4 text-primary-foreground" />
+          <Collapsible open={toOpen} onOpenChange={setToOpen}>
+            <Card className="overflow-hidden">
+              <CollapsibleTrigger asChild>
+                <div className="flex items-start justify-between p-5 cursor-pointer hover:bg-muted/30 transition-colors">
+                  <div className="flex gap-4">
+                    <div className="mt-0.5">
+                      {hasRecipients ? (
+                        <div className="h-6 w-6 rounded-full bg-primary flex items-center justify-center">
+                          <Check className="h-4 w-4 text-primary-foreground" />
+                        </div>
+                      ) : (
+                        <Circle className="h-6 w-6 text-muted-foreground" />
+                      )}
                     </div>
-                  ) : (
-                    <Circle className="h-6 w-6 text-muted-foreground" />
-                  )}
-                </div>
-                <div>
-                  <h3 className="font-semibold text-base">To</h3>
-                  <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1">
-                    {selectedListIds.length === 0 ? 'All contacts' : `${selectedListIds.length} list(s) selected`}
-                    <ExternalLink className="h-3 w-3" />
-                  </p>
-                </div>
-              </div>
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => setEditRecipientsOpen(true)}
-              >
-                Edit recipients
-              </Button>
-            </div>
-          </Card>
-
-          {/* From */}
-          <Card className="overflow-hidden">
-            <div className="flex items-start justify-between p-5">
-              <div className="flex gap-4">
-                <div className="mt-0.5">
-                  {hasFrom ? (
-                    <div className="h-6 w-6 rounded-full bg-primary flex items-center justify-center">
-                      <Check className="h-4 w-4 text-primary-foreground" />
+                    <div>
+                      <h3 className="font-semibold text-base">To</h3>
+                      <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1">
+                        {selectedListIds.length === 0 ? 'All contacts' : `${selectedListIds.length} list(s) selected`}
+                        <ExternalLink className="h-3 w-3" />
+                      </p>
                     </div>
-                  ) : (
-                    <Circle className="h-6 w-6 text-muted-foreground" />
-                  )}
-                </div>
-                <div>
-                  <h3 className="font-semibold text-base">From</h3>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {campaign.from_name} &lt;{campaign.from_email}&gt;
-                  </p>
-                  {campaign.reply_to_email && (
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Replies go to: {campaign.reply_to_email}
-                    </p>
-                  )}
-                </div>
-              </div>
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => setEditFromOpen(true)}
-              >
-                Edit from
-              </Button>
-            </div>
-          </Card>
-
-          {/* Subject */}
-          <Card className="overflow-hidden">
-            <div className="flex items-start justify-between p-5">
-              <div className="flex gap-4">
-                <div className="mt-0.5">
-                  {hasSubject ? (
-                    <div className="h-6 w-6 rounded-full bg-primary flex items-center justify-center">
-                      <Check className="h-4 w-4 text-primary-foreground" />
-                    </div>
-                  ) : (
-                    <Circle className="h-6 w-6 text-muted-foreground" />
-                  )}
-                </div>
-                <div>
-                  <h3 className="font-semibold text-base">Subject</h3>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {campaign.subject || 'No subject set'}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Preview text: {campaign.html_content ? campaign.html_content.replace(/<[^>]*>/g, '').substring(0, 50) + '...' : 'Add preview text'}
-                  </p>
-                </div>
-              </div>
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => setEditSubjectOpen(true)}
-              >
-                Edit subject
-              </Button>
-            </div>
-          </Card>
-
-          {/* Send Time */}
-          <Card className="overflow-hidden">
-            <div className="flex items-start justify-between p-5">
-              <div className="flex gap-4">
-                <div className="mt-0.5">
-                  <div className="h-6 w-6 rounded-full bg-primary flex items-center justify-center">
-                    <Check className="h-4 w-4 text-primary-foreground" />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">Edit recipients</span>
+                    <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${toOpen ? 'rotate-180' : ''}`} />
                   </div>
                 </div>
-                <div>
-                  <h3 className="font-semibold text-base">Send time</h3>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {sendTimeOption === 'now' ? 'Send immediately' : 'Scheduled for later'}
-                  </p>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="px-5 pb-5 pt-0 border-t">
+                  <div className="space-y-3 py-4">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="all-contacts"
+                        checked={selectedListIds.length === 0}
+                        onCheckedChange={(checked) => {
+                          if (checked) setSelectedListIds([]);
+                        }}
+                      />
+                      <label htmlFor="all-contacts" className="text-sm font-medium">
+                        All Contacts
+                      </label>
+                    </div>
+                    {lists.map((list) => (
+                      <div key={list.id} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`list-${list.id}`}
+                          checked={selectedListIds.includes(list.id)}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setSelectedListIds([...selectedListIds, list.id]);
+                            } else {
+                              setSelectedListIds(selectedListIds.filter(id => id !== list.id));
+                            }
+                          }}
+                        />
+                        <label htmlFor={`list-${list.id}`} className="text-sm">
+                          {list.name}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                  <Button size="sm" onClick={() => setToOpen(false)}>Done</Button>
                 </div>
-              </div>
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => setEditSendTimeOpen(true)}
-              >
-                Edit send time
-              </Button>
-            </div>
-          </Card>
+              </CollapsibleContent>
+            </Card>
+          </Collapsible>
+
+          {/* From */}
+          <Collapsible open={fromOpen} onOpenChange={setFromOpen}>
+            <Card className="overflow-hidden">
+              <CollapsibleTrigger asChild>
+                <div className="flex items-start justify-between p-5 cursor-pointer hover:bg-muted/30 transition-colors">
+                  <div className="flex gap-4">
+                    <div className="mt-0.5">
+                      {hasFrom ? (
+                        <div className="h-6 w-6 rounded-full bg-primary flex items-center justify-center">
+                          <Check className="h-4 w-4 text-primary-foreground" />
+                        </div>
+                      ) : (
+                        <Circle className="h-6 w-6 text-muted-foreground" />
+                      )}
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-base">From</h3>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {campaign.from_name ? `${campaign.from_name} ` : ''}&lt;{campaign.from_email}&gt;
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">Edit from</span>
+                    <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${fromOpen ? 'rotate-180' : ''}`} />
+                  </div>
+                </div>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="px-5 pb-5 pt-0 border-t">
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="from-name">From Name</Label>
+                      <Input
+                        id="from-name"
+                        value={fromName}
+                        onChange={(e) => setFromName(e.target.value)}
+                        placeholder="Your Company"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>From Email</Label>
+                      <Select value={fromEmailOption} onValueChange={setFromEmailOption}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select sender email" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {fromEmailOptions.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label} {option.value !== 'custom' && `(${option.value})`}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {fromEmailOption === 'custom' && (
+                        <Input
+                          type="email"
+                          placeholder="your@email.com"
+                          value={customFromEmail}
+                          onChange={(e) => setCustomFromEmail(e.target.value)}
+                          className="mt-2"
+                        />
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="reply-to">Reply-To Email (optional)</Label>
+                      <Input
+                        id="reply-to"
+                        type="email"
+                        value={replyToEmail}
+                        onChange={(e) => setReplyToEmail(e.target.value)}
+                        placeholder="replies@example.com"
+                      />
+                    </div>
+                  </div>
+                  <Button size="sm" onClick={handleUpdateFrom} disabled={updateCampaign.isPending}>
+                    {updateCampaign.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Save
+                  </Button>
+                </div>
+              </CollapsibleContent>
+            </Card>
+          </Collapsible>
+
+          {/* Subject */}
+          <Collapsible open={subjectOpen} onOpenChange={setSubjectOpen}>
+            <Card className="overflow-hidden">
+              <CollapsibleTrigger asChild>
+                <div className="flex items-start justify-between p-5 cursor-pointer hover:bg-muted/30 transition-colors">
+                  <div className="flex gap-4">
+                    <div className="mt-0.5">
+                      {hasSubject ? (
+                        <div className="h-6 w-6 rounded-full bg-primary flex items-center justify-center">
+                          <Check className="h-4 w-4 text-primary-foreground" />
+                        </div>
+                      ) : (
+                        <Circle className="h-6 w-6 text-muted-foreground" />
+                      )}
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-base">Subject</h3>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {campaign.subject || 'No subject set'}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Preview text: Add preview text
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">Edit subject</span>
+                    <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${subjectOpen ? 'rotate-180' : ''}`} />
+                  </div>
+                </div>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="px-5 pb-5 pt-0 border-t">
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="subject-line">Subject Line</Label>
+                      <Input
+                        id="subject-line"
+                        value={subject}
+                        onChange={(e) => setSubject(e.target.value)}
+                        placeholder="Your email subject"
+                      />
+                    </div>
+                  </div>
+                  <Button size="sm" onClick={handleUpdateSubject} disabled={updateCampaign.isPending}>
+                    {updateCampaign.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Save
+                  </Button>
+                </div>
+              </CollapsibleContent>
+            </Card>
+          </Collapsible>
+
+          {/* Send Time */}
+          <Collapsible open={sendTimeOpen} onOpenChange={setSendTimeOpen}>
+            <Card className="overflow-hidden">
+              <CollapsibleTrigger asChild>
+                <div className="flex items-start justify-between p-5 cursor-pointer hover:bg-muted/30 transition-colors">
+                  <div className="flex gap-4">
+                    <div className="mt-0.5">
+                      <div className="h-6 w-6 rounded-full bg-primary flex items-center justify-center">
+                        <Check className="h-4 w-4 text-primary-foreground" />
+                      </div>
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-base">Send time</h3>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {sendTimeOption === 'now' ? 'Send immediately' : 'Scheduled for later'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">Edit send time</span>
+                    <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${sendTimeOpen ? 'rotate-180' : ''}`} />
+                  </div>
+                </div>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="px-5 pb-5 pt-0 border-t">
+                  <div className="py-4">
+                    <RadioGroup value={sendTimeOption} onValueChange={(v) => setSendTimeOption(v as 'now' | 'scheduled')}>
+                      <div className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-muted/50 cursor-pointer">
+                        <RadioGroupItem value="now" id="send-now" />
+                        <Label htmlFor="send-now" className="flex-1 cursor-pointer">
+                          <div className="font-medium">Send now</div>
+                          <div className="text-sm text-muted-foreground">Send immediately when you click Schedule</div>
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-muted/50 cursor-pointer opacity-50 mt-2">
+                        <RadioGroupItem value="scheduled" id="send-later" disabled />
+                        <Label htmlFor="send-later" className="flex-1 cursor-pointer">
+                          <div className="font-medium">Schedule for later</div>
+                          <div className="text-sm text-muted-foreground">Coming soon</div>
+                        </Label>
+                      </div>
+                    </RadioGroup>
+                  </div>
+                  <Button size="sm" onClick={() => setSendTimeOpen(false)}>Done</Button>
+                </div>
+              </CollapsibleContent>
+            </Card>
+          </Collapsible>
 
           {/* Content */}
           <Card className="overflow-hidden">
@@ -550,158 +685,6 @@ export function CampaignDetail({ campaign, onBack }: CampaignDetailProps) {
         </div>
       </div>
 
-      {/* Edit Recipients Dialog */}
-      <Dialog open={editRecipientsOpen} onOpenChange={setEditRecipientsOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit Recipients</DialogTitle>
-            <DialogDescription>
-              Choose who will receive this campaign.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2 max-h-[300px] overflow-y-auto">
-              <div className="flex items-center space-x-2 pb-2 border-b">
-                <Checkbox
-                  id="all-contacts-edit"
-                  checked={selectedListIds.length === 0}
-                  onCheckedChange={(checked) => {
-                    if (checked) setSelectedListIds([]);
-                  }}
-                />
-                <label htmlFor="all-contacts-edit" className="text-sm font-medium">
-                  All Contacts
-                </label>
-              </div>
-              {lists.map((list) => (
-                <div key={list.id} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`list-${list.id}`}
-                    checked={selectedListIds.includes(list.id)}
-                    onCheckedChange={(checked) => {
-                      if (checked) {
-                        setSelectedListIds([...selectedListIds, list.id]);
-                      } else {
-                        setSelectedListIds(selectedListIds.filter(id => id !== list.id));
-                      }
-                    }}
-                  />
-                  <label htmlFor={`list-${list.id}`} className="text-sm font-medium">
-                    {list.name}
-                  </label>
-                </div>
-              ))}
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditRecipientsOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={() => setEditRecipientsOpen(false)}>
-              Save
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit From Dialog */}
-      <Dialog open={editFromOpen} onOpenChange={setEditFromOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit From</DialogTitle>
-            <DialogDescription>
-              Set the sender name and email address.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="from-name-edit">From Name</Label>
-              <Input
-                id="from-name-edit"
-                value={fromName}
-                onChange={(e) => setFromName(e.target.value)}
-                placeholder="Your Company"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>From Email</Label>
-              <Select value={fromEmailOption} onValueChange={setFromEmailOption}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select sender email" />
-                </SelectTrigger>
-                <SelectContent>
-                  {fromEmailOptions.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label} {option.value !== 'custom' && `(${option.value})`}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {fromEmailOption === 'custom' && (
-                <Input
-                  type="email"
-                  placeholder="your@email.com"
-                  value={customFromEmail}
-                  onChange={(e) => setCustomFromEmail(e.target.value)}
-                  className="mt-2"
-                />
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="reply-to-edit">Reply-To Email (optional)</Label>
-              <Input
-                id="reply-to-edit"
-                type="email"
-                value={replyToEmail}
-                onChange={(e) => setReplyToEmail(e.target.value)}
-                placeholder="replies@example.com"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditFromOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleUpdateFrom} disabled={updateCampaign.isPending}>
-              {updateCampaign.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Save
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit Subject Dialog */}
-      <Dialog open={editSubjectOpen} onOpenChange={setEditSubjectOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit Subject</DialogTitle>
-            <DialogDescription>
-              Set the email subject line.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="subject-edit">Subject Line</Label>
-              <Input
-                id="subject-edit"
-                value={subject}
-                onChange={(e) => setSubject(e.target.value)}
-                placeholder="Your email subject"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditSubjectOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleUpdateSubject} disabled={updateCampaign.isPending}>
-              {updateCampaign.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Save
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
       {/* Edit Content Dialog */}
       <Dialog open={editContentOpen} onOpenChange={setEditContentOpen}>
         <DialogContent className="max-w-3xl">
@@ -750,44 +733,6 @@ export function CampaignDetail({ campaign, onBack }: CampaignDetailProps) {
             </Button>
             <Button onClick={handleUpdateContent} disabled={updateCampaign.isPending}>
               {updateCampaign.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Save
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit Send Time Dialog */}
-      <Dialog open={editSendTimeOpen} onOpenChange={setEditSendTimeOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit Send Time</DialogTitle>
-            <DialogDescription>
-              Choose when to send your campaign.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <RadioGroup value={sendTimeOption} onValueChange={(v) => setSendTimeOption(v as 'now' | 'scheduled')}>
-              <div className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-muted/50 cursor-pointer">
-                <RadioGroupItem value="now" id="send-now" />
-                <Label htmlFor="send-now" className="flex-1 cursor-pointer">
-                  <div className="font-medium">Send now</div>
-                  <div className="text-sm text-muted-foreground">Send immediately when you click Schedule</div>
-                </Label>
-              </div>
-              <div className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-muted/50 cursor-pointer opacity-50">
-                <RadioGroupItem value="scheduled" id="send-later" disabled />
-                <Label htmlFor="send-later" className="flex-1 cursor-pointer">
-                  <div className="font-medium">Schedule for later</div>
-                  <div className="text-sm text-muted-foreground">Coming soon - schedule your campaign for a specific date and time</div>
-                </Label>
-              </div>
-            </RadioGroup>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditSendTimeOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={() => setEditSendTimeOpen(false)}>
               Save
             </Button>
           </DialogFooter>
