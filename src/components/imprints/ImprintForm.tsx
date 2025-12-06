@@ -184,19 +184,8 @@ export function ImprintForm({ open, onClose, imprint }: ImprintFormProps) {
                   )}
                 />
 
-                <FormField
-                  control={form.control}
-                  name="slug"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Slug</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder="xulon-press" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                {/* Slug is auto-generated from name - hidden from user */}
+                <input type="hidden" {...form.register('slug')} />
 
                 <div className="grid grid-cols-2 gap-4">
                   <FormField
