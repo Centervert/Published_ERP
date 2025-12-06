@@ -48,11 +48,11 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="border-b border-sidebar-border">
-        <div className="flex items-center justify-center px-2 py-2">
+        <div className="flex items-center justify-center px-2 py-3">
           <img 
             src={authorServicesLogo} 
             alt="Author Services" 
-            className={collapsed ? "h-8 w-auto" : "h-10 w-auto max-w-full"}
+            className={collapsed ? "h-8 object-contain" : "h-10 object-contain"}
           />
         </div>
       </SidebarHeader>
