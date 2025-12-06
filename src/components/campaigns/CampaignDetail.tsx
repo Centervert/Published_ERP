@@ -392,76 +392,7 @@ export function CampaignDetail({ campaign, onBack }: CampaignDetailProps) {
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
         {/* Checklist Section */}
         <div className="lg:col-span-3 space-y-2">
-          {/* To (Recipients) */}
-          <Collapsible open={toOpen} onOpenChange={setToOpen}>
-            <Card className="overflow-hidden">
-              <CollapsibleTrigger asChild>
-                <div className="flex items-start justify-between p-5 cursor-pointer hover:bg-muted/30 transition-colors">
-                  <div className="flex gap-4">
-                    <div className="mt-0.5">
-                      {hasRecipients ? (
-                        <div className="h-6 w-6 rounded-full bg-primary flex items-center justify-center">
-                          <Check className="h-4 w-4 text-primary-foreground" />
-                        </div>
-                      ) : (
-                        <Circle className="h-6 w-6 text-muted-foreground" />
-                      )}
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-base">To</h3>
-                      <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1">
-                        {selectedListIds.length === 0 ? 'All contacts' : `${selectedListIds.length} list(s) selected`}
-                        <ExternalLink className="h-3 w-3" />
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground">Edit recipients</span>
-                    <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${toOpen ? 'rotate-180' : ''}`} />
-                  </div>
-                </div>
-              </CollapsibleTrigger>
-              <CollapsibleContent>
-                <div className="px-5 pb-5 pt-0 border-t">
-                  <div className="space-y-3 py-4">
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id="all-contacts"
-                        checked={selectedListIds.length === 0}
-                        onCheckedChange={(checked) => {
-                          if (checked) setSelectedListIds([]);
-                        }}
-                      />
-                      <label htmlFor="all-contacts" className="text-sm font-medium">
-                        All Contacts
-                      </label>
-                    </div>
-                    {lists.map((list) => (
-                      <div key={list.id} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={`list-${list.id}`}
-                          checked={selectedListIds.includes(list.id)}
-                          onCheckedChange={(checked) => {
-                            if (checked) {
-                              setSelectedListIds([...selectedListIds, list.id]);
-                            } else {
-                              setSelectedListIds(selectedListIds.filter(id => id !== list.id));
-                            }
-                          }}
-                        />
-                        <label htmlFor={`list-${list.id}`} className="text-sm">
-                          {list.name}
-                        </label>
-                      </div>
-                    ))}
-                  </div>
-                  <Button size="sm" onClick={() => setToOpen(false)}>Done</Button>
-                </div>
-              </CollapsibleContent>
-            </Card>
-          </Collapsible>
-
-          {/* From */}
+          {/* From - FIRST (required before other sections) */}
           <Collapsible open={fromOpen} onOpenChange={setFromOpen}>
             <Card className="overflow-hidden">
               <CollapsibleTrigger asChild>
@@ -558,141 +489,214 @@ export function CampaignDetail({ campaign, onBack }: CampaignDetailProps) {
             </Card>
           </Collapsible>
 
-          {/* Subject */}
-          <Collapsible open={subjectOpen} onOpenChange={setSubjectOpen}>
-            <Card className="overflow-hidden">
-              <CollapsibleTrigger asChild>
-                <div className="flex items-start justify-between p-5 cursor-pointer hover:bg-muted/30 transition-colors">
-                  <div className="flex gap-4">
-                    <div className="mt-0.5">
-                      {hasSubject ? (
+          {/* Remaining sections - blurred until From is complete */}
+          <div className={!hasFrom ? 'opacity-50 blur-[1px] pointer-events-none select-none' : ''}>
+            {/* To (Recipients) */}
+            <Collapsible open={toOpen} onOpenChange={hasFrom ? setToOpen : undefined}>
+              <Card className="overflow-hidden">
+                <CollapsibleTrigger asChild>
+                  <div className="flex items-start justify-between p-5 cursor-pointer hover:bg-muted/30 transition-colors">
+                    <div className="flex gap-4">
+                      <div className="mt-0.5">
+                        {hasRecipients ? (
+                          <div className="h-6 w-6 rounded-full bg-primary flex items-center justify-center">
+                            <Check className="h-4 w-4 text-primary-foreground" />
+                          </div>
+                        ) : (
+                          <Circle className="h-6 w-6 text-muted-foreground" />
+                        )}
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-base">To</h3>
+                        <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1">
+                          {selectedListIds.length === 0 ? 'All contacts' : `${selectedListIds.length} list(s) selected`}
+                          <ExternalLink className="h-3 w-3" />
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-muted-foreground">Edit recipients</span>
+                      <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${toOpen ? 'rotate-180' : ''}`} />
+                    </div>
+                  </div>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <div className="px-5 pb-5 pt-0 border-t">
+                    <div className="space-y-3 py-4">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="all-contacts"
+                          checked={selectedListIds.length === 0}
+                          onCheckedChange={(checked) => {
+                            if (checked) setSelectedListIds([]);
+                          }}
+                        />
+                        <label htmlFor="all-contacts" className="text-sm font-medium">
+                          All Contacts
+                        </label>
+                      </div>
+                      {lists.map((list) => (
+                        <div key={list.id} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`list-${list.id}`}
+                            checked={selectedListIds.includes(list.id)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setSelectedListIds([...selectedListIds, list.id]);
+                              } else {
+                                setSelectedListIds(selectedListIds.filter(id => id !== list.id));
+                              }
+                            }}
+                          />
+                          <label htmlFor={`list-${list.id}`} className="text-sm">
+                            {list.name}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                    <Button size="sm" onClick={() => setToOpen(false)}>Done</Button>
+                  </div>
+                </CollapsibleContent>
+              </Card>
+            </Collapsible>
+
+            {/* Subject */}
+            <Collapsible open={subjectOpen} onOpenChange={hasFrom ? setSubjectOpen : undefined}>
+              <Card className="overflow-hidden mt-2">
+                <CollapsibleTrigger asChild>
+                  <div className="flex items-start justify-between p-5 cursor-pointer hover:bg-muted/30 transition-colors">
+                    <div className="flex gap-4">
+                      <div className="mt-0.5">
+                        {hasSubject ? (
+                          <div className="h-6 w-6 rounded-full bg-primary flex items-center justify-center">
+                            <Check className="h-4 w-4 text-primary-foreground" />
+                          </div>
+                        ) : (
+                          <Circle className="h-6 w-6 text-muted-foreground" />
+                        )}
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-base">Subject</h3>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {campaign.subject || 'No subject set'}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Preview text: Add preview text
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-muted-foreground">Edit subject</span>
+                      <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${subjectOpen ? 'rotate-180' : ''}`} />
+                    </div>
+                  </div>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <div className="px-5 pb-5 pt-0 border-t">
+                    <div className="space-y-4 py-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="subject-line">Subject Line</Label>
+                        <Input
+                          id="subject-line"
+                          value={subject}
+                          onChange={(e) => setSubject(e.target.value)}
+                          placeholder="Your email subject"
+                        />
+                      </div>
+                    </div>
+                    <Button size="sm" onClick={handleUpdateSubject} disabled={updateCampaign.isPending}>
+                      {updateCampaign.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      Save
+                    </Button>
+                  </div>
+                </CollapsibleContent>
+              </Card>
+            </Collapsible>
+
+            {/* Send Time */}
+            <Collapsible open={sendTimeOpen} onOpenChange={hasFrom ? setSendTimeOpen : undefined}>
+              <Card className="overflow-hidden mt-2">
+                <CollapsibleTrigger asChild>
+                  <div className="flex items-start justify-between p-5 cursor-pointer hover:bg-muted/30 transition-colors">
+                    <div className="flex gap-4">
+                      <div className="mt-0.5">
                         <div className="h-6 w-6 rounded-full bg-primary flex items-center justify-center">
                           <Check className="h-4 w-4 text-primary-foreground" />
                         </div>
-                      ) : (
-                        <Circle className="h-6 w-6 text-muted-foreground" />
-                      )}
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-base">Send time</h3>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {sendTimeOption === 'now' ? 'Send immediately' : 'Scheduled for later'}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <h3 className="font-semibold text-base">Subject</h3>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {campaign.subject || 'No subject set'}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Preview text: Add preview text
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground">Edit subject</span>
-                    <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${subjectOpen ? 'rotate-180' : ''}`} />
-                  </div>
-                </div>
-              </CollapsibleTrigger>
-              <CollapsibleContent>
-                <div className="px-5 pb-5 pt-0 border-t">
-                  <div className="space-y-4 py-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="subject-line">Subject Line</Label>
-                      <Input
-                        id="subject-line"
-                        value={subject}
-                        onChange={(e) => setSubject(e.target.value)}
-                        placeholder="Your email subject"
-                      />
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-muted-foreground">Edit send time</span>
+                      <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${sendTimeOpen ? 'rotate-180' : ''}`} />
                     </div>
                   </div>
-                  <Button size="sm" onClick={handleUpdateSubject} disabled={updateCampaign.isPending}>
-                    {updateCampaign.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Save
-                  </Button>
-                </div>
-              </CollapsibleContent>
-            </Card>
-          </Collapsible>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <div className="px-5 pb-5 pt-0 border-t">
+                    <div className="py-4">
+                      <RadioGroup value={sendTimeOption} onValueChange={(v) => setSendTimeOption(v as 'now' | 'scheduled')}>
+                        <div className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-muted/50 cursor-pointer">
+                          <RadioGroupItem value="now" id="send-now" />
+                          <Label htmlFor="send-now" className="flex-1 cursor-pointer">
+                            <div className="font-medium">Send now</div>
+                            <div className="text-sm text-muted-foreground">Send immediately when you click Schedule</div>
+                          </Label>
+                        </div>
+                        <div className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-muted/50 cursor-pointer opacity-50 mt-2">
+                          <RadioGroupItem value="scheduled" id="send-later" disabled />
+                          <Label htmlFor="send-later" className="flex-1 cursor-pointer">
+                            <div className="font-medium">Schedule for later</div>
+                            <div className="text-sm text-muted-foreground">Coming soon</div>
+                          </Label>
+                        </div>
+                      </RadioGroup>
+                    </div>
+                    <Button size="sm" onClick={() => setSendTimeOpen(false)}>Done</Button>
+                  </div>
+                </CollapsibleContent>
+              </Card>
+            </Collapsible>
 
-          {/* Send Time */}
-          <Collapsible open={sendTimeOpen} onOpenChange={setSendTimeOpen}>
-            <Card className="overflow-hidden">
-              <CollapsibleTrigger asChild>
-                <div className="flex items-start justify-between p-5 cursor-pointer hover:bg-muted/30 transition-colors">
-                  <div className="flex gap-4">
-                    <div className="mt-0.5">
+            {/* Content */}
+            <Card className="overflow-hidden mt-2">
+              <div className="flex items-start justify-between p-5">
+                <div className="flex gap-4">
+                  <div className="mt-0.5">
+                    {hasContent ? (
                       <div className="h-6 w-6 rounded-full bg-primary flex items-center justify-center">
                         <Check className="h-4 w-4 text-primary-foreground" />
                       </div>
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-base">Send time</h3>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {sendTimeOption === 'now' ? 'Send immediately' : 'Scheduled for later'}
-                      </p>
-                    </div>
+                    ) : (
+                      <Circle className="h-6 w-6 text-muted-foreground" />
+                    )}
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground">Edit send time</span>
-                    <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${sendTimeOpen ? 'rotate-180' : ''}`} />
+                  <div>
+                    <h3 className="font-semibold text-base">Content</h3>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {hasContent ? 'Email content ready' : 'No content added yet'}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      A plain-text version will be automatically included. <button className="text-primary hover:underline">Edit</button>
+                    </p>
                   </div>
                 </div>
-              </CollapsibleTrigger>
-              <CollapsibleContent>
-                <div className="px-5 pb-5 pt-0 border-t">
-                  <div className="py-4">
-                    <RadioGroup value={sendTimeOption} onValueChange={(v) => setSendTimeOption(v as 'now' | 'scheduled')}>
-                      <div className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-muted/50 cursor-pointer">
-                        <RadioGroupItem value="now" id="send-now" />
-                        <Label htmlFor="send-now" className="flex-1 cursor-pointer">
-                          <div className="font-medium">Send now</div>
-                          <div className="text-sm text-muted-foreground">Send immediately when you click Schedule</div>
-                        </Label>
-                      </div>
-                      <div className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-muted/50 cursor-pointer opacity-50 mt-2">
-                        <RadioGroupItem value="scheduled" id="send-later" disabled />
-                        <Label htmlFor="send-later" className="flex-1 cursor-pointer">
-                          <div className="font-medium">Schedule for later</div>
-                          <div className="text-sm text-muted-foreground">Coming soon</div>
-                        </Label>
-                      </div>
-                    </RadioGroup>
-                  </div>
-                  <Button size="sm" onClick={() => setSendTimeOpen(false)}>Done</Button>
-                </div>
-              </CollapsibleContent>
-            </Card>
-          </Collapsible>
-
-          {/* Content */}
-          <Card className="overflow-hidden">
-            <div className="flex items-start justify-between p-5">
-              <div className="flex gap-4">
-                <div className="mt-0.5">
-                  {hasContent ? (
-                    <div className="h-6 w-6 rounded-full bg-primary flex items-center justify-center">
-                      <Check className="h-4 w-4 text-primary-foreground" />
-                    </div>
-                  ) : (
-                    <Circle className="h-6 w-6 text-muted-foreground" />
-                  )}
-                </div>
-                <div>
-                  <h3 className="font-semibold text-base">Content</h3>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {hasContent ? 'Email content ready' : 'No content added yet'}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    A plain-text version will be automatically included. <button className="text-primary hover:underline">Edit</button>
-                  </p>
-                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => hasFrom && setEmailBuilderOpen(true)}
+                  disabled={!hasFrom}
+                >
+                  Edit design
+                </Button>
               </div>
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => setEmailBuilderOpen(true)}
-              >
-                Edit design
-              </Button>
-            </div>
-          </Card>
+            </Card>
+          </div>
         </div>
 
         {/* Email Preview Section */}
