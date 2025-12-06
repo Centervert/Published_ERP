@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -146,14 +146,14 @@ export function ImprintForm({ open, onClose, imprint }: ImprintFormProps) {
   };
 
   return (
-    <Dialog open={open} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{imprint ? 'Edit Imprint' : 'Create New Imprint'}</DialogTitle>
-          <DialogDescription>
+    <Sheet open={open} onOpenChange={(open) => !open && onClose()}>
+      <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
+        <SheetHeader>
+          <SheetTitle>{imprint ? 'Edit Imprint' : 'Create New Imprint'}</SheetTitle>
+          <SheetDescription>
             Configure your brand's identity, colors, fonts, and email settings.
-          </DialogDescription>
-        </DialogHeader>
+          </SheetDescription>
+        </SheetHeader>
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -500,7 +500,7 @@ export function ImprintForm({ open, onClose, imprint }: ImprintFormProps) {
             </div>
           </form>
         </Form>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 }
