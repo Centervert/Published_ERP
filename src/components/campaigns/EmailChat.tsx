@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Send, Loader2, Sparkles, User, RotateCcw, Image as ImageIcon, Plus } from 'lucide-react';
+import { Send, Loader2, Sparkles, User, RotateCcw, Image as ImageIcon, Plus, Upload } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export interface ChatMessage {
@@ -20,9 +20,11 @@ interface EmailChatProps {
   onRegenerate: () => void;
   onGenerateImage?: (prompt: string) => void;
   onInsertImage?: (imageUrl: string) => void;
+  onUploadImage?: (file: File) => Promise<void>;
   isLoading: boolean;
   isStreaming: boolean;
   isGeneratingImage?: boolean;
+  isUploadingImage?: boolean;
 }
 
 export function EmailChat({ 
@@ -31,13 +33,16 @@ export function EmailChat({
   onRegenerate,
   onGenerateImage,
   onInsertImage,
+  onUploadImage,
   isLoading, 
   isStreaming,
-  isGeneratingImage 
+  isGeneratingImage,
+  isUploadingImage 
 }: EmailChatProps) {
   const [input, setInput] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     // Scroll to bottom when messages change
@@ -48,7 +53,7 @@ export function EmailChat({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || isLoading || isStreaming || isGeneratingImage) return;
+    if (!input.trim() || isLoading || isStreaming || isGeneratingImage || isUploadingImage) return;
     
     // Check if this is an image generation request
     const imageKeywords = ['generate image', 'create image', 'make image', 'generate a image', 'create a image', 'hero image', 'banner image', 'generate hero', 'create hero', 'make a hero', 'generate banner', 'create banner', 'make banner'];
@@ -66,6 +71,25 @@ export function EmailChat({
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSubmit(e);
+    }
+  };
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && onUploadImage) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        return;
+      }
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        return;
+      }
+      await onUploadImage(file);
+    }
+    // Reset input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
     }
   };
 
@@ -104,7 +128,9 @@ export function EmailChat({
                 className={cn(
                   "max-w-[80%] rounded-2xl",
                   message.role === 'user'
-                    ? "bg-primary text-primary-foreground px-4 py-2.5"
+                    ? message.isImage 
+                      ? "bg-primary/10 p-2"
+                      : "bg-primary text-primary-foreground px-4 py-2.5"
                     : message.isImage 
                       ? "bg-muted p-2"
                       : "bg-muted px-4 py-2.5"
@@ -114,11 +140,24 @@ export function EmailChat({
                   <div className="space-y-2">
                     <img 
                       src={message.imageUrl} 
-                      alt="Generated image" 
+                      alt="Image" 
                       className="rounded-lg max-w-full h-auto"
                       style={{ maxHeight: '200px' }}
                     />
-                    <div className="flex gap-2">
+                    {message.role === 'assistant' && (
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => onInsertImage?.(message.imageUrl!)}
+                          className="w-full"
+                        >
+                          <Plus className="h-3 w-3 mr-1" />
+                          Insert into Email
+                        </Button>
+                      </div>
+                    )}
+                    {message.role === 'user' && (
                       <Button
                         size="sm"
                         variant="secondary"
@@ -128,7 +167,7 @@ export function EmailChat({
                         <Plus className="h-3 w-3 mr-1" />
                         Insert into Email
                       </Button>
-                    </div>
+                    )}
                     {message.content && (
                       <p className="text-xs text-muted-foreground">{message.content}</p>
                     )}
@@ -141,7 +180,7 @@ export function EmailChat({
                   <p className="text-sm whitespace-pre-wrap">{message.content}</p>
                 )}
               </div>
-              {message.role === 'user' && (
+              {message.role === 'user' && !message.isImage && (
                 <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary flex items-center justify-center">
                   <User className="h-4 w-4 text-primary-foreground" />
                 </div>
@@ -180,11 +219,24 @@ export function EmailChat({
               </div>
             </div>
           )}
+
+          {isUploadingImage && (
+            <div className="flex gap-3 justify-end">
+              <div className="bg-primary/10 rounded-2xl px-4 py-2.5">
+                <div className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span className="text-sm text-muted-foreground">
+                    Uploading image...
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </ScrollArea>
 
       {/* Quick Suggestions */}
-      {messages.length > 0 && !isLoading && !isStreaming && !isGeneratingImage && (
+      {messages.length > 0 && !isLoading && !isStreaming && !isGeneratingImage && !isUploadingImage && (
         <div className="px-4 py-2 border-t">
           <p className="text-xs text-muted-foreground mb-2">Quick suggestions:</p>
           <div className="flex flex-wrap gap-2">
@@ -221,6 +273,23 @@ export function EmailChat({
       {/* Input Area */}
       <div className="p-4 border-t">
         <form onSubmit={handleSubmit} className="flex gap-2">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleFileSelect}
+            className="hidden"
+          />
+          <Button
+            type="button"
+            size="icon"
+            variant="outline"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isLoading || isStreaming || isGeneratingImage || isUploadingImage}
+            title="Upload image"
+          >
+            <Upload className="h-4 w-4" />
+          </Button>
           <Textarea
             ref={textareaRef}
             value={input}
@@ -229,12 +298,12 @@ export function EmailChat({
             placeholder="Ask for changes or 'generate a hero image'..."
             className="min-h-[44px] max-h-[120px] resize-none"
             rows={1}
-            disabled={isLoading || isStreaming || isGeneratingImage}
+            disabled={isLoading || isStreaming || isGeneratingImage || isUploadingImage}
           />
           <Button 
             type="submit" 
             size="icon" 
-            disabled={!input.trim() || isLoading || isStreaming || isGeneratingImage}
+            disabled={!input.trim() || isLoading || isStreaming || isGeneratingImage || isUploadingImage}
           >
             <Send className="h-4 w-4" />
           </Button>
