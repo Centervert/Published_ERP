@@ -112,6 +112,9 @@ export function CampaignDetail({ campaign, onBack }: CampaignDetailProps) {
   const clickRate = stats && stats.openedHuman > 0 
     ? ((stats.clicked / stats.openedHuman) * 100).toFixed(1) 
     : '0';
+  const unsubscribeRate = stats && stats.sent > 0 
+    ? ((stats.unsubscribed / stats.sent) * 100).toFixed(2) 
+    : '0';
 
   const handleSend = async () => {
     await sendCampaign.mutateAsync({
@@ -213,7 +216,7 @@ export function CampaignDetail({ campaign, onBack }: CampaignDetailProps) {
                   <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                 </div>
               ) : stats ? (
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-3 gap-4">
                   <div className="text-center">
                     <div className="text-2xl font-bold text-green-600">{openRate}%</div>
                     <div className="text-xs text-muted-foreground">Open Rate</div>
@@ -221,6 +224,10 @@ export function CampaignDetail({ campaign, onBack }: CampaignDetailProps) {
                   <div className="text-center">
                     <div className="text-2xl font-bold text-blue-600">{clickRate}%</div>
                     <div className="text-xs text-muted-foreground">Click Rate</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-red-600">{unsubscribeRate}%</div>
+                    <div className="text-xs text-muted-foreground">Unsub Rate</div>
                   </div>
                 </div>
               ) : null}
