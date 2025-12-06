@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useImprints, Imprint } from '@/hooks/useImprints';
 import { ImprintForm } from '@/components/imprints/ImprintForm';
-import { ImprintCard } from '@/components/imprints/ImprintCard';
+import { ImprintsTable } from '@/components/imprints/ImprintsTable';
 import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Plus, Loader2, Building2 } from 'lucide-react';
@@ -63,16 +63,11 @@ export default function Imprints() {
           </Button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {imprints.map((imprint) => (
-            <ImprintCard
-              key={imprint.id}
-              imprint={imprint}
-              onEdit={() => handleEdit(imprint)}
-              onDelete={() => setDeletingImprint(imprint)}
-            />
-          ))}
-        </div>
+        <ImprintsTable
+          imprints={imprints}
+          onEdit={handleEdit}
+          onDelete={setDeletingImprint}
+        />
       )}
 
       <ImprintForm
