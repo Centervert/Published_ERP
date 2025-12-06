@@ -96,10 +96,15 @@ REQUIREMENTS:
 5. Use the brand colors consistently
 6. Make the email responsive (max-width: 600px centered)
 7. Include an unsubscribe link placeholder: {{unsubscribe_url}}
-8. Include personalization placeholders: {{first_name}}, {{last_name}}
-9. Ensure text is readable (minimum 14px font size for body)
-10. Add proper alt text to all images
-11. The output should be ONLY the HTML - start with <!DOCTYPE html> and end with </html>
+8. Ensure text is readable (minimum 14px font size for body)
+9. Add proper alt text to all images
+10. The output should be ONLY the HTML - start with <!DOCTYPE html> and end with </html>
+
+CRITICAL PERSONALIZATION RULES:
+- DO NOT use any personalization merge tags like {{first_name}}, {{last_name}}, [first_name], %FIRST_NAME% etc.
+- DO NOT include "Hello [Name]" or "Dear [Name]" greetings - our system does not support personalization
+- Use generic greetings instead, such as: "Hello," or "Hi there," or jump straight into the content
+- Never assume the email system can replace any placeholder variables for names
 
 CRITICAL FONT REQUIREMENTS:
 ${googleFontsUrl ? `- You MUST include this Google Fonts import in the <head>:
