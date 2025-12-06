@@ -67,7 +67,6 @@ export function CampaignDetail({ campaign, onBack }: CampaignDetailProps) {
   // Collapsible section states
   const [toOpen, setToOpen] = useState(false);
   const [fromOpen, setFromOpen] = useState(false);
-  const [subjectOpen, setSubjectOpen] = useState(false);
   const [sendTimeOpen, setSendTimeOpen] = useState(false);
   
   // Edit dialogs
@@ -137,7 +136,6 @@ export function CampaignDetail({ campaign, onBack }: CampaignDetailProps) {
       id: campaign.id,
       subject,
     });
-    setSubjectOpen(false);
   };
 
   const handleUpdateName = async () => {
@@ -560,58 +558,40 @@ export function CampaignDetail({ campaign, onBack }: CampaignDetailProps) {
               </Card>
             </Collapsible>
 
-            {/* Subject */}
-            <Collapsible open={subjectOpen} onOpenChange={hasFrom ? setSubjectOpen : undefined}>
-              <Card className="overflow-hidden mt-2">
-                <CollapsibleTrigger asChild>
-                  <div className="flex items-start justify-between p-5 cursor-pointer hover:bg-muted/30 transition-colors">
-                    <div className="flex gap-4">
-                      <div className="mt-0.5">
-                        {hasSubject ? (
-                          <div className="h-6 w-6 rounded-full bg-primary flex items-center justify-center">
-                            <Check className="h-4 w-4 text-primary-foreground" />
-                          </div>
-                        ) : (
-                          <Circle className="h-6 w-6 text-muted-foreground" />
-                        )}
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-base">Subject</h3>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {campaign.subject || 'No subject set'}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Preview text: Add preview text
-                        </p>
-                      </div>
+          {/* Subject - Inline Edit */}
+            <Card className="overflow-hidden mt-2">
+              <div className="flex items-start gap-4 p-5">
+                <div className="mt-0.5">
+                  {hasSubject ? (
+                    <div className="h-6 w-6 rounded-full bg-primary flex items-center justify-center">
+                      <Check className="h-4 w-4 text-primary-foreground" />
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-muted-foreground">Edit subject</span>
-                      <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${subjectOpen ? 'rotate-180' : ''}`} />
-                    </div>
-                  </div>
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                  <div className="px-5 pb-5 pt-0 border-t">
-                    <div className="space-y-4 py-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="subject-line">Subject Line</Label>
-                        <Input
-                          id="subject-line"
-                          value={subject}
-                          onChange={(e) => setSubject(e.target.value)}
-                          placeholder="Your email subject"
-                        />
-                      </div>
-                    </div>
-                    <Button size="sm" onClick={handleUpdateSubject} disabled={updateCampaign.isPending}>
-                      {updateCampaign.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                      Save
-                    </Button>
-                  </div>
-                </CollapsibleContent>
-              </Card>
-            </Collapsible>
+                  ) : (
+                    <Circle className="h-6 w-6 text-muted-foreground" />
+                  )}
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-base mb-2">Subject</h3>
+                  <Input
+                    value={subject}
+                    onChange={(e) => setSubject(e.target.value)}
+                    placeholder="Enter your email subject"
+                    className="max-w-lg"
+                    onBlur={() => {
+                      if (subject !== campaign.subject) {
+                        handleUpdateSubject();
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleUpdateSubject();
+                      }
+                    }}
+                  />
+                </div>
+              </div>
+            </Card>
 
             {/* Send Time */}
             <Collapsible open={sendTimeOpen} onOpenChange={hasFrom ? setSendTimeOpen : undefined}>
