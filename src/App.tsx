@@ -11,6 +11,7 @@ import Dashboard from "./pages/Dashboard";
 import Contacts from "./pages/Contacts";
 import Campaigns from "./pages/Campaigns";
 import Templates from "./pages/Templates";
+import Imprints from "./pages/Imprints";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
@@ -61,6 +62,16 @@ const App = () => (
                 <ProtectedRoute>
                   <DashboardLayout>
                     <Templates />
+                  </DashboardLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/imprints"
+              element={
+                <ProtectedRoute>
+                  <DashboardLayout>
+                    <Imprints />
                   </DashboardLayout>
                 </ProtectedRoute>
               }
