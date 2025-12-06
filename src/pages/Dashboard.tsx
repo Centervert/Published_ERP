@@ -85,28 +85,28 @@ export default function Dashboard() {
           <h2 className="text-base font-medium text-foreground">Quick actions</h2>
           <Info className="h-4 w-4 text-muted-foreground" />
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <Link to="/campaigns">
             <Card className="hover:border-primary/50 transition-colors cursor-pointer group">
-              <CardContent className="flex items-center justify-center gap-3 py-6">
-                <Mail className="h-5 w-5 text-primary group-hover:scale-110 transition-transform" />
-                <span className="font-medium text-primary">Create email</span>
+              <CardContent className="flex items-center justify-center gap-2 py-3 px-4">
+                <Mail className="h-4 w-4 text-primary group-hover:scale-110 transition-transform" />
+                <span className="text-sm font-medium text-primary">Create email</span>
               </CardContent>
             </Card>
           </Link>
           <Link to="/contacts">
             <Card className="hover:border-primary/50 transition-colors cursor-pointer group">
-              <CardContent className="flex items-center justify-center gap-3 py-6">
-                <Users className="h-5 w-5 text-primary group-hover:scale-110 transition-transform" />
-                <span className="font-medium text-primary">Import contacts</span>
+              <CardContent className="flex items-center justify-center gap-2 py-3 px-4">
+                <Users className="h-4 w-4 text-primary group-hover:scale-110 transition-transform" />
+                <span className="text-sm font-medium text-primary">Import contacts</span>
               </CardContent>
             </Card>
           </Link>
           <Link to="/templates">
             <Card className="hover:border-primary/50 transition-colors cursor-pointer group">
-              <CardContent className="flex items-center justify-center gap-3 py-6">
-                <FileText className="h-5 w-5 text-primary group-hover:scale-110 transition-transform" />
-                <span className="font-medium text-primary">Create a template</span>
+              <CardContent className="flex items-center justify-center gap-2 py-3 px-4">
+                <FileText className="h-4 w-4 text-primary group-hover:scale-110 transition-transform" />
+                <span className="text-sm font-medium text-primary">Create a template</span>
               </CardContent>
             </Card>
           </Link>
