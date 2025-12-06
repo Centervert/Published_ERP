@@ -102,10 +102,15 @@ export default function Campaigns() {
       return a.name.localeCompare(b.name);
     });
 
-  if (viewingCampaign) {
+  // Get the latest campaign data from the query for the viewing campaign
+  const currentCampaign = viewingCampaign 
+    ? campaigns.find(c => c.id === viewingCampaign.id) || viewingCampaign
+    : null;
+
+  if (currentCampaign) {
     return (
       <CampaignDetail
-        campaign={viewingCampaign}
+        campaign={currentCampaign}
         onBack={() => setViewingCampaign(null)}
       />
     );
