@@ -1,30 +1,41 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { EmailPromptForm, EmailPromptData } from './EmailPromptForm';
 import { EmailChat, ChatMessage } from './EmailChat';
 import { EmailPreview } from './EmailPreview';
+import { BlockEditor } from './BlockEditor';
 import { useToast } from '@/hooks/use-toast';
-import { X, Check } from 'lucide-react';
+import { X, Check, MessageSquare, MousePointer } from 'lucide-react';
 import { Imprint } from '@/hooks/useImprints';
 import { supabase } from '@/integrations/supabase/client';
+import type { EmailBlock } from '@/types/email-blocks';
+import { renderBlocksToPreviewHtml } from '@/lib/block-renderer';
+import { aiBlocksToEmailBlocks } from '@/lib/block-utils';
 
 interface EmailBuilderProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   imprint: Imprint | null;
   initialHtml?: string;
-  onSave: (html: string) => void;
+  initialBlocks?: EmailBlock[];
+  onSave: (html: string, blocks: EmailBlock[]) => void;
 }
+
+type EditorMode = 'chat' | 'visual';
 
 export function EmailBuilder({ 
   open, 
   onOpenChange, 
   imprint, 
   initialHtml,
+  initialBlocks,
   onSave 
 }: EmailBuilderProps) {
   const { toast } = useToast();
+  const [mode, setMode] = useState<EditorMode>('chat');
+  const [blocks, setBlocks] = useState<EmailBlock[]>(initialBlocks || []);
   const [html, setHtml] = useState(initialHtml || '');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -34,7 +45,27 @@ export function EmailBuilder({
   const [hasGenerated, setHasGenerated] = useState(false);
   const [lastPromptData, setLastPromptData] = useState<EmailPromptData | null>(null);
 
-  const streamResponse = useCallback(async (body: object) => {
+  // Update HTML preview when blocks change
+  useEffect(() => {
+    if (blocks.length > 0 && imprint) {
+      const previewHtml = renderBlocksToPreviewHtml(blocks, {
+        imprint: {
+          primaryColor: imprint.primary_color || undefined,
+          secondaryColor: imprint.secondary_color || undefined,
+          accentColor: imprint.accent_color || undefined,
+          backgroundColor: imprint.background_color || undefined,
+          textColor: imprint.text_color || undefined,
+          headingFont: imprint.heading_font || undefined,
+          bodyFont: imprint.body_font || undefined,
+          logoUrl: imprint.logo_url || undefined,
+          websiteUrl: imprint.website_url || undefined,
+        },
+      });
+      setHtml(previewHtml);
+    }
+  }, [blocks, imprint]);
+
+  const streamBlocksResponse = useCallback(async (body: object) => {
     const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-email`;
     
     const resp = await fetch(CHAT_URL, {
@@ -56,7 +87,7 @@ export function EmailBuilder({
     const reader = resp.body.getReader();
     const decoder = new TextDecoder();
     let textBuffer = "";
-    let fullHtml = "";
+    let fullJson = "";
     let streamDone = false;
 
     while (!streamDone) {
@@ -83,9 +114,7 @@ export function EmailBuilder({
           const parsed = JSON.parse(jsonStr);
           const content = parsed.choices?.[0]?.delta?.content as string | undefined;
           if (content) {
-            fullHtml += content;
-            // Update preview in real-time
-            setHtml(fullHtml);
+            fullJson += content;
           }
         } catch {
           textBuffer = line + "\n" + textBuffer;
@@ -107,15 +136,40 @@ export function EmailBuilder({
           const parsed = JSON.parse(jsonStr);
           const content = parsed.choices?.[0]?.delta?.content as string | undefined;
           if (content) {
-            fullHtml += content;
-            setHtml(fullHtml);
+            fullJson += content;
           }
         } catch { /* ignore */ }
       }
     }
 
-    return fullHtml;
+    return fullJson;
   }, []);
+
+  const parseBlocksFromAI = (jsonString: string): EmailBlock[] => {
+    try {
+      // Clean up the response - remove markdown code blocks if present
+      let cleanJson = jsonString.trim();
+      if (cleanJson.startsWith('```json')) {
+        cleanJson = cleanJson.slice(7);
+      }
+      if (cleanJson.startsWith('```')) {
+        cleanJson = cleanJson.slice(3);
+      }
+      if (cleanJson.endsWith('```')) {
+        cleanJson = cleanJson.slice(0, -3);
+      }
+      cleanJson = cleanJson.trim();
+
+      const parsed = JSON.parse(cleanJson);
+      if (parsed.blocks && Array.isArray(parsed.blocks)) {
+        return aiBlocksToEmailBlocks(parsed.blocks);
+      }
+      return [];
+    } catch (e) {
+      console.error('Failed to parse blocks from AI:', e, jsonString);
+      return [];
+    }
+  };
 
   const handleGenerateImage = async (prompt: string) => {
     const userMsgId = crypto.randomUUID();
@@ -219,7 +273,7 @@ export function EmailBuilder({
   };
 
   const handleInsertImage = (imageUrl: string) => {
-    if (!html) {
+    if (blocks.length === 0) {
       toast({
         title: "No email content",
         description: "Generate an email first, then insert images.",
@@ -228,32 +282,21 @@ export function EmailBuilder({
       return;
     }
 
-    // Insert image after the logo/header section or at the beginning of body
-    const imgTag = `<tr><td align="center" style="padding: 20px 0;"><img src="${imageUrl}" alt="Email hero image" style="max-width: 100%; height: auto; display: block; border-radius: 8px;" /></td></tr>`;
+    // Add image block after header or at the beginning
+    const headerIndex = blocks.findIndex(b => b.type === 'header');
+    const insertIndex = headerIndex !== -1 ? headerIndex + 1 : 0;
     
-    let newHtml = html;
+    const newBlocks = [...blocks];
+    newBlocks.splice(insertIndex, 0, {
+      id: `block_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      type: 'image',
+      src: imageUrl,
+      alt: 'Email image',
+      width: 'full',
+      align: 'center',
+    });
     
-    // Try to find a good insertion point after logo or at start of body
-    const bodyMatch = html.match(/<body[^>]*>/i);
-    const logoMatch = html.match(/<img[^>]*logo[^>]*>/i);
-    
-    if (logoMatch) {
-      // Insert after the row containing the logo
-      const logoIndex = html.indexOf(logoMatch[0]);
-      const nextTrClose = html.indexOf('</tr>', logoIndex);
-      if (nextTrClose !== -1) {
-        newHtml = html.slice(0, nextTrClose + 5) + imgTag + html.slice(nextTrClose + 5);
-      }
-    } else if (bodyMatch) {
-      // Insert after first <table> or <tbody>
-      const tbodyMatch = html.match(/<tbody[^>]*>/i);
-      if (tbodyMatch) {
-        const index = html.indexOf(tbodyMatch[0]) + tbodyMatch[0].length;
-        newHtml = html.slice(0, index) + imgTag + html.slice(index);
-      }
-    }
-    
-    setHtml(newHtml);
+    setBlocks(newBlocks);
     
     toast({
       title: "Image inserted",
@@ -274,10 +317,10 @@ export function EmailBuilder({
     setLastPromptData(data);
     setIsLoading(true);
     setIsStreaming(true);
-    setHtml('');
+    setBlocks([]);
 
     try {
-      const fullHtml = await streamResponse({
+      const fullJson = await streamBlocksResponse({
         imprint: {
           name: imprint.name,
           tagline: imprint.tagline,
@@ -299,7 +342,11 @@ export function EmailBuilder({
         keyPoints: data.keyPoints,
         callToAction: data.callToAction,
         tone: data.tone,
+        outputFormat: 'blocks',
       });
+
+      const newBlocks = parseBlocksFromAI(fullJson);
+      setBlocks(newBlocks);
 
       // Add initial messages to chat
       const userMsgId = crypto.randomUUID();
@@ -314,8 +361,7 @@ export function EmailBuilder({
         {
           id: assistantMsgId,
           role: 'assistant',
-          content: fullHtml,
-          isHtml: true,
+          content: `I've created your email with ${newBlocks.length} blocks. You can switch to Visual Edit mode to drag, reorder, and customize each block.`,
         },
       ]);
       
@@ -346,16 +392,16 @@ export function EmailBuilder({
       // Build conversation history
       const conversationHistory = messages.map(m => ({
         role: m.role,
-        content: m.isHtml ? `[Previous email HTML was generated]` : m.isImage ? `[Image was generated: ${m.imageUrl}]` : m.content,
+        content: m.isImage ? `[Image was generated: ${m.imageUrl}]` : m.content,
       }));
 
-      // Add current HTML as context
+      // Add current blocks as context
       conversationHistory.push({
         role: 'assistant',
-        content: `Here is the current email HTML:\n${html}`,
+        content: `Current email blocks: ${JSON.stringify({ blocks })}`,
       });
 
-      const fullHtml = await streamResponse({
+      const fullJson = await streamBlocksResponse({
         imprint: {
           name: imprint.name,
           tagline: imprint.tagline,
@@ -379,10 +425,20 @@ export function EmailBuilder({
         tone: lastPromptData.tone,
         conversationHistory,
         followUpMessage: message,
+        outputFormat: 'blocks',
       });
 
+      const newBlocks = parseBlocksFromAI(fullJson);
+      if (newBlocks.length > 0) {
+        setBlocks(newBlocks);
+      }
+
       const assistantMsgId = crypto.randomUUID();
-      setMessages(prev => [...prev, { id: assistantMsgId, role: 'assistant', content: fullHtml, isHtml: true }]);
+      setMessages(prev => [...prev, { 
+        id: assistantMsgId, 
+        role: 'assistant', 
+        content: `Updated! The email now has ${newBlocks.length} blocks.` 
+      }]);
     } catch (error) {
       console.error('Error:', error);
       toast({
@@ -400,14 +456,19 @@ export function EmailBuilder({
     if (lastPromptData) {
       setMessages([]);
       setHasGenerated(false);
+      setBlocks([]);
       setHtml('');
       handleInitialSubmit(lastPromptData);
     }
   };
 
+  const handleBlocksChange = (newBlocks: EmailBlock[]) => {
+    setBlocks(newBlocks);
+  };
+
   const handleSave = () => {
-    if (html) {
-      onSave(html);
+    if (blocks.length > 0 || html) {
+      onSave(html, blocks);
       onOpenChange(false);
       toast({
         title: "Design saved",
@@ -422,8 +483,10 @@ export function EmailBuilder({
     setTimeout(() => {
       setMessages([]);
       setHasGenerated(false);
+      setBlocks(initialBlocks || []);
       setHtml(initialHtml || '');
       setLastPromptData(null);
+      setMode('chat');
     }, 300);
   };
 
@@ -451,43 +514,71 @@ export function EmailBuilder({
               )}
             </div>
           </div>
-          <Button onClick={handleSave} disabled={!html}>
+          
+          {/* Mode Toggle */}
+          {hasGenerated && (
+            <Tabs value={mode} onValueChange={(v) => setMode(v as EditorMode)} className="mx-4">
+              <TabsList>
+                <TabsTrigger value="chat" className="gap-2">
+                  <MessageSquare className="h-4 w-4" />
+                  AI Chat
+                </TabsTrigger>
+                <TabsTrigger value="visual" className="gap-2">
+                  <MousePointer className="h-4 w-4" />
+                  Visual Edit
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          )}
+
+          <Button onClick={handleSave} disabled={blocks.length === 0 && !html}>
             <Check className="mr-2 h-4 w-4" />
             Use This Design
           </Button>
         </div>
 
-        {/* Main Content - Split View */}
+        {/* Main Content */}
         <div className="flex-1 flex overflow-hidden">
-          {/* Left Panel - Chat/Form */}
-          <div className="w-[400px] border-r flex flex-col overflow-hidden">
-            {!hasGenerated ? (
-              <div className="overflow-auto">
-                <EmailPromptForm 
-                  onSubmit={handleInitialSubmit} 
-                  isLoading={isLoading} 
-                />
+          {mode === 'chat' ? (
+            <>
+              {/* Left Panel - Chat/Form */}
+              <div className="w-[400px] border-r flex flex-col overflow-hidden">
+                {!hasGenerated ? (
+                  <div className="overflow-auto">
+                    <EmailPromptForm 
+                      onSubmit={handleInitialSubmit} 
+                      isLoading={isLoading} 
+                    />
+                  </div>
+                ) : (
+                  <EmailChat
+                    messages={messages}
+                    onSendMessage={handleChatMessage}
+                    onRegenerate={handleRegenerate}
+                    onGenerateImage={handleGenerateImage}
+                    onInsertImage={handleInsertImage}
+                    onUploadImage={handleUploadImage}
+                    isLoading={isLoading}
+                    isStreaming={isStreaming}
+                    isGeneratingImage={isGeneratingImage}
+                    isUploadingImage={isUploadingImage}
+                  />
+                )}
               </div>
-            ) : (
-              <EmailChat
-                messages={messages}
-                onSendMessage={handleChatMessage}
-                onRegenerate={handleRegenerate}
-                onGenerateImage={handleGenerateImage}
-                onInsertImage={handleInsertImage}
-                onUploadImage={handleUploadImage}
-                isLoading={isLoading}
-                isStreaming={isStreaming}
-                isGeneratingImage={isGeneratingImage}
-                isUploadingImage={isUploadingImage}
-              />
-            )}
-          </div>
 
-          {/* Right Panel - Preview */}
-          <div className="flex-1 relative overflow-hidden">
-            <EmailPreview html={html} isStreaming={isStreaming} />
-          </div>
+              {/* Right Panel - Preview */}
+              <div className="flex-1 relative overflow-hidden">
+                <EmailPreview html={html} isStreaming={isStreaming} />
+              </div>
+            </>
+          ) : (
+            /* Visual Editor Mode */
+            <BlockEditor
+              blocks={blocks}
+              onChange={handleBlocksChange}
+              className="flex-1"
+            />
+          )}
         </div>
       </SheetContent>
     </Sheet>

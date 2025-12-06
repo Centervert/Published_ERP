@@ -2,6 +2,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import type { EmailBlock } from '@/types/email-blocks';
+import type { Json } from '@/integrations/supabase/types';
 
 export interface Campaign {
   id: string;
@@ -12,6 +14,7 @@ export interface Campaign {
   reply_to_email: string | null;
   template_id: string | null;
   html_content: string;
+  blocks_json: EmailBlock[] | null;
   status: 'draft' | 'scheduled' | 'sending' | 'sent' | 'failed';
   scheduled_at: string | null;
   sent_at: string | null;
@@ -44,7 +47,7 @@ export function useCampaigns() {
         .order('created_at', { ascending: false });
       
       if (error) throw error;
-      return data as Campaign[];
+      return data as unknown as Campaign[];
     },
   });
 
@@ -56,19 +59,21 @@ export function useCampaigns() {
       from_email: string;
       reply_to_email?: string;
       html_content: string;
+      blocks_json?: EmailBlock[];
       template_id?: string;
     }) => {
       const { data, error } = await supabase
         .from('campaigns')
         .insert({
           ...campaign,
+          blocks_json: campaign.blocks_json as unknown as Json,
           created_by: user?.id,
         })
         .select()
         .single();
       
       if (error) throw error;
-      return data as Campaign;
+      return data as unknown as Campaign;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['campaigns'] });
@@ -80,16 +85,21 @@ export function useCampaigns() {
   });
 
   const updateCampaign = useMutation({
-    mutationFn: async ({ id, ...updates }: Partial<Campaign> & { id: string }) => {
+    mutationFn: async ({ id, blocks_json, ...updates }: Partial<Campaign> & { id: string }) => {
+      const updateData = {
+        ...updates,
+        ...(blocks_json !== undefined && { blocks_json: blocks_json as unknown as Json }),
+      };
+      
       const { data, error } = await supabase
         .from('campaigns')
-        .update(updates)
+        .update(updateData)
         .eq('id', id)
         .select()
         .single();
       
       if (error) throw error;
-      return data as Campaign;
+      return data as unknown as Campaign;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['campaigns'] });

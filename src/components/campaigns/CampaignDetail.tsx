@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Campaign, useCampaignStats, useCampaigns } from '@/hooks/useCampaigns';
 import { useLists } from '@/hooks/useContacts';
+import type { EmailBlock } from '@/types/email-blocks';
 import { useImprints } from '@/hooks/useImprints';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -101,7 +102,7 @@ export function CampaignDetail({ campaign, onBack }: CampaignDetailProps) {
   const hasRecipients = true; // Always has recipients (all contacts or specific lists)
   const hasFrom = !!fromName && !!fromEmail;
   const hasSubject = !!campaign.subject || !!subject;
-  const hasContent = !!campaign.html_content;
+  const hasContent = !!campaign.html_content || (campaign.blocks_json && campaign.blocks_json.length > 0);
   const isReadyToSend = hasRecipients && hasFrom && hasSubject && hasContent;
 
   // Use human opens for accurate rate calculation
@@ -147,10 +148,11 @@ export function CampaignDetail({ campaign, onBack }: CampaignDetailProps) {
     setIsEditingName(false);
   };
 
-  const handleSaveContent = async (html: string) => {
+  const handleSaveContent = async (html: string, blocks: EmailBlock[]) => {
     await updateCampaign.mutateAsync({
       id: campaign.id,
       html_content: html,
+      blocks_json: blocks.length > 0 ? blocks : undefined,
     });
   };
 
@@ -720,6 +722,7 @@ export function CampaignDetail({ campaign, onBack }: CampaignDetailProps) {
         onOpenChange={setEmailBuilderOpen}
         imprint={imprints.find(i => i.id === selectedImprintId) || null}
         initialHtml={campaign.html_content}
+        initialBlocks={campaign.blocks_json || undefined}
         onSave={handleSaveContent}
       />
 
