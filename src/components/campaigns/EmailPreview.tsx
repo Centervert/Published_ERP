@@ -50,18 +50,31 @@ export function EmailPreview({ html, isStreaming }: EmailPreviewProps) {
                 </div>
               </div>
               
-              {/* Email Content */}
-              <iframe
-                srcDoc={html}
-                className={`w-full border-0 transition-opacity ${
-                  isStreaming ? 'opacity-70' : 'opacity-100'
-                }`}
-                style={{ 
-                  height: view === 'desktop' ? '600px' : '700px',
-                  pointerEvents: 'none' 
-                }}
-                title="Email Preview"
-              />
+              {/* Email Content - Scrollable */}
+              <div 
+                className="overflow-auto"
+                style={{ maxHeight: view === 'desktop' ? '600px' : '700px' }}
+              >
+                <iframe
+                  srcDoc={html}
+                  className={`w-full border-0 transition-opacity ${
+                    isStreaming ? 'opacity-70' : 'opacity-100'
+                  }`}
+                  style={{ 
+                    minHeight: view === 'desktop' ? '600px' : '700px',
+                    height: 'auto'
+                  }}
+                  title="Email Preview"
+                  onLoad={(e) => {
+                    // Auto-resize iframe to content height
+                    const iframe = e.target as HTMLIFrameElement;
+                    if (iframe.contentDocument) {
+                      const height = iframe.contentDocument.body.scrollHeight;
+                      iframe.style.height = `${Math.max(height, view === 'desktop' ? 600 : 700)}px`;
+                    }
+                  }}
+                />
+              </div>
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center h-[500px] text-center">

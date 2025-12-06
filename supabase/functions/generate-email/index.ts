@@ -55,6 +55,13 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
+    // Build Google Fonts URL if custom fonts are specified
+    const headingFont = imprint.heading_font || 'Arial';
+    const bodyFont = imprint.body_font || 'Arial';
+    const googleFontsUrl = (headingFont !== 'Arial' || bodyFont !== 'Arial') 
+      ? `https://fonts.googleapis.com/css2?family=${encodeURIComponent(headingFont).replace(/%20/g, '+')}:wght@400;600;700&family=${encodeURIComponent(bodyFont).replace(/%20/g, '+')}:wght@400;600&display=swap`
+      : null;
+
     // Build system prompt with imprint context
     const systemPrompt = `You are an expert email designer and copywriter. You create beautiful, responsive HTML emails.
 
@@ -71,9 +78,10 @@ ${imprint.accent_color ? `- Accent: ${imprint.accent_color}` : ''}
 ${imprint.background_color ? `- Background: ${imprint.background_color}` : '- Background: #ffffff'}
 ${imprint.text_color ? `- Text: ${imprint.text_color}` : '- Text: #1f2937'}
 
-TYPOGRAPHY:
-${imprint.heading_font ? `- Headings: ${imprint.heading_font}` : '- Headings: Arial, sans-serif'}
-${imprint.body_font ? `- Body: ${imprint.body_font}` : '- Body: Arial, sans-serif'}
+TYPOGRAPHY - CRITICAL:
+- Heading Font: "${headingFont}" - USE THIS EXACT FONT for all headings (h1, h2, h3)
+- Body Font: "${bodyFont}" - USE THIS EXACT FONT for all body text and paragraphs
+${googleFontsUrl ? `- Google Fonts URL to include: ${googleFontsUrl}` : ''}
 
 ASSETS:
 ${imprint.logo_url ? `- Logo URL: ${imprint.logo_url}` : ''}
@@ -91,7 +99,15 @@ REQUIREMENTS:
 8. Include personalization placeholders: {{first_name}}, {{last_name}}
 9. Ensure text is readable (minimum 14px font size for body)
 10. Add proper alt text to all images
-11. The output should be ONLY the HTML - start with <!DOCTYPE html> and end with </html>`;
+11. The output should be ONLY the HTML - start with <!DOCTYPE html> and end with </html>
+
+CRITICAL FONT REQUIREMENTS:
+${googleFontsUrl ? `- You MUST include this Google Fonts import in the <head>:
+  <link href="${googleFontsUrl}" rel="stylesheet">` : ''}
+- All headings (h1, h2, h3, titles) MUST use: font-family: '${headingFont}', sans-serif;
+- All body text and paragraphs MUST use: font-family: '${bodyFont}', sans-serif;
+- Apply fonts using inline styles on EVERY text element - do not rely on inheritance in emails`;
+
 
     // Build messages array
     const messages: Array<{ role: string; content: string }> = [
