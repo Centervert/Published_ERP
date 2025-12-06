@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import {
   Dialog,
   DialogContent,
@@ -24,7 +24,16 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Plus, Send, Trash2, Loader2, MoreHorizontal } from 'lucide-react';
+import { 
+  Plus, 
+  Send, 
+  Trash2, 
+  Loader2, 
+  Search, 
+  Mail, 
+  ChevronDown,
+  BarChart3
+} from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -35,7 +44,7 @@ import { format } from 'date-fns';
 import { CampaignDetail } from '@/components/campaigns/CampaignDetail';
 
 const statusColors: Record<string, string> = {
-  draft: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300',
+  draft: 'bg-muted text-muted-foreground',
   scheduled: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
   sending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
   sent: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
@@ -51,7 +60,9 @@ export default function Campaigns() {
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
   const [viewingCampaign, setViewingCampaign] = useState<Campaign | null>(null);
   const [selectedListIds, setSelectedListIds] = useState<string[]>([]);
-  const [statusFilter, setStatusFilter] = useState<string>('active');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'name'>('newest');
 
   // Form state
   const [name, setName] = useState('');
@@ -122,6 +133,18 @@ export default function Campaigns() {
     setSendDialogOpen(true);
   };
 
+  const filteredCampaigns = campaigns
+    .filter(campaign => {
+      if (statusFilter !== 'all' && campaign.status !== statusFilter) return false;
+      if (searchQuery && !campaign.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+      return true;
+    })
+    .sort((a, b) => {
+      if (sortBy === 'newest') return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+      if (sortBy === 'oldest') return new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime();
+      return a.name.localeCompare(b.name);
+    });
+
   if (viewingCampaign) {
     return (
       <CampaignDetail
@@ -132,90 +155,197 @@ export default function Campaigns() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-6xl">
+      {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Campaigns</h1>
-          <p className="text-muted-foreground">
-            Create and send email campaigns
-          </p>
+        <h1 className="text-2xl font-semibold tracking-tight">All campaigns</h1>
+        <div className="flex items-center gap-3">
+          <Button variant="outline" size="sm">
+            <BarChart3 className="mr-2 h-4 w-4" />
+            View analytics
+          </Button>
+          <Button onClick={() => setCreateDialogOpen(true)} size="sm">
+            <Plus className="mr-2 h-4 w-4" />
+            Create
+          </Button>
         </div>
-        <Button onClick={() => setCreateDialogOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          New Campaign
-        </Button>
       </div>
 
-      <div className="flex items-center gap-2">
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Filter by status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Campaigns</SelectItem>
-            <SelectItem value="active">Active (Draft/Sending)</SelectItem>
-            <SelectItem value="draft">Draft Only</SelectItem>
-            <SelectItem value="sent">Sent Only</SelectItem>
-            <SelectItem value="failed">Failed Only</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+      {/* Search and Filters */}
+      <Card>
+        <CardContent className="pt-6">
+          {/* Search Bar */}
+          <div className="relative mb-4">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search campaigns"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 bg-background"
+            />
+          </div>
 
+          {/* Filters Row */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Status:</span>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-8 text-primary">
+                      {statusFilter === 'all' ? 'All' : statusFilter}
+                      <ChevronDown className="ml-1 h-3 w-3" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start">
+                    <DropdownMenuItem onClick={() => setStatusFilter('all')}>All</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setStatusFilter('draft')}>Draft</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setStatusFilter('sent')}>Sent</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setStatusFilter('sending')}>Sending</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setStatusFilter('failed')}>Failed</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+              {statusFilter !== 'all' && (
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-8 text-primary"
+                  onClick={() => setStatusFilter('all')}
+                >
+                  Clear
+                </Button>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">Sort:</span>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="h-8 text-primary">
+                    {sortBy === 'newest' ? 'Newest' : sortBy === 'oldest' ? 'Oldest' : 'Name'}
+                    <ChevronDown className="ml-1 h-3 w-3" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => setSortBy('newest')}>Newest</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setSortBy('oldest')}>Oldest</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setSortBy('name')}>Name</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Campaign List */}
       {isLoading ? (
         <div className="flex items-center justify-center h-64">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
-      ) : campaigns.length === 0 ? (
+      ) : filteredCampaigns.length === 0 ? (
         <Card>
-          <CardContent className="flex flex-col items-center justify-center h-64">
-            <Send className="h-12 w-12 text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">No campaigns yet</p>
-            <Button className="mt-4" onClick={() => setCreateDialogOpen(true)}>
-              Create your first campaign
-            </Button>
+          <CardContent className="flex flex-col items-center justify-center py-16">
+            <Send className="h-12 w-12 text-muted-foreground/50 mb-4" />
+            <p className="text-muted-foreground mb-4">
+              {searchQuery || statusFilter !== 'all' ? 'No campaigns match your filters' : 'No campaigns yet'}
+            </p>
+            {!searchQuery && statusFilter === 'all' && (
+              <Button onClick={() => setCreateDialogOpen(true)}>
+                Create your first campaign
+              </Button>
+            )}
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4">
-          {campaigns
-            .filter(campaign => {
-              if (statusFilter === 'all') return true;
-              if (statusFilter === 'active') return campaign.status === 'draft' || campaign.status === 'sending';
-              return campaign.status === statusFilter;
-            })
-            .map((campaign) => (
-            <Card 
-              key={campaign.id} 
-              className="hover:shadow-md transition-shadow cursor-pointer"
-              onClick={() => setViewingCampaign(campaign)}
-            >
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <CardTitle className="text-lg">{campaign.name}</CardTitle>
-                      <Badge variant="secondary" className={statusColors[campaign.status]}>
-                        {campaign.status}
-                      </Badge>
-                    </div>
-                    <CardDescription>{campaign.subject}</CardDescription>
+        <Card>
+          <CardContent className="p-0">
+            {/* Table Header */}
+            <div className="grid grid-cols-12 gap-4 px-6 py-3 border-b text-sm text-muted-foreground">
+              <div className="col-span-5">Name</div>
+              <div className="col-span-2">Status</div>
+              <div className="col-span-2">Recipients</div>
+              <div className="col-span-2">Performance</div>
+              <div className="col-span-1 text-right">Actions</div>
+            </div>
+
+            {/* Campaign Rows */}
+            {filteredCampaigns.map((campaign) => (
+              <div
+                key={campaign.id}
+                className="grid grid-cols-12 gap-4 px-6 py-4 border-b last:border-0 hover:bg-muted/50 transition-colors cursor-pointer items-center"
+                onClick={() => setViewingCampaign(campaign)}
+              >
+                {/* Name Column */}
+                <div className="col-span-5">
+                  <p className="font-medium text-primary hover:underline">
+                    {campaign.name}
+                  </p>
+                  <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
+                    <Mail className="h-3 w-3" />
+                    <span>Regular email</span>
                   </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Last edited {campaign.updated_at 
+                      ? format(new Date(campaign.updated_at), 'MMM d, yyyy h:mm a')
+                      : format(new Date(campaign.created_at || ''), 'MMM d, yyyy h:mm a')
+                    }
+                  </p>
+                </div>
+
+                {/* Status Column */}
+                <div className="col-span-2">
+                  <Badge variant="secondary" className={statusColors[campaign.status]}>
+                    {campaign.status === 'sent' ? 'Published' : campaign.status}
+                  </Badge>
+                  {campaign.sent_at && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {format(new Date(campaign.sent_at), 'MMM d, h:mm a')}
+                    </p>
+                  )}
+                </div>
+
+                {/* Recipients Column */}
+                <div className="col-span-2">
+                  <p className="text-sm">
+                    {campaign.total_recipients > 0 
+                      ? `${campaign.total_recipients} contacts`
+                      : '—'
+                    }
+                  </p>
+                </div>
+
+                {/* Performance Column */}
+                <div className="col-span-2">
+                  {campaign.status === 'sent' ? (
+                    <p className="text-sm text-muted-foreground">View report</p>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">—</p>
+                  )}
+                </div>
+
+                {/* Actions Column */}
+                <div className="col-span-1 flex justify-end" onClick={(e) => e.stopPropagation()}>
                   <DropdownMenu>
-                    <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                      <Button variant="ghost" size="icon">
-                        <MoreHorizontal className="h-4 w-4" />
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm" className="h-8">
+                        {campaign.status === 'draft' ? 'Edit' : 'View'}
+                        <ChevronDown className="ml-1 h-3 w-3" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => setViewingCampaign(campaign)}>
+                        View Details
+                      </DropdownMenuItem>
                       {campaign.status === 'draft' && (
-                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openSendDialog(campaign); }}>
+                        <DropdownMenuItem onClick={() => openSendDialog(campaign)}>
                           <Send className="mr-2 h-4 w-4" />
                           Send Campaign
                         </DropdownMenuItem>
                       )}
                       <DropdownMenuItem
                         className="text-destructive"
-                        onClick={(e) => { e.stopPropagation(); handleDelete(campaign); }}
+                        onClick={() => handleDelete(campaign)}
                       >
                         <Trash2 className="mr-2 h-4 w-4" />
                         Delete
@@ -223,21 +353,10 @@ export default function Campaigns() {
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                  <span>From: {campaign.from_name} &lt;{campaign.from_email}&gt;</span>
-                  {campaign.sent_at && (
-                    <span>Sent: {format(new Date(campaign.sent_at), 'MMM d, yyyy h:mm a')}</span>
-                  )}
-                  {campaign.total_recipients > 0 && (
-                    <span>{campaign.total_recipients} recipients</span>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
       )}
 
       {/* Create Campaign Dialog */}
