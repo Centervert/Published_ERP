@@ -338,44 +338,40 @@ export function CampaignDetail({ campaign, onBack }: CampaignDetailProps) {
       {/* Header */}
       <div className="flex items-start justify-between mb-8">
         <div className="flex-1">
-          {/* Campaign Subject as Hero */}
-          <h1 className="text-3xl font-semibold tracking-tight mb-2">
-            {campaign.subject || 'Untitled Campaign'}
-          </h1>
+          {/* Campaign Name as Hero - Clickable to Edit */}
+          {isEditingName ? (
+            <div className="flex items-center gap-2 mb-2">
+              <Input
+                value={campaignName}
+                onChange={(e) => setCampaignName(e.target.value)}
+                className="text-3xl font-semibold h-12 px-2"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleUpdateName();
+                  if (e.key === 'Escape') {
+                    setCampaignName(campaign.name);
+                    setIsEditingName(false);
+                  }
+                }}
+                onBlur={handleUpdateName}
+              />
+            </div>
+          ) : (
+            <h1 
+              className="text-3xl font-semibold tracking-tight mb-2 cursor-pointer hover:text-primary/80 transition-colors"
+              onClick={() => setIsEditingName(true)}
+              title="Click to edit name"
+            >
+              {campaign.name || 'Untitled Campaign'}
+            </h1>
+          )}
           <div className="flex items-center gap-3">
             <Badge variant="secondary" className="bg-muted text-muted-foreground">
               Draft
             </Badge>
-            {isEditingName ? (
-              <div className="flex items-center gap-2">
-                <Input
-                  value={campaignName}
-                  onChange={(e) => setCampaignName(e.target.value)}
-                  className="h-7 w-48 text-sm"
-                  autoFocus
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') handleUpdateName();
-                    if (e.key === 'Escape') {
-                      setCampaignName(campaign.name);
-                      setIsEditingName(false);
-                    }
-                  }}
-                />
-                <Button size="sm" variant="ghost" className="h-7 px-2" onClick={handleUpdateName}>
-                  <Check className="h-3 w-3" />
-                </Button>
-              </div>
-            ) : (
-              <>
-                <span className="text-sm text-muted-foreground">{campaign.name}</span>
-                <button 
-                  className="text-sm text-primary hover:underline"
-                  onClick={() => setIsEditingName(true)}
-                >
-                  Edit name
-                </button>
-              </>
-            )}
+            <span className="text-sm text-muted-foreground">
+              {campaign.subject || 'No subject set'}
+            </span>
           </div>
         </div>
         <div className="flex items-center gap-3">
