@@ -29,3 +29,7 @@ verify_jwt = false
 # AI Email generation - requires auth
 [functions.generate-email]
 verify_jwt = true
+
+# AI Image generation - requires auth
+[functions.generate-image]
+verify_jwt = true

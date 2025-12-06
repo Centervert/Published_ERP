@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Send, Loader2, Sparkles, User, RotateCcw } from 'lucide-react';
+import { Send, Loader2, Sparkles, User, RotateCcw, Image as ImageIcon, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export interface ChatMessage {
@@ -10,22 +10,30 @@ export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
   isHtml?: boolean;
+  isImage?: boolean;
+  imageUrl?: string;
 }
 
 interface EmailChatProps {
   messages: ChatMessage[];
   onSendMessage: (message: string) => void;
   onRegenerate: () => void;
+  onGenerateImage?: (prompt: string) => void;
+  onInsertImage?: (imageUrl: string) => void;
   isLoading: boolean;
   isStreaming: boolean;
+  isGeneratingImage?: boolean;
 }
 
 export function EmailChat({ 
   messages, 
   onSendMessage, 
   onRegenerate,
+  onGenerateImage,
+  onInsertImage,
   isLoading, 
-  isStreaming 
+  isStreaming,
+  isGeneratingImage 
 }: EmailChatProps) {
   const [input, setInput] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -40,9 +48,17 @@ export function EmailChat({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || isLoading || isStreaming) return;
+    if (!input.trim() || isLoading || isStreaming || isGeneratingImage) return;
     
-    onSendMessage(input.trim());
+    // Check if this is an image generation request
+    const imageKeywords = ['generate image', 'create image', 'make image', 'generate a image', 'create a image', 'hero image', 'banner image', 'generate hero', 'create hero', 'make a hero', 'generate banner', 'create banner', 'make banner'];
+    const isImageRequest = imageKeywords.some(keyword => input.toLowerCase().includes(keyword));
+    
+    if (isImageRequest && onGenerateImage) {
+      onGenerateImage(input.trim());
+    } else {
+      onSendMessage(input.trim());
+    }
     setInput('');
   };
 
@@ -59,6 +75,11 @@ export function EmailChat({
     "Add more white space",
     "Make it more urgent",
     "Simplify the layout",
+  ];
+
+  const imageSuggestions = [
+    "Generate a hero image with books",
+    "Create a banner with abstract shapes",
   ];
 
   return (
@@ -81,13 +102,38 @@ export function EmailChat({
               )}
               <div
                 className={cn(
-                  "max-w-[80%] rounded-2xl px-4 py-2.5",
+                  "max-w-[80%] rounded-2xl",
                   message.role === 'user'
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted"
+                    ? "bg-primary text-primary-foreground px-4 py-2.5"
+                    : message.isImage 
+                      ? "bg-muted p-2"
+                      : "bg-muted px-4 py-2.5"
                 )}
               >
-                {message.isHtml ? (
+                {message.isImage && message.imageUrl ? (
+                  <div className="space-y-2">
+                    <img 
+                      src={message.imageUrl} 
+                      alt="Generated image" 
+                      className="rounded-lg max-w-full h-auto"
+                      style={{ maxHeight: '200px' }}
+                    />
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => onInsertImage?.(message.imageUrl!)}
+                        className="w-full"
+                      >
+                        <Plus className="h-3 w-3 mr-1" />
+                        Insert into Email
+                      </Button>
+                    </div>
+                    {message.content && (
+                      <p className="text-xs text-muted-foreground">{message.content}</p>
+                    )}
+                  </div>
+                ) : message.isHtml ? (
                   <p className="text-sm text-muted-foreground italic">
                     ✓ Email design updated
                   </p>
@@ -118,20 +164,46 @@ export function EmailChat({
               </div>
             </div>
           )}
+
+          {isGeneratingImage && (
+            <div className="flex gap-3 justify-start">
+              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                <ImageIcon className="h-4 w-4 text-primary" />
+              </div>
+              <div className="bg-muted rounded-2xl px-4 py-2.5">
+                <div className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span className="text-sm text-muted-foreground">
+                    Generating image...
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </ScrollArea>
 
       {/* Quick Suggestions */}
-      {messages.length > 0 && !isLoading && !isStreaming && (
+      {messages.length > 0 && !isLoading && !isStreaming && !isGeneratingImage && (
         <div className="px-4 py-2 border-t">
           <p className="text-xs text-muted-foreground mb-2">Quick suggestions:</p>
           <div className="flex flex-wrap gap-2">
-            {suggestions.slice(0, 3).map((suggestion) => (
+            {suggestions.slice(0, 2).map((suggestion) => (
               <button
                 key={suggestion}
                 onClick={() => onSendMessage(suggestion)}
                 className="text-xs px-3 py-1.5 rounded-full bg-muted hover:bg-muted/80 transition-colors"
               >
+                {suggestion}
+              </button>
+            ))}
+            {onGenerateImage && imageSuggestions.slice(0, 1).map((suggestion) => (
+              <button
+                key={suggestion}
+                onClick={() => onGenerateImage(suggestion)}
+                className="text-xs px-3 py-1.5 rounded-full bg-primary/10 hover:bg-primary/20 transition-colors flex items-center gap-1"
+              >
+                <ImageIcon className="h-3 w-3" />
                 {suggestion}
               </button>
             ))}
@@ -154,15 +226,15 @@ export function EmailChat({
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Ask for changes... (e.g., 'Make the button green')"
+            placeholder="Ask for changes or 'generate a hero image'..."
             className="min-h-[44px] max-h-[120px] resize-none"
             rows={1}
-            disabled={isLoading || isStreaming}
+            disabled={isLoading || isStreaming || isGeneratingImage}
           />
           <Button 
             type="submit" 
             size="icon" 
-            disabled={!input.trim() || isLoading || isStreaming}
+            disabled={!input.trim() || isLoading || isStreaming || isGeneratingImage}
           >
             <Send className="h-4 w-4" />
           </Button>
