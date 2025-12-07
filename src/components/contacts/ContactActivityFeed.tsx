@@ -34,6 +34,7 @@ interface ContactActivityFeedProps {
   contactId: string;
   contactEmail?: string;
   contactName?: string;
+  contactImprintId?: string | null;
   assignedAsc?: string | null;
   assignedAe?: string | null;
   assignedAscId?: string | null;
@@ -159,6 +160,7 @@ export function ContactActivityFeed({
   contactId,
   contactEmail = '',
   contactName = '',
+  contactImprintId,
   selectedTab = 'contact',
   onTabChange,
 }: ContactActivityFeedProps) {
@@ -204,6 +206,7 @@ export function ContactActivityFeed({
             contactId={contactId}
             contactEmail={contactEmail}
             contactName={contactName}
+            contactImprintId={contactImprintId}
           />
         </TabsContent>
 
