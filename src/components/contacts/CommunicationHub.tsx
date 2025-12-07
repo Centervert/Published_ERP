@@ -118,7 +118,9 @@ export function CommunicationHub({ contactId, contactEmail, contactName }: Commu
       <div className="flex-1 overflow-y-auto p-4">
         <CommunicationTimeline 
           communications={filteredCommunications} 
-          isLoading={isLoading} 
+          isLoading={isLoading}
+          contactEmail={contactEmail}
+          contactName={contactName}
         />
       </div>
 
