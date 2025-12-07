@@ -69,7 +69,7 @@ export function useContacts() {
 
   const createContact = useMutation({
     mutationFn: async (contact: {
-      email: string;
+      email?: string;
       first_name?: string;
       last_name?: string;
       phone?: string;
