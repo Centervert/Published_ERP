@@ -1,5 +1,12 @@
 import { useContactActivity } from '@/hooks/useContacts';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { 
   UserPlus, 
   Edit, 
@@ -11,14 +18,25 @@ import {
   Send,
   Clock,
   Loader2,
-  ArrowRight
+  ArrowRight,
+  Users
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
+
+interface TeamMember {
+  id: string;
+  full_name: string | null;
+  email: string;
+}
 
 interface ContactActivityFeedProps {
   contactId: string;
   assignedAsc?: string | null;
   assignedAe?: string | null;
+  assignedAscId?: string | null;
+  assignedAeId?: string | null;
+  teamMembers?: TeamMember[];
+  onAssignmentChange?: (field: 'assigned_asc' | 'assigned_ae', value: string | null) => void;
 }
 
 interface ActivityItem {
@@ -133,8 +151,24 @@ const renderFieldChanges = (metadata: any, type: string) => {
   return null;
 };
 
-export function ContactActivityFeed({ contactId, assignedAsc, assignedAe }: ContactActivityFeedProps) {
+export function ContactActivityFeed({ 
+  contactId, 
+  assignedAsc, 
+  assignedAe,
+  assignedAscId,
+  assignedAeId,
+  teamMembers = [],
+  onAssignmentChange 
+}: ContactActivityFeedProps) {
   const { activities, isLoading } = useContactActivity(contactId);
+
+  const handleAscChange = (value: string) => {
+    onAssignmentChange?.('assigned_asc', value === 'none' ? null : value);
+  };
+
+  const handleAeChange = (value: string) => {
+    onAssignmentChange?.('assigned_ae', value === 'none' ? null : value);
+  };
 
   return (
     <div className="h-full flex flex-col">
@@ -162,24 +196,60 @@ export function ContactActivityFeed({ contactId, assignedAsc, assignedAe }: Cont
             <div className="grid grid-cols-2 gap-4">
               {/* Assigned ASC */}
               <div className="border rounded-lg p-3">
-                <div className="flex flex-wrap items-baseline gap-x-1.5 mb-1">
+                <div className="flex flex-wrap items-baseline gap-x-1.5 mb-2">
                   <span className="text-sm font-medium text-foreground">Assigned ASC</span>
                   <span className="text-[11px] text-muted-foreground whitespace-nowrap">(Author Success Coach)</span>
                 </div>
-                <p className="text-sm">
-                  {assignedAsc ? assignedAsc : <span className="text-muted-foreground">Not assigned</span>}
-                </p>
+                <Select 
+                  value={assignedAscId || 'none'} 
+                  onValueChange={handleAscChange}
+                >
+                  <SelectTrigger className="h-9 bg-background">
+                    <SelectValue placeholder="Select team member">
+                      <div className="flex items-center gap-2">
+                        <Users className="h-4 w-4 text-muted-foreground" />
+                        <span>{assignedAsc || 'Not assigned'}</span>
+                      </div>
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover z-50">
+                    <SelectItem value="none">Not assigned</SelectItem>
+                    {teamMembers.map(member => (
+                      <SelectItem key={member.id} value={member.id}>
+                        {member.full_name || member.email}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* Assigned AE */}
               <div className="border rounded-lg p-3">
-                <div className="flex flex-wrap items-baseline gap-x-1.5 mb-1">
+                <div className="flex flex-wrap items-baseline gap-x-1.5 mb-2">
                   <span className="text-sm font-medium text-foreground">Assigned AE</span>
                   <span className="text-[11px] text-muted-foreground whitespace-nowrap">(Account Executive)</span>
                 </div>
-                <p className="text-sm">
-                  {assignedAe ? assignedAe : <span className="text-muted-foreground">Not assigned</span>}
-                </p>
+                <Select 
+                  value={assignedAeId || 'none'} 
+                  onValueChange={handleAeChange}
+                >
+                  <SelectTrigger className="h-9 bg-background">
+                    <SelectValue placeholder="Select team member">
+                      <div className="flex items-center gap-2">
+                        <Users className="h-4 w-4 text-muted-foreground" />
+                        <span>{assignedAe || 'Not assigned'}</span>
+                      </div>
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover z-50">
+                    <SelectItem value="none">Not assigned</SelectItem>
+                    {teamMembers.map(member => (
+                      <SelectItem key={member.id} value={member.id}>
+                        {member.full_name || member.email}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </TabsContent>
