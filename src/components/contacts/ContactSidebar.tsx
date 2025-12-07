@@ -328,10 +328,7 @@ export function ContactSidebar({ contact, onBack }: ContactSidebarProps) {
 
           {/* Email */}
           <div className="flex items-center group min-h-[28px]">
-            <div className="flex items-center gap-1.5 w-20 flex-shrink-0">
-              <Mail className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
-              <span className="text-xs text-muted-foreground">Email</span>
-            </div>
+            <span className="text-xs text-muted-foreground w-20 flex-shrink-0">Email</span>
             <div className="flex-1 flex items-center justify-end gap-1">
               {editingField === 'email' ? (
                 <Input
@@ -362,10 +359,7 @@ export function ContactSidebar({ contact, onBack }: ContactSidebarProps) {
 
           {/* Phone */}
           <div className="flex items-center group min-h-[28px]">
-            <div className="flex items-center gap-1.5 w-20 flex-shrink-0">
-              <Phone className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
-              <span className="text-xs text-muted-foreground">Phone</span>
-            </div>
+            <span className="text-xs text-muted-foreground w-20 flex-shrink-0">Phone</span>
             <div className="flex-1 text-right">
               {editingField === 'phone' ? (
                 <Input
@@ -389,10 +383,7 @@ export function ContactSidebar({ contact, onBack }: ContactSidebarProps) {
 
           {/* Address */}
           <div className="flex items-start group min-h-[28px]">
-            <div className="flex items-center gap-1.5 w-20 flex-shrink-0 pt-0.5">
-              <MapPin className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
-              <span className="text-xs text-muted-foreground">Address</span>
-            </div>
+            <span className="text-xs text-muted-foreground w-20 flex-shrink-0 pt-0.5">Address</span>
             <div className="flex-1 text-right">
               {editingField === 'address' ? (
                 <div className="text-left">
@@ -425,10 +416,7 @@ export function ContactSidebar({ contact, onBack }: ContactSidebarProps) {
 
           {/* Timezone */}
           <div className="flex items-center group min-h-[28px]">
-            <div className="flex items-center gap-1.5 w-20 flex-shrink-0">
-              <Clock className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
-              <span className="text-xs text-muted-foreground">Timezone</span>
-            </div>
+            <span className="text-xs text-muted-foreground w-20 flex-shrink-0">Timezone</span>
             <span 
               onClick={openTimezoneDialog}
               className="text-sm hover:text-primary transition-colors text-right flex-1 cursor-pointer"
