@@ -92,9 +92,9 @@ export function ContactSidebar({ contact, onBack }: ContactSidebarProps) {
     },
   });
   
-  const [editOpen, setEditOpen] = useState(false);
   const [linksOpen, setLinksOpen] = useState(false);
   const [assignmentOpen, setAssignmentOpen] = useState(false);
+  const [editingField, setEditingField] = useState<string | null>(null);
   const [timezoneDialogOpen, setTimezoneDialogOpen] = useState(false);
   const [timezoneInput, setTimezoneInput] = useState('');
   
@@ -294,50 +294,154 @@ export function ContactSidebar({ contact, onBack }: ContactSidebarProps) {
           </Button>
         </div>
 
-        {/* Contact Overview - Always Visible */}
+        {/* Contact Info - Inline Editable */}
         <div className="space-y-3 pt-3 border-t">
+          {/* Name */}
+          <div className="flex items-start gap-2 group">
+            <div className="h-4 w-4 mt-0.5 flex-shrink-0" /> {/* Spacer for alignment */}
+            <div className="min-w-0 flex-1">
+              <p className="text-xs text-muted-foreground">Name</p>
+              {editingField === 'name' ? (
+                <div className="flex gap-2 mt-1">
+                  <Input
+                    value={formData.first_name}
+                    onChange={(e) => handleChange('first_name', e.target.value)}
+                    placeholder="First"
+                    className="h-7 text-sm"
+                    autoFocus
+                  />
+                  <Input
+                    value={formData.last_name}
+                    onChange={(e) => handleChange('last_name', e.target.value)}
+                    placeholder="Last"
+                    className="h-7 text-sm"
+                    onBlur={() => setEditingField(null)}
+                    onKeyDown={(e) => e.key === 'Enter' && setEditingField(null)}
+                  />
+                </div>
+              ) : (
+                <button 
+                  onClick={() => setEditingField('name')}
+                  className="text-sm text-left hover:text-primary transition-colors w-full"
+                >
+                  {displayName || <span className="text-muted-foreground">Add name</span>}
+                </button>
+              )}
+            </div>
+          </div>
+
           {/* Email */}
-          <div className="flex items-start gap-2">
+          <div className="flex items-start gap-2 group">
             <Mail className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
             <div className="min-w-0 flex-1">
               <p className="text-xs text-muted-foreground">Email</p>
-              <div className="flex items-center gap-1">
-                <span className="text-sm truncate">{contact.email || '--'}</span>
-                {contact.email && (
-                  <Button variant="ghost" size="icon" className="h-5 w-5 flex-shrink-0" onClick={() => navigator.clipboard.writeText(contact.email)}>
-                    <Copy className="h-3 w-3 text-muted-foreground" />
-                  </Button>
-                )}
-              </div>
+              {editingField === 'email' ? (
+                <Input
+                  value={formData.email}
+                  onChange={(e) => handleChange('email', e.target.value)}
+                  className="h-7 text-sm mt-1"
+                  autoFocus
+                  onBlur={() => setEditingField(null)}
+                  onKeyDown={(e) => e.key === 'Enter' && setEditingField(null)}
+                />
+              ) : (
+                <div className="flex items-center gap-1">
+                  <button 
+                    onClick={() => setEditingField('email')}
+                    className="text-sm text-left hover:text-primary transition-colors truncate"
+                  >
+                    {formData.email || <span className="text-muted-foreground">Add email</span>}
+                  </button>
+                  {formData.email && (
+                    <Button variant="ghost" size="icon" className="h-5 w-5 flex-shrink-0 opacity-0 group-hover:opacity-100" onClick={() => navigator.clipboard.writeText(formData.email)}>
+                      <Copy className="h-3 w-3 text-muted-foreground" />
+                    </Button>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
           {/* Phone */}
-          <div className="flex items-start gap-2">
+          <div className="flex items-start gap-2 group">
             <Phone className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
             <div className="min-w-0 flex-1">
               <p className="text-xs text-muted-foreground">Phone</p>
-              <span className="text-sm">{formData.phone || '--'}</span>
+              {editingField === 'phone' ? (
+                <Input
+                  value={formData.phone}
+                  onChange={(e) => handleChange('phone', formatPhoneNumber(e.target.value))}
+                  className="h-7 text-sm mt-1"
+                  autoFocus
+                  onBlur={() => setEditingField(null)}
+                  onKeyDown={(e) => e.key === 'Enter' && setEditingField(null)}
+                />
+              ) : (
+                <button 
+                  onClick={() => setEditingField('phone')}
+                  className="text-sm text-left hover:text-primary transition-colors"
+                >
+                  {formData.phone || <span className="text-muted-foreground">Add phone</span>}
+                </button>
+              )}
             </div>
           </div>
 
           {/* Address */}
-          <div className="flex items-start gap-2">
+          <div className="flex items-start gap-2 group">
             <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
             <div className="min-w-0 flex-1">
               <p className="text-xs text-muted-foreground">Address</p>
-              <span className="text-sm">{formData.address || '--'}</span>
+              {editingField === 'address' ? (
+                <div className="mt-1">
+                  <AddressAutocomplete
+                    value={formData.address}
+                    onChange={(value) => handleChange('address', value)}
+                    onTimezoneDetected={(timezone) => handleChange('timezone', timezone)}
+                    placeholder="Start typing an address..."
+                    className="h-7 text-sm"
+                  />
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="h-6 text-xs mt-1"
+                    onClick={() => setEditingField(null)}
+                  >
+                    Done
+                  </Button>
+                </div>
+              ) : (
+                <button 
+                  onClick={() => setEditingField('address')}
+                  className="text-sm text-left hover:text-primary transition-colors"
+                >
+                  {formData.address || <span className="text-muted-foreground">Add address</span>}
+                </button>
+              )}
             </div>
           </div>
 
           {/* Timezone */}
-          {formData.timezone && (
-            <div className="flex items-start gap-2">
-              <Clock className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-              <div className="min-w-0 flex-1">
-                <p className="text-xs text-muted-foreground">Timezone</p>
-                <span className="text-sm">{formData.timezone}</span>
-              </div>
+          <div className="flex items-start gap-2 group">
+            <Clock className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+            <div className="min-w-0 flex-1">
+              <p className="text-xs text-muted-foreground">Timezone</p>
+              <button 
+                onClick={openTimezoneDialog}
+                className="text-sm text-left hover:text-primary transition-colors"
+              >
+                {formData.timezone || <span className="text-muted-foreground">Auto-detected from address</span>}
+              </button>
+            </div>
+          </div>
+
+          {/* Save Button - shown when there are changes */}
+          {hasChanges && (
+            <div className="pt-2">
+              <Button onClick={handleSave} className="w-full" size="sm" disabled={updateContact.isPending}>
+                <Save className="h-4 w-4 mr-2" />
+                Save Changes
+              </Button>
             </div>
           )}
         </div>
@@ -345,95 +449,6 @@ export function ContactSidebar({ contact, onBack }: ContactSidebarProps) {
 
       {/* Collapsible Sections */}
       <div className="flex-1 overflow-y-auto">
-        {/* Edit Contact Info */}
-        <Collapsible open={editOpen} onOpenChange={setEditOpen}>
-          <CollapsibleTrigger className="flex items-center justify-between w-full px-4 py-3 border-t hover:bg-muted/50 text-left">
-            <div className="flex items-center gap-2">
-              <ChevronDown className={`h-4 w-4 transition-transform ${editOpen ? '' : '-rotate-90'}`} />
-              <span className="font-medium text-sm">Edit Contact Info</span>
-            </div>
-            {hasChanges && <Badge variant="secondary" className="text-xs">Unsaved</Badge>}
-          </CollapsibleTrigger>
-          <CollapsibleContent className="px-4 pb-4 space-y-4">
-            {/* Names */}
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label className="text-xs text-muted-foreground">First Name</Label>
-                <Input
-                  value={formData.first_name}
-                  onChange={(e) => handleChange('first_name', e.target.value)}
-                  className="h-8 mt-1"
-                />
-              </div>
-              <div>
-                <Label className="text-xs text-muted-foreground">Last Name</Label>
-                <Input
-                  value={formData.last_name}
-                  onChange={(e) => handleChange('last_name', e.target.value)}
-                  className="h-8 mt-1"
-                />
-              </div>
-            </div>
-
-            {/* Email */}
-            <div>
-              <Label className="text-xs text-muted-foreground">Email</Label>
-              <Input
-                value={formData.email}
-                onChange={(e) => handleChange('email', e.target.value)}
-                className="h-8 mt-1"
-              />
-            </div>
-
-            {/* Phone */}
-            <div>
-              <Label className="text-xs text-muted-foreground">Phone number</Label>
-              <Input
-                value={formData.phone}
-                onChange={(e) => handleChange('phone', formatPhoneNumber(e.target.value))}
-                placeholder="--"
-                className="h-8 mt-1"
-              />
-            </div>
-
-            {/* Address */}
-            <div>
-              <Label className="text-xs text-muted-foreground">Address</Label>
-              <AddressAutocomplete
-                value={formData.address}
-                onChange={(value) => handleChange('address', value)}
-                onTimezoneDetected={(timezone) => handleChange('timezone', timezone)}
-                placeholder="Start typing an address..."
-                className="mt-1"
-              />
-            </div>
-
-            {/* Timezone */}
-            <div>
-              <Label className="text-xs text-muted-foreground flex items-center gap-1">
-                Timezone
-                <span className="text-[10px] text-muted-foreground/70">(auto-detected)</span>
-              </Label>
-              <button
-                type="button"
-                onClick={openTimezoneDialog}
-                className="w-full h-8 mt-1 px-3 text-left text-sm border rounded-md bg-background hover:bg-muted/50 transition-colors flex items-center justify-between group"
-              >
-                <span className={formData.timezone ? 'text-foreground' : 'text-muted-foreground'}>
-                  {formData.timezone || 'Auto-detected from address'}
-                </span>
-                <Pencil className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-              </button>
-            </div>
-
-            {hasChanges && (
-              <Button onClick={handleSave} className="w-full" size="sm" disabled={updateContact.isPending}>
-                <Save className="h-4 w-4 mr-2" />
-                Save Changes
-              </Button>
-            )}
-          </CollapsibleContent>
-        </Collapsible>
 
         {/* Links Section */}
         <Collapsible open={linksOpen} onOpenChange={setLinksOpen}>
