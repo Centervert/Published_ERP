@@ -2,9 +2,9 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useContact } from '@/hooks/useContacts';
-import { ContactInfoPanel } from '@/components/contacts/ContactInfoPanel';
-import { CommunicationPanel } from '@/components/contacts/CommunicationPanel';
-import { ActivityLogPanel } from '@/components/contacts/ActivityLogPanel';
+import { ContactSidebar } from '@/components/contacts/ContactSidebar';
+import { ContactActivityFeed } from '@/components/contacts/ContactActivityFeed';
+import { ContactSummaryPanel } from '@/components/contacts/ContactSummaryPanel';
 
 export default function ContactDetail() {
   const { contactId } = useParams<{ contactId: string }>();
@@ -31,31 +31,21 @@ export default function ContactDetail() {
     );
   }
 
-  const displayName = [contact.first_name, contact.last_name].filter(Boolean).join(' ') || contact.email;
-
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate('/contacts')}>
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
-        <div>
-          <h1 className="text-2xl font-semibold">{displayName}</h1>
-          <p className="text-muted-foreground text-sm">{contact.email}</p>
-        </div>
+    <div className="h-[calc(100vh-120px)] flex">
+      {/* Left Sidebar - Contact Info */}
+      <div className="w-[300px] border-r overflow-y-auto flex-shrink-0">
+        <ContactSidebar contact={contact} onBack={() => navigate('/contacts')} />
       </div>
 
-      {/* 3-Column Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr_320px] gap-6">
-        {/* Left: Contact Info */}
-        <ContactInfoPanel contact={contact} />
+      {/* Center - Activity Feed */}
+      <div className="flex-1 overflow-y-auto">
+        <ContactActivityFeed contactId={contact.id} />
+      </div>
 
-        {/* Center: Communication */}
-        <CommunicationPanel contactId={contact.id} />
-
-        {/* Right: Activity Log */}
-        <ActivityLogPanel contactId={contact.id} />
+      {/* Right Sidebar - Summary */}
+      <div className="w-[320px] border-l overflow-y-auto flex-shrink-0 hidden xl:block">
+        <ContactSummaryPanel contact={contact} />
       </div>
     </div>
   );
