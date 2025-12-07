@@ -72,7 +72,7 @@ export default function ContactDetail() {
   return (
     <div className="h-[calc(100vh-56px)] flex -m-6 overflow-hidden">
       {/* Left Sidebar - Contact Info */}
-      <div className="w-[300px] border-r overflow-y-auto flex-shrink-0">
+      <div className="w-[340px] border-r overflow-y-auto flex-shrink-0">
         <ContactSidebar 
           contact={contact} 
           onBack={() => navigate('/contacts')} 
