@@ -5,7 +5,6 @@ import { useImprints } from '@/hooks/useImprints';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { EditableCell } from './EditableCell';
 import {
   Table,
   TableBody,
@@ -44,15 +43,9 @@ const contactTypeColors: Record<string, string> = {
   bad: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
 };
 
-const CONTACT_TYPES = [
-  { value: 'lead', label: 'Lead' },
-  { value: 'author', label: 'Author' },
-  { value: 'bad', label: 'Bad' },
-];
-
 export function ContactsTable() {
   const navigate = useNavigate();
-  const { contacts, isLoading, updateContact, deleteContact } = useContacts();
+  const { contacts, isLoading, deleteContact } = useContacts();
   const { imprints } = useImprints();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -104,8 +97,19 @@ export function ContactsTable() {
     }
   };
 
-  const handleUpdateField = async (contactId: string, field: string, value: string) => {
-    await updateContact.mutateAsync({ id: contactId, [field]: value || null });
+  const getImprintName = (imprintId: string | null) => {
+    if (!imprintId) return 'Author Services';
+    const imprint = imprints.find(i => i.id === imprintId);
+    return imprint?.name || 'Author Services';
+  };
+
+  const getContactTypeLabel = (type: string | null) => {
+    switch (type) {
+      case 'lead': return 'Lead';
+      case 'author': return 'Author';
+      case 'bad': return 'Bad';
+      default: return 'Lead';
+    }
   };
 
   if (isLoading) {
@@ -188,8 +192,7 @@ export function ContactsTable() {
                     onCheckedChange={toggleSelectAll}
                   />
                 </TableHead>
-                <TableHead>First Name</TableHead>
-                <TableHead>Last Name</TableHead>
+                <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Phone</TableHead>
                 <TableHead>Type</TableHead>
@@ -200,94 +203,67 @@ export function ContactsTable() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredContacts.map((contact) => (
-                <TableRow 
-                  key={contact.id} 
-                  className="cursor-pointer hover:bg-muted/50"
-                  onClick={() => handleRowClick(contact.id)}
-                >
-                  <TableCell onClick={(e) => e.stopPropagation()}>
-                    <Checkbox
-                      checked={selectedIds.has(contact.id)}
-                      onCheckedChange={() => toggleSelect(contact.id)}
-                    />
-                  </TableCell>
-                  <TableCell onClick={(e) => e.stopPropagation()}>
-                    <EditableCell
-                      value={contact.first_name || ''}
-                      onSave={(value) => handleUpdateField(contact.id, 'first_name', value)}
-                      placeholder="—"
-                    />
-                  </TableCell>
-                  <TableCell onClick={(e) => e.stopPropagation()}>
-                    <EditableCell
-                      value={contact.last_name || ''}
-                      onSave={(value) => handleUpdateField(contact.id, 'last_name', value)}
-                      placeholder="—"
-                    />
-                  </TableCell>
-                  <TableCell onClick={(e) => e.stopPropagation()}>
-                    <EditableCell
-                      value={contact.email}
-                      onSave={(value) => handleUpdateField(contact.id, 'email', value)}
-                    />
-                  </TableCell>
-                  <TableCell onClick={(e) => e.stopPropagation()}>
-                    <EditableCell
-                      value={contact.phone || ''}
-                      onSave={(value) => handleUpdateField(contact.id, 'phone', value)}
-                      type="phone"
-                      placeholder="—"
-                    />
-                  </TableCell>
-                  <TableCell onClick={(e) => e.stopPropagation()}>
-                    <EditableCell
-                      value={contact.contact_type || 'lead'}
-                      onSave={(value) => handleUpdateField(contact.id, 'contact_type', value)}
-                      type="select"
-                      options={CONTACT_TYPES}
-                    />
-                  </TableCell>
-                  <TableCell onClick={(e) => e.stopPropagation()}>
-                    <EditableCell
-                      value={contact.imprint_id || 'none'}
-                      onSave={(value) => handleUpdateField(contact.id, 'imprint_id', value === 'none' ? '' : value)}
-                      type="select"
-                      options={[
-                        { value: 'none', label: 'Author Services' },
-                        ...imprints.map(i => ({ value: i.id, label: i.name }))
-                      ]}
-                      placeholder="Author Services"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="secondary" className={statusColors[contact.status] || ''}>
-                      {contact.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground text-sm">
-                    {format(new Date(contact.created_at), 'MMM d, yyyy')}
-                  </TableCell>
-                  <TableCell onClick={(e) => e.stopPropagation()}>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem
-                          className="text-destructive"
-                          onClick={() => handleDelete(contact)}
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))}
+              {filteredContacts.map((contact) => {
+                const displayName = [contact.first_name, contact.last_name].filter(Boolean).join(' ') || '—';
+                
+                return (
+                  <TableRow 
+                    key={contact.id} 
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => handleRowClick(contact.id)}
+                  >
+                    <TableCell onClick={(e) => e.stopPropagation()}>
+                      <Checkbox
+                        checked={selectedIds.has(contact.id)}
+                        onCheckedChange={() => toggleSelect(contact.id)}
+                      />
+                    </TableCell>
+                    <TableCell className="font-medium">
+                      {displayName}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {contact.email}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {contact.phone || '—'}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="secondary" className={contactTypeColors[contact.contact_type || 'lead']}>
+                        {getContactTypeLabel(contact.contact_type)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {getImprintName(contact.imprint_id)}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="secondary" className={statusColors[contact.status] || ''}>
+                        {contact.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground text-sm">
+                      {format(new Date(contact.created_at), 'MMM d, yyyy')}
+                    </TableCell>
+                    <TableCell onClick={(e) => e.stopPropagation()}>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            className="text-destructive"
+                            onClick={() => handleDelete(contact)}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </div>
