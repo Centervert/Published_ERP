@@ -169,42 +169,42 @@ export default function MyProfile() {
   }
 
   return (
-    <div className="p-6 max-w-6xl mx-auto space-y-6">
-      <h1 className="text-2xl font-semibold text-foreground">My Profile</h1>
+    <div className="p-6 max-w-5xl mx-auto space-y-6">
+      <h1 className="text-xl font-medium text-foreground">My Profile</h1>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Left Column - Personal Data */}
         <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Personal Data</CardTitle>
+          <Card className="border-border/50 shadow-sm">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-base font-medium">Personal Data</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-5">
               {/* Avatar Section */}
-              <div className="flex items-center gap-6">
+              <div className="flex items-center gap-5">
                 <div className="relative">
-                  <Avatar className="h-24 w-24 border-2 border-muted">
+                  <Avatar className="h-20 w-20 border border-border/50">
                     <AvatarImage src={profile?.avatar_url || undefined} />
-                    <AvatarFallback className="text-2xl bg-muted">
+                    <AvatarFallback className="text-lg bg-muted/50 text-muted-foreground">
                       {getInitials()}
                     </AvatarFallback>
                   </Avatar>
-                  <button className="absolute bottom-0 right-0 h-8 w-8 rounded-full bg-background border-2 border-muted flex items-center justify-center hover:bg-muted transition-colors">
-                    <Camera className="h-4 w-4 text-muted-foreground" />
+                  <button className="absolute bottom-0 right-0 h-7 w-7 rounded-full bg-background border border-border/50 flex items-center justify-center hover:bg-muted/50 transition-colors">
+                    <Camera className="h-3.5 w-3.5 text-muted-foreground" />
                   </button>
                 </div>
                 <div>
-                  <p className="font-medium">Profile Image</p>
-                  <p className="text-sm text-muted-foreground">
-                    The proposed size is 512×512 px no bigger than 2.5 MB
+                  <p className="text-sm font-medium text-foreground">Profile Image</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    512×512 px, max 2.5 MB
                   </p>
                 </div>
               </div>
 
               {/* Name Fields */}
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="firstName">
+                <div className="space-y-1.5">
+                  <Label htmlFor="firstName" className="text-xs font-normal text-muted-foreground">
                     First Name <span className="text-destructive">*</span>
                   </Label>
                   <Input
@@ -212,10 +212,11 @@ export default function MyProfile() {
                     value={firstName}
                     onChange={(e) => setFirstName(e.target.value)}
                     placeholder="First Name"
+                    className="h-9 text-sm"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="lastName">
+                <div className="space-y-1.5">
+                  <Label htmlFor="lastName" className="text-xs font-normal text-muted-foreground">
                     Last Name <span className="text-destructive">*</span>
                   </Label>
                   <Input
@@ -223,41 +224,44 @@ export default function MyProfile() {
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
                     placeholder="Last Name"
+                    className="h-9 text-sm"
                   />
                 </div>
               </div>
 
               {/* Email & Phone */}
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email">
+                <div className="space-y-1.5">
+                  <Label htmlFor="email" className="text-xs font-normal text-muted-foreground">
                     Email <span className="text-destructive">*</span>
                   </Label>
                   <Input
                     id="email"
                     value={user?.email || ''}
                     disabled
-                    className="bg-muted"
+                    className="h-9 text-sm bg-muted/30"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone</Label>
+                <div className="space-y-1.5">
+                  <Label htmlFor="phone" className="text-xs font-normal text-muted-foreground">Phone</Label>
                   <Input
                     id="phone"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     placeholder="Phone"
+                    className="h-9 text-sm"
                   />
                 </div>
               </div>
 
-              <div className="flex justify-end">
+              <div className="flex justify-end pt-2">
                 <Button
+                  size="sm"
                   onClick={() => updateProfile.mutate()}
                   disabled={updateProfile.isPending}
                 >
                   {updateProfile.isPending ? (
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
                   ) : null}
                   Update Profile
                 </Button>
@@ -269,80 +273,79 @@ export default function MyProfile() {
         {/* Right Column - Security & Integrations */}
         <div className="space-y-6">
           {/* Email Sync Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Email (2-way sync)</CardTitle>
-              <CardDescription>
-                Connect to sync incoming & outgoing emails between the CRM & your personal email account.
+          <Card className="border-border/50 shadow-sm">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base font-medium">Email (2-way sync)</CardTitle>
+              <CardDescription className="text-xs">
+                Sync emails between the CRM & your personal email account.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <p className="text-sm font-medium">Select your email provider</p>
+              <p className="text-xs font-medium text-muted-foreground">Select your email provider</p>
               
               {/* Outlook Option */}
               <div 
-                className={`flex items-center gap-4 p-4 rounded-lg border-2 transition-colors cursor-pointer ${
-                  emailConnection ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'
+                className={`flex items-center gap-3 p-3 rounded-md border transition-colors cursor-pointer ${
+                  emailConnection ? 'border-primary/50 bg-primary/5' : 'border-border/50 hover:border-border hover:bg-muted/30'
                 }`}
                 onClick={!emailConnection ? connectOutlook : undefined}
               >
-                <div className="h-10 w-10 rounded bg-[#0078d4] flex items-center justify-center">
-                  <Mail className="h-5 w-5 text-white" />
+                <div className="h-8 w-8 rounded bg-[#0078d4]/90 flex items-center justify-center">
+                  <Mail className="h-4 w-4 text-white" />
                 </div>
-                <div className="flex-1">
-                  <p className="font-medium">Outlook</p>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium">Outlook</p>
                   {emailConnection && (
-                    <p className="text-sm text-muted-foreground">{emailConnection.email}</p>
+                    <p className="text-xs text-muted-foreground truncate">{emailConnection.email}</p>
                   )}
                 </div>
                 {emailConnection ? (
-                  <div className="flex items-center gap-2">
-                    <Check className="h-5 w-5 text-primary" />
-                    <span className="text-sm text-primary font-medium">Connected</span>
+                  <div className="flex items-center gap-1.5">
+                    <Check className="h-4 w-4 text-primary" />
+                    <span className="text-xs text-primary font-medium">Connected</span>
                   </div>
                 ) : (
-                  <span className="text-sm text-muted-foreground">Click to connect</span>
+                  <span className="text-xs text-muted-foreground">Click to connect</span>
                 )}
               </div>
 
-              {emailConnection && (
-                <div className="flex justify-end">
+              <div className="flex justify-end">
+                {emailConnection ? (
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => disconnectEmail.mutate()}
                     disabled={disconnectEmail.isPending}
+                    className="h-8 text-xs"
                   >
                     Disconnect
                   </Button>
-                </div>
-              )}
-
-              {!emailConnection && (
-                <div className="flex justify-end">
-                  <Button onClick={connectOutlook}>
+                ) : (
+                  <Button size="sm" onClick={connectOutlook} className="h-8 text-xs">
                     Connect
                   </Button>
-                </div>
-              )}
+                )}
+              </div>
             </CardContent>
           </Card>
 
           {/* Sign Out Everywhere Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Sign Out Everywhere</CardTitle>
-              <CardDescription>
-                This will sign you out of all devices and sessions, including this one.
+          <Card className="border-border/50 shadow-sm">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base font-medium">Sign Out Everywhere</CardTitle>
+              <CardDescription className="text-xs">
+                Sign out of all devices and sessions, including this one.
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="flex justify-end">
                 <Button 
-                  variant="default"
+                  variant="outline"
+                  size="sm"
                   onClick={signOutEverywhere}
+                  className="h-8 text-xs"
                 >
-                  <LogOut className="h-4 w-4 mr-2" />
+                  <LogOut className="h-3.5 w-3.5 mr-1.5" />
                   Sign Out Everywhere
                 </Button>
               </div>
