@@ -169,6 +169,15 @@ export function ContactSidebar({ contact, onBack }: ContactSidebarProps) {
   const displayName = [contact.first_name, contact.last_name].filter(Boolean).join(' ') || 'No Name';
   const initials = displayName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || '?';
   const contactTypeLabel = CONTACT_TYPES.find(t => t.value === formData.contact_type)?.label || 'Lead';
+  
+  const getTypeColor = (type: string) => {
+    switch (type) {
+      case 'lead': return 'bg-blue-100 text-blue-700';
+      case 'author': return 'bg-green-100 text-green-700';
+      case 'bad': return 'bg-red-100 text-red-700';
+      default: return 'bg-muted text-muted-foreground';
+    }
+  };
 
   return (
     <div className="flex flex-col h-full">
@@ -194,7 +203,7 @@ export function ContactSidebar({ contact, onBack }: ContactSidebarProps) {
           </div>
           <div className="min-w-0 flex-1">
             <h1 className="text-lg font-semibold text-foreground truncate">{displayName}</h1>
-            <span className="inline-block text-xs font-medium px-2 py-0.5 bg-muted text-muted-foreground rounded-sm">{contactTypeLabel}</span>
+            <span className={`inline-block text-xs font-medium px-2 py-0.5 rounded-sm ${getTypeColor(formData.contact_type)}`}>{contactTypeLabel}</span>
             <p className="text-xs text-muted-foreground mt-1">
               Created {contact.created_at ? format(parseISO(contact.created_at), 'MMM d, yyyy') : '--'}
             </p>
