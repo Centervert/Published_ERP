@@ -290,9 +290,9 @@ export function ContactSidebar({ contact, onBack }: ContactSidebarProps) {
         {/* Contact Info - Inline Editable */}
         <div className="space-y-2.5 pt-3 border-t">
           {/* Name */}
-          <div className="flex items-center justify-between group">
+          <div className="flex items-center group min-h-[28px]">
             <span className="text-xs text-muted-foreground w-20 flex-shrink-0">Name</span>
-            <div className="flex-1 text-right">
+            <div className="flex-1">
               {editingField === 'name' ? (
                 <div className="flex gap-2">
                   <Input
@@ -314,7 +314,7 @@ export function ContactSidebar({ contact, onBack }: ContactSidebarProps) {
               ) : (
                 <button 
                   onClick={() => setEditingField('name')}
-                  className="text-sm hover:text-primary transition-colors"
+                  className="text-sm hover:text-primary transition-colors text-right w-full"
                 >
                   {displayName || <span className="text-muted-foreground">Add name</span>}
                 </button>
@@ -323,8 +323,11 @@ export function ContactSidebar({ contact, onBack }: ContactSidebarProps) {
           </div>
 
           {/* Email */}
-          <div className="flex items-center justify-between group">
-            <span className="text-xs text-muted-foreground w-20 flex-shrink-0">Email</span>
+          <div className="flex items-center group min-h-[28px]">
+            <div className="flex items-center gap-1.5 w-20 flex-shrink-0">
+              <Mail className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="text-xs text-muted-foreground">Email</span>
+            </div>
             <div className="flex-1 flex items-center justify-end gap-1">
               {editingField === 'email' ? (
                 <Input
@@ -354,8 +357,11 @@ export function ContactSidebar({ contact, onBack }: ContactSidebarProps) {
           </div>
 
           {/* Phone */}
-          <div className="flex items-center justify-between group">
-            <span className="text-xs text-muted-foreground w-20 flex-shrink-0">Phone</span>
+          <div className="flex items-center group min-h-[28px]">
+            <div className="flex items-center gap-1.5 w-20 flex-shrink-0">
+              <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="text-xs text-muted-foreground">Phone</span>
+            </div>
             <div className="flex-1 text-right">
               {editingField === 'phone' ? (
                 <Input
@@ -378,8 +384,11 @@ export function ContactSidebar({ contact, onBack }: ContactSidebarProps) {
           </div>
 
           {/* Address */}
-          <div className="flex items-start justify-between group">
-            <span className="text-xs text-muted-foreground w-20 flex-shrink-0 pt-0.5">Address</span>
+          <div className="flex items-start group min-h-[28px]">
+            <div className="flex items-center gap-1.5 w-20 flex-shrink-0 pt-0.5">
+              <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="text-xs text-muted-foreground">Address</span>
+            </div>
             <div className="flex-1 text-right">
               {editingField === 'address' ? (
                 <div className="text-left">
@@ -411,11 +420,14 @@ export function ContactSidebar({ contact, onBack }: ContactSidebarProps) {
           </div>
 
           {/* Timezone */}
-          <div className="flex items-center justify-between group">
-            <span className="text-xs text-muted-foreground w-20 flex-shrink-0">Timezone</span>
+          <div className="flex items-center group min-h-[28px]">
+            <div className="flex items-center gap-1.5 w-20 flex-shrink-0">
+              <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="text-xs text-muted-foreground">Timezone</span>
+            </div>
             <button 
               onClick={openTimezoneDialog}
-              className="text-sm hover:text-primary transition-colors text-right"
+              className="text-sm hover:text-primary transition-colors text-right flex-1"
             >
               {formData.timezone || <span className="text-muted-foreground">Auto-detect</span>}
             </button>
