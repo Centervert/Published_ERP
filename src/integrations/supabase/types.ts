@@ -192,6 +192,62 @@ export type Database = {
           },
         ]
       }
+      contact_communications: {
+        Row: {
+          body: string | null
+          contact_id: string
+          created_at: string
+          created_by: string | null
+          direction: string
+          duration_seconds: number | null
+          external_id: string | null
+          id: string
+          notes: string | null
+          outcome: string | null
+          status: string | null
+          subject: string | null
+          type: string
+        }
+        Insert: {
+          body?: string | null
+          contact_id: string
+          created_at?: string
+          created_by?: string | null
+          direction: string
+          duration_seconds?: number | null
+          external_id?: string | null
+          id?: string
+          notes?: string | null
+          outcome?: string | null
+          status?: string | null
+          subject?: string | null
+          type: string
+        }
+        Update: {
+          body?: string | null
+          contact_id?: string
+          created_at?: string
+          created_by?: string | null
+          direction?: string
+          duration_seconds?: number | null
+          external_id?: string | null
+          id?: string
+          notes?: string | null
+          outcome?: string | null
+          status?: string | null
+          subject?: string | null
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contact_communications_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contact_links: {
         Row: {
           contact_id: string

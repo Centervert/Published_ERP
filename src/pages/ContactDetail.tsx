@@ -81,9 +81,11 @@ export default function ContactDetail() {
       </div>
 
       {/* Center - Tabs */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-hidden flex flex-col">
         <ContactActivityFeed 
           contactId={contact.id} 
+          contactEmail={contact.email}
+          contactName={`${contact.first_name || ''} ${contact.last_name || ''}`.trim() || contact.email}
           selectedTab={selectedTab}
           onTabChange={setSelectedTab}
         />

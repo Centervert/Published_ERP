@@ -22,6 +22,7 @@ import {
   MoreHorizontal
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
+import { CommunicationHub } from './CommunicationHub';
 
 interface TeamMember {
   id: string;
@@ -31,6 +32,8 @@ interface TeamMember {
 
 interface ContactActivityFeedProps {
   contactId: string;
+  contactEmail?: string;
+  contactName?: string;
   assignedAsc?: string | null;
   assignedAe?: string | null;
   assignedAscId?: string | null;
@@ -154,6 +157,8 @@ const renderFieldChanges = (metadata: any, type: string) => {
 
 export function ContactActivityFeed({ 
   contactId,
+  contactEmail = '',
+  contactName = '',
   selectedTab = 'contact',
   onTabChange,
 }: ContactActivityFeedProps) {
@@ -193,28 +198,13 @@ export function ContactActivityFeed({
           </TabsList>
         </div>
 
-        {/* Contact Tab - Communication History */}
-        <TabsContent value="contact" className="mt-0 flex-1 overflow-y-auto">
-          <div className="p-6">
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <div className="flex gap-4 mb-4">
-                <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center">
-                  <Mail className="h-5 w-5 text-muted-foreground" />
-                </div>
-                <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center">
-                  <Phone className="h-5 w-5 text-muted-foreground" />
-                </div>
-                <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center">
-                  <MessageSquare className="h-5 w-5 text-muted-foreground" />
-                </div>
-              </div>
-              <h3 className="text-lg font-medium mb-1">Communication History</h3>
-              <p className="text-sm text-muted-foreground mb-4 max-w-sm">
-                Emails, calls, and texts with this contact will appear here once SMTP integration is configured.
-              </p>
-              <p className="text-xs text-muted-foreground">Coming Soon</p>
-            </div>
-          </div>
+        {/* Contact Tab - Communication Hub */}
+        <TabsContent value="contact" className="mt-0 flex-1 overflow-hidden flex flex-col">
+          <CommunicationHub 
+            contactId={contactId}
+            contactEmail={contactEmail}
+            contactName={contactName}
+          />
         </TabsContent>
 
         {/* Notes Tab */}
