@@ -11,7 +11,6 @@ import {
   ThumbsDown,
   Copy,
   Plus,
-  Building2,
   Briefcase
 } from 'lucide-react';
 import { useState } from 'react';
@@ -23,7 +22,6 @@ interface ContactSummaryPanelProps {
 
 export function ContactSummaryPanel({ contact }: ContactSummaryPanelProps) {
   const [summaryOpen, setSummaryOpen] = useState(true);
-  const [companiesOpen, setCompaniesOpen] = useState(true);
   const [dealsOpen, setDealsOpen] = useState(true);
 
   const displayName = [contact.first_name, contact.last_name].filter(Boolean).join(' ') || 'this contact';
@@ -81,29 +79,6 @@ export function ContactSummaryPanel({ contact }: ContactSummaryPanelProps) {
               </Button>
             </CardContent>
           </Card>
-        </CollapsibleContent>
-      </Collapsible>
-
-      {/* Companies Section */}
-      <Collapsible open={companiesOpen} onOpenChange={setCompaniesOpen}>
-        <CollapsibleTrigger className="flex items-center justify-between w-full px-4 py-3 border-b hover:bg-muted/50 text-left">
-          <div className="flex items-center gap-2">
-            <ChevronDown className={`h-4 w-4 transition-transform ${companiesOpen ? '' : '-rotate-90'}`} />
-            <span className="font-medium text-sm">Companies (0)</span>
-          </div>
-          <Button variant="ghost" size="sm" className="h-6 text-primary text-xs px-2">
-            <Plus className="h-3 w-3 mr-1" />
-            Add
-          </Button>
-        </CollapsibleTrigger>
-        <CollapsibleContent className="p-4">
-          <div className="flex flex-col items-center justify-center py-6 text-center">
-            <Building2 className="h-8 w-8 text-muted-foreground mb-2" />
-            <p className="text-sm text-muted-foreground">No companies associated</p>
-            <Button variant="link" size="sm" className="text-primary mt-1">
-              Associate a company
-            </Button>
-          </div>
         </CollapsibleContent>
       </Collapsible>
 
