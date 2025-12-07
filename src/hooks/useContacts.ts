@@ -23,6 +23,7 @@ export interface Contact {
   imprint_id: string | null;
   notes: string | null;
   status: string;
+  assigned_to: string | null;
   created_at: string;
   updated_at: string;
   imprint?: {
