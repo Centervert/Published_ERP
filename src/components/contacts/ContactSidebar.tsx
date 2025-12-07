@@ -294,6 +294,7 @@ export function ContactSidebar({ contact, onBack }: ContactSidebarProps) {
               <AddressAutocomplete
                 value={formData.address}
                 onChange={(value) => handleChange('address', value)}
+                onTimezoneDetected={(timezone) => handleChange('timezone', timezone)}
                 placeholder="Start typing an address..."
                 className="mt-1"
               />
@@ -303,11 +304,12 @@ export function ContactSidebar({ contact, onBack }: ContactSidebarProps) {
             <div>
               <Label className="text-xs text-muted-foreground flex items-center gap-1">
                 <Clock className="h-3 w-3" /> Timezone
+                <span className="text-[10px] text-muted-foreground/70">(auto-detected)</span>
               </Label>
               <Input
                 value={formData.timezone}
                 onChange={(e) => handleChange('timezone', e.target.value)}
-                placeholder="--"
+                placeholder="Auto-detected from address"
                 className="h-8 mt-1"
               />
             </div>
