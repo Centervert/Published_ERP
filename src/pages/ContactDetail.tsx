@@ -40,7 +40,11 @@ export default function ContactDetail() {
 
       {/* Center - Activity Feed */}
       <div className="flex-1 overflow-y-auto">
-        <ContactActivityFeed contactId={contact.id} />
+        <ContactActivityFeed 
+          contactId={contact.id} 
+          assignedAsc={contact.assigned_asc}
+          assignedBss={contact.assigned_bss}
+        />
       </div>
 
       {/* Right Sidebar - Summary */}

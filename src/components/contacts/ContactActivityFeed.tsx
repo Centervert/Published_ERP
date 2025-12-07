@@ -25,6 +25,8 @@ import { format, parseISO, isToday, isYesterday } from 'date-fns';
 
 interface ContactActivityFeedProps {
   contactId: string;
+  assignedAsc?: string | null;
+  assignedBss?: string | null;
 }
 
 interface ActivityItem {
@@ -110,7 +112,7 @@ const groupActivitiesByDate = (activities: ActivityItem[]) => {
   return groups;
 };
 
-export function ContactActivityFeed({ contactId }: ContactActivityFeedProps) {
+export function ContactActivityFeed({ contactId, assignedAsc, assignedBss }: ContactActivityFeedProps) {
   const { activities, isLoading } = useContactActivity(contactId);
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
@@ -137,7 +139,7 @@ export function ContactActivityFeed({ contactId }: ContactActivityFeedProps) {
     <div className="h-full flex flex-col">
       {/* Tab Header */}
       <div className="border-b bg-background sticky top-0 z-10">
-        <Tabs defaultValue="activities" className="w-full">
+        <Tabs defaultValue="overview" className="w-full">
           <div className="px-6 pt-4">
             <TabsList className="h-auto p-0 bg-transparent border-b-0 gap-6">
               <TabsTrigger 
@@ -156,8 +158,30 @@ export function ContactActivityFeed({ contactId }: ContactActivityFeedProps) {
           </div>
 
           <TabsContent value="overview" className="mt-0 p-6">
-            <div className="text-center py-12 text-muted-foreground">
-              <p>Overview coming soon</p>
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Assigned ASC */}
+                <div className="border rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-sm font-medium text-muted-foreground">Assigned ASC</span>
+                    <span className="text-xs text-muted-foreground">(Author Success Coach)</span>
+                  </div>
+                  <p className="text-sm text-foreground">
+                    {assignedAsc ? assignedAsc : <span className="text-muted-foreground">Not assigned</span>}
+                  </p>
+                </div>
+
+                {/* Assigned BSS */}
+                <div className="border rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-sm font-medium text-muted-foreground">Assigned BSS</span>
+                    <span className="text-xs text-muted-foreground">(Book Support Specialist)</span>
+                  </div>
+                  <p className="text-sm text-foreground">
+                    {assignedBss ? assignedBss : <span className="text-muted-foreground">Not assigned</span>}
+                  </p>
+                </div>
+              </div>
             </div>
           </TabsContent>
 
