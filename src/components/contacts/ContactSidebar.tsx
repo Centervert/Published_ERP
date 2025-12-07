@@ -92,9 +92,9 @@ export function ContactSidebar({ contact, onBack }: ContactSidebarProps) {
     },
   });
   
-  const [aboutOpen, setAboutOpen] = useState(true);
+  const [editOpen, setEditOpen] = useState(false);
   const [linksOpen, setLinksOpen] = useState(false);
-  const [notesOpen, setNotesOpen] = useState(false);
+  const [assignmentOpen, setAssignmentOpen] = useState(false);
   const [timezoneDialogOpen, setTimezoneDialogOpen] = useState(false);
   const [timezoneInput, setTimezoneInput] = useState('');
   
@@ -285,12 +285,12 @@ export function ContactSidebar({ contact, onBack }: ContactSidebarProps) {
 
       {/* Collapsible Sections */}
       <div className="flex-1 overflow-y-auto">
-        {/* Edit Contact Details */}
-        <Collapsible open={aboutOpen} onOpenChange={setAboutOpen}>
+        {/* Edit Contact Info */}
+        <Collapsible open={editOpen} onOpenChange={setEditOpen}>
           <CollapsibleTrigger className="flex items-center justify-between w-full px-4 py-3 border-t hover:bg-muted/50 text-left">
             <div className="flex items-center gap-2">
-              <ChevronDown className={`h-4 w-4 transition-transform ${aboutOpen ? '' : '-rotate-90'}`} />
-              <span className="font-medium text-sm">Edit Details</span>
+              <ChevronDown className={`h-4 w-4 transition-transform ${editOpen ? '' : '-rotate-90'}`} />
+              <span className="font-medium text-sm">Edit Contact Info</span>
             </div>
             {hasChanges && <Badge variant="secondary" className="text-xs">Unsaved</Badge>}
           </CollapsibleTrigger>
@@ -366,6 +366,91 @@ export function ContactSidebar({ contact, onBack }: ContactSidebarProps) {
               </button>
             </div>
 
+            {hasChanges && (
+              <Button onClick={handleSave} className="w-full" size="sm" disabled={updateContact.isPending}>
+                <Save className="h-4 w-4 mr-2" />
+                Save Changes
+              </Button>
+            )}
+          </CollapsibleContent>
+        </Collapsible>
+
+        {/* Links Section */}
+        <Collapsible open={linksOpen} onOpenChange={setLinksOpen}>
+          <CollapsibleTrigger className="flex items-center justify-between w-full px-4 py-3 border-t hover:bg-muted/50 text-left">
+            <div className="flex items-center gap-2">
+              <ChevronDown className={`h-4 w-4 transition-transform ${linksOpen ? '' : '-rotate-90'}`} />
+              <span className="font-medium text-sm">Websites & Social</span>
+            </div>
+            <Badge variant="secondary" className="text-xs">{links.length}</Badge>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="px-4 pb-4 space-y-3">
+            {links.map((link) => (
+              <div key={link.id} className="flex items-center gap-2 text-sm">
+                <ExternalLink className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                <a 
+                  href={link.url} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline truncate flex-1"
+                >
+                  {link.label || link.url}
+                </a>
+                <span className="text-xs text-muted-foreground">{link.link_type}</span>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={() => deleteLink.mutateAsync(link.id!)}
+                >
+                  <Trash2 className="h-3 w-3 text-destructive" />
+                </Button>
+              </div>
+            ))}
+
+            <div className="pt-2 border-t space-y-2">
+              <div className="flex gap-2">
+                <Select value={newLink.type} onValueChange={(v) => setNewLink(p => ({ ...p, type: v }))}>
+                  <SelectTrigger className="w-28 h-8 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {LINK_TYPES.map(type => (
+                      <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Input
+                  value={newLink.url}
+                  onChange={(e) => setNewLink(p => ({ ...p, url: e.target.value }))}
+                  placeholder="https://..."
+                  className="h-8 text-xs flex-1"
+                />
+              </div>
+              <div className="flex gap-2">
+                <Input
+                  value={newLink.label}
+                  onChange={(e) => setNewLink(p => ({ ...p, label: e.target.value }))}
+                  placeholder="Label (optional)"
+                  className="h-8 text-xs flex-1"
+                />
+                <Button size="sm" className="h-8" onClick={handleAddLink} disabled={!newLink.url}>
+                  <Plus className="h-3 w-3 mr-1" /> Add
+                </Button>
+              </div>
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
+
+        {/* System Assignment */}
+        <Collapsible open={assignmentOpen} onOpenChange={setAssignmentOpen}>
+          <CollapsibleTrigger className="flex items-center justify-between w-full px-4 py-3 border-t hover:bg-muted/50 text-left">
+            <div className="flex items-center gap-2">
+              <ChevronDown className={`h-4 w-4 transition-transform ${assignmentOpen ? '' : '-rotate-90'}`} />
+              <span className="font-medium text-sm">System & Assignment</span>
+            </div>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="px-4 pb-4 space-y-4">
             {/* Contact Type */}
             <div>
               <Label className="text-xs text-muted-foreground">Contact Type</Label>
@@ -454,91 +539,6 @@ export function ContactSidebar({ contact, onBack }: ContactSidebarProps) {
                 Save Changes
               </Button>
             )}
-          </CollapsibleContent>
-        </Collapsible>
-
-        {/* Links Section */}
-        <Collapsible open={linksOpen} onOpenChange={setLinksOpen}>
-          <CollapsibleTrigger className="flex items-center justify-between w-full px-4 py-3 border-t hover:bg-muted/50 text-left">
-            <div className="flex items-center gap-2">
-              <ChevronDown className={`h-4 w-4 transition-transform ${linksOpen ? '' : '-rotate-90'}`} />
-              <span className="font-medium text-sm">Websites & Social</span>
-            </div>
-            <Badge variant="secondary" className="text-xs">{links.length}</Badge>
-          </CollapsibleTrigger>
-          <CollapsibleContent className="px-4 pb-4 space-y-3">
-            {links.map((link) => (
-              <div key={link.id} className="flex items-center gap-2 text-sm">
-                <ExternalLink className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
-                <a 
-                  href={link.url} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="text-primary hover:underline truncate flex-1"
-                >
-                  {link.label || link.url}
-                </a>
-                <span className="text-xs text-muted-foreground">{link.link_type}</span>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6"
-                  onClick={() => deleteLink.mutateAsync(link.id!)}
-                >
-                  <Trash2 className="h-3 w-3 text-destructive" />
-                </Button>
-              </div>
-            ))}
-
-            <div className="pt-2 border-t space-y-2">
-              <div className="flex gap-2">
-                <Select value={newLink.type} onValueChange={(v) => setNewLink(p => ({ ...p, type: v }))}>
-                  <SelectTrigger className="w-28 h-8 text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {LINK_TYPES.map(type => (
-                      <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Input
-                  value={newLink.url}
-                  onChange={(e) => setNewLink(p => ({ ...p, url: e.target.value }))}
-                  placeholder="https://..."
-                  className="h-8 text-xs flex-1"
-                />
-              </div>
-              <div className="flex gap-2">
-                <Input
-                  value={newLink.label}
-                  onChange={(e) => setNewLink(p => ({ ...p, label: e.target.value }))}
-                  placeholder="Label (optional)"
-                  className="h-8 text-xs flex-1"
-                />
-                <Button size="sm" className="h-8" onClick={handleAddLink} disabled={!newLink.url}>
-                  <Plus className="h-3 w-3 mr-1" /> Add
-                </Button>
-              </div>
-            </div>
-          </CollapsibleContent>
-        </Collapsible>
-
-        {/* Notes Section */}
-        <Collapsible open={notesOpen} onOpenChange={setNotesOpen}>
-          <CollapsibleTrigger className="flex items-center justify-between w-full px-4 py-3 border-t hover:bg-muted/50 text-left">
-            <div className="flex items-center gap-2">
-              <ChevronDown className={`h-4 w-4 transition-transform ${notesOpen ? '' : '-rotate-90'}`} />
-              <span className="font-medium text-sm">Notes</span>
-            </div>
-          </CollapsibleTrigger>
-          <CollapsibleContent className="px-4 pb-4">
-            <Textarea
-              value={formData.notes}
-              onChange={(e) => handleChange('notes', e.target.value)}
-              placeholder="Add notes about this contact..."
-              className="min-h-[100px] resize-none text-sm"
-            />
           </CollapsibleContent>
         </Collapsible>
       </div>
