@@ -14,6 +14,7 @@ import Campaigns from "./pages/Campaigns";
 import Templates from "./pages/Templates";
 import Imprints from "./pages/Imprints";
 import Settings from "./pages/Settings";
+import Users from "./pages/Users";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -94,6 +95,14 @@ const App = () => (
                   <DashboardLayout>
                     <Settings />
                   </DashboardLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/users"
+              element={
+                <ProtectedRoute>
+                  <Users />
                 </ProtectedRoute>
               }
             />
