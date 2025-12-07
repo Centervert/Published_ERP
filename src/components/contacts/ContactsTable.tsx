@@ -64,7 +64,7 @@ export function ContactsTable({ filterByUser }: ContactsTableProps) {
       
       const matchesStatus = statusFilter === 'all' || contact.status === statusFilter;
       const matchesType = typeFilter === 'all' || contact.contact_type === typeFilter;
-      const matchesUser = filterByUser === null || contact.assigned_asc === filterByUser || contact.assigned_bss === filterByUser;
+      const matchesUser = filterByUser === null || contact.assigned_asc === filterByUser || contact.assigned_ae === filterByUser;
       
       return matchesSearch && matchesStatus && matchesType && matchesUser;
     });
