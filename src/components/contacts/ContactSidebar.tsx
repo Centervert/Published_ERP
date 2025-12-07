@@ -34,6 +34,7 @@ import {
 } from 'lucide-react';
 import { formatPhoneNumber } from '@/lib/phone-utils';
 import { format, parseISO } from 'date-fns';
+import { AddressAutocomplete } from './AddressAutocomplete';
 
 const CONTACT_TYPES = [
   { value: 'lead', label: 'Lead' },
@@ -290,11 +291,11 @@ export function ContactSidebar({ contact, onBack }: ContactSidebarProps) {
               <Label className="text-xs text-muted-foreground flex items-center gap-1">
                 <MapPin className="h-3 w-3" /> Address
               </Label>
-              <Input
+              <AddressAutocomplete
                 value={formData.address}
-                onChange={(e) => handleChange('address', e.target.value)}
-                placeholder="--"
-                className="h-8 mt-1"
+                onChange={(value) => handleChange('address', value)}
+                placeholder="Start typing an address..."
+                className="mt-1"
               />
             </div>
 
