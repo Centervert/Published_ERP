@@ -58,7 +58,7 @@ export function ContactsTable({ filterByUser }: ContactsTableProps) {
       
       const matchesStatus = statusFilter === 'all' || contact.status === statusFilter;
       const matchesType = typeFilter === 'all' || contact.contact_type === typeFilter;
-      const matchesUser = filterByUser === null || contact.assigned_to === filterByUser;
+      const matchesUser = filterByUser === null || contact.assigned_asc === filterByUser || contact.assigned_bss === filterByUser;
       
       return matchesSearch && matchesStatus && matchesType && matchesUser;
     });
@@ -207,7 +207,8 @@ export function ContactsTable({ filterByUser }: ContactsTableProps) {
                   <TableHead className="font-semibold">NAME</TableHead>
                   <TableHead className="font-semibold">TYPE</TableHead>
                   <TableHead className="font-semibold">STATUS</TableHead>
-                  <TableHead className="font-semibold">ASSIGNED A.S.C</TableHead>
+                  <TableHead className="font-semibold">ASSIGNED ASC</TableHead>
+                  <TableHead className="font-semibold">ASSIGNED BSS</TableHead>
                   <TableHead className="font-semibold">DATE CREATED</TableHead>
                   <TableHead className="w-12"></TableHead>
                 </TableRow>
@@ -246,9 +247,8 @@ export function ContactsTable({ filterByUser }: ContactsTableProps) {
                       <TableCell className="text-muted-foreground">
                         {getStatusLabel(contact.status)}
                       </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        --
-                      </TableCell>
+                      <TableCell className="text-muted-foreground">--</TableCell>
+                      <TableCell className="text-muted-foreground">--</TableCell>
                       <TableCell className="text-muted-foreground">
                         {format(new Date(contact.created_at), 'MM/dd/yyyy')}
                       </TableCell>
