@@ -69,27 +69,23 @@ export function useContactCommunications(contactId: string) {
 
   const sendEmail = useMutation({
     mutationFn: async (emailData: {
+      to: string;
       subject: string;
       body: string;
-      from_email?: string;
     }) => {
-      // For now, just log the email attempt
-      // Later this will integrate with Outlook via edge function
-      const { data, error } = await supabase
-        .from('contact_communications')
-        .insert({
-          contact_id: contactId,
-          type: 'email',
-          direction: 'outbound',
+      // Send email via Outlook edge function
+      const { data, error } = await supabase.functions.invoke('send-email-outlook', {
+        body: {
+          to: emailData.to,
           subject: emailData.subject,
           body: emailData.body,
-          status: 'sent',
-          created_by: user?.id,
-        })
-        .select()
-        .single();
+          contact_id: contactId,
+        },
+      });
 
       if (error) throw error;
+      if (!data.success) throw new Error(data.error || 'Failed to send email');
+      
       return data;
     },
     onSuccess: () => {

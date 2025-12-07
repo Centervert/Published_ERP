@@ -44,3 +44,11 @@ verify_jwt = false
 # Google Places autocomplete - requires auth
 [functions.places-autocomplete]
 verify_jwt = true
+
+# Send email via Outlook - requires auth
+[functions.send-email-outlook]
+verify_jwt = true
+
+# Sync inbox emails - can be called via cron or manually
+[functions.sync-inbox-emails]
+verify_jwt = false
