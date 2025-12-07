@@ -295,14 +295,13 @@ export function ContactSidebar({ contact, onBack }: ContactSidebarProps) {
         </div>
 
         {/* Contact Info - Inline Editable */}
-        <div className="space-y-3 pt-3 border-t">
+        <div className="space-y-2.5 pt-3 border-t">
           {/* Name */}
-          <div className="flex items-start gap-2 group">
-            <div className="h-4 w-4 mt-0.5 flex-shrink-0" /> {/* Spacer for alignment */}
-            <div className="min-w-0 flex-1">
-              <p className="text-xs text-muted-foreground">Name</p>
+          <div className="flex items-center justify-between group">
+            <span className="text-xs text-muted-foreground w-20 flex-shrink-0">Name</span>
+            <div className="flex-1 text-right">
               {editingField === 'name' ? (
-                <div className="flex gap-2 mt-1">
+                <div className="flex gap-2">
                   <Input
                     value={formData.first_name}
                     onChange={(e) => handleChange('first_name', e.target.value)}
@@ -322,7 +321,7 @@ export function ContactSidebar({ contact, onBack }: ContactSidebarProps) {
               ) : (
                 <button 
                   onClick={() => setEditingField('name')}
-                  className="text-sm text-left hover:text-primary transition-colors w-full"
+                  className="text-sm hover:text-primary transition-colors"
                 >
                   {displayName || <span className="text-muted-foreground">Add name</span>}
                 </button>
@@ -331,24 +330,23 @@ export function ContactSidebar({ contact, onBack }: ContactSidebarProps) {
           </div>
 
           {/* Email */}
-          <div className="flex items-start gap-2 group">
-            <Mail className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-            <div className="min-w-0 flex-1">
-              <p className="text-xs text-muted-foreground">Email</p>
+          <div className="flex items-center justify-between group">
+            <span className="text-xs text-muted-foreground w-20 flex-shrink-0">Email</span>
+            <div className="flex-1 flex items-center justify-end gap-1">
               {editingField === 'email' ? (
                 <Input
                   value={formData.email}
                   onChange={(e) => handleChange('email', e.target.value)}
-                  className="h-7 text-sm mt-1"
+                  className="h-7 text-sm"
                   autoFocus
                   onBlur={() => setEditingField(null)}
                   onKeyDown={(e) => e.key === 'Enter' && setEditingField(null)}
                 />
               ) : (
-                <div className="flex items-center gap-1">
+                <>
                   <button 
                     onClick={() => setEditingField('email')}
-                    className="text-sm text-left hover:text-primary transition-colors truncate"
+                    className="text-sm hover:text-primary transition-colors truncate"
                   >
                     {formData.email || <span className="text-muted-foreground">Add email</span>}
                   </button>
@@ -357,21 +355,20 @@ export function ContactSidebar({ contact, onBack }: ContactSidebarProps) {
                       <Copy className="h-3 w-3 text-muted-foreground" />
                     </Button>
                   )}
-                </div>
+                </>
               )}
             </div>
           </div>
 
           {/* Phone */}
-          <div className="flex items-start gap-2 group">
-            <Phone className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-            <div className="min-w-0 flex-1">
-              <p className="text-xs text-muted-foreground">Phone</p>
+          <div className="flex items-center justify-between group">
+            <span className="text-xs text-muted-foreground w-20 flex-shrink-0">Phone</span>
+            <div className="flex-1 text-right">
               {editingField === 'phone' ? (
                 <Input
                   value={formData.phone}
                   onChange={(e) => handleChange('phone', formatPhoneNumber(e.target.value))}
-                  className="h-7 text-sm mt-1"
+                  className="h-7 text-sm"
                   autoFocus
                   onBlur={() => setEditingField(null)}
                   onKeyDown={(e) => e.key === 'Enter' && setEditingField(null)}
@@ -379,7 +376,7 @@ export function ContactSidebar({ contact, onBack }: ContactSidebarProps) {
               ) : (
                 <button 
                   onClick={() => setEditingField('phone')}
-                  className="text-sm text-left hover:text-primary transition-colors"
+                  className="text-sm hover:text-primary transition-colors"
                 >
                   {formData.phone || <span className="text-muted-foreground">Add phone</span>}
                 </button>
@@ -388,12 +385,11 @@ export function ContactSidebar({ contact, onBack }: ContactSidebarProps) {
           </div>
 
           {/* Address */}
-          <div className="flex items-start gap-2 group">
-            <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-            <div className="min-w-0 flex-1">
-              <p className="text-xs text-muted-foreground">Address</p>
+          <div className="flex items-start justify-between group">
+            <span className="text-xs text-muted-foreground w-20 flex-shrink-0 pt-0.5">Address</span>
+            <div className="flex-1 text-right">
               {editingField === 'address' ? (
-                <div className="mt-1">
+                <div className="text-left">
                   <AddressAutocomplete
                     value={formData.address}
                     onChange={(value) => handleChange('address', value)}
@@ -413,7 +409,7 @@ export function ContactSidebar({ contact, onBack }: ContactSidebarProps) {
               ) : (
                 <button 
                   onClick={() => setEditingField('address')}
-                  className="text-sm text-left hover:text-primary transition-colors"
+                  className="text-sm hover:text-primary transition-colors text-right"
                 >
                   {formData.address || <span className="text-muted-foreground">Add address</span>}
                 </button>
@@ -422,17 +418,14 @@ export function ContactSidebar({ contact, onBack }: ContactSidebarProps) {
           </div>
 
           {/* Timezone */}
-          <div className="flex items-start gap-2 group">
-            <Clock className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-            <div className="min-w-0 flex-1">
-              <p className="text-xs text-muted-foreground">Timezone</p>
-              <button 
-                onClick={openTimezoneDialog}
-                className="text-sm text-left hover:text-primary transition-colors"
-              >
-                {formData.timezone || <span className="text-muted-foreground">Auto-detected from address</span>}
-              </button>
-            </div>
+          <div className="flex items-center justify-between group">
+            <span className="text-xs text-muted-foreground w-20 flex-shrink-0">Timezone</span>
+            <button 
+              onClick={openTimezoneDialog}
+              className="text-sm hover:text-primary transition-colors text-right"
+            >
+              {formData.timezone || <span className="text-muted-foreground">Auto-detect</span>}
+            </button>
           </div>
 
           {/* Save Button - shown when there are changes */}
