@@ -18,6 +18,12 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -25,7 +31,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { MoreHorizontal, Search, Trash2, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { MoreHorizontal, Search, Trash2, Loader2, ChevronLeft, ChevronRight, Info } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface ContactsTableProps {
@@ -207,8 +213,36 @@ export function ContactsTable({ filterByUser }: ContactsTableProps) {
                   <TableHead className="font-semibold">NAME</TableHead>
                   <TableHead className="font-semibold">TYPE</TableHead>
                   <TableHead className="font-semibold">STATUS</TableHead>
-                  <TableHead className="font-semibold">ASSIGNED ASC</TableHead>
-                  <TableHead className="font-semibold">ASSIGNED BSS</TableHead>
+                  <TableHead className="font-semibold">
+                    <div className="flex items-center gap-1">
+                      ASSIGNED ASC
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Author Success Coach</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                  </TableHead>
+                  <TableHead className="font-semibold">
+                    <div className="flex items-center gap-1">
+                      ASSIGNED BSS
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Book Support Specialist</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                  </TableHead>
                   <TableHead className="font-semibold">DATE CREATED</TableHead>
                   <TableHead className="w-12"></TableHead>
                 </TableRow>
