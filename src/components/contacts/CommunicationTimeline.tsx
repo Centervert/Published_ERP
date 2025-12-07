@@ -13,6 +13,9 @@ import { ContactCommunication } from '@/hooks/useContactCommunications';
 interface CommunicationTimelineProps {
   communications: ContactCommunication[];
   isLoading: boolean;
+  contactEmail: string;
+  contactName: string;
+  userEmail?: string;
 }
 
 const formatDuration = (seconds: number | null) => {
@@ -58,7 +61,7 @@ const formatDateHeader = (date: Date) => {
   return format(date, 'MMMM d, yyyy');
 };
 
-export function CommunicationTimeline({ communications, isLoading }: CommunicationTimelineProps) {
+export function CommunicationTimeline({ communications, isLoading, contactEmail, contactName, userEmail }: CommunicationTimelineProps) {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -128,36 +131,53 @@ export function CommunicationTimeline({ communications, isLoading }: Communicati
                   key={comm.id}
                   className="flex flex-col rounded-lg border bg-card overflow-hidden"
                 >
-                  {/* Header */}
-                  <div className="flex items-center gap-3 p-3 border-b bg-muted/30">
-                    {/* Icon */}
-                    <div className={`flex-shrink-0 h-8 w-8 rounded-full flex items-center justify-center ${colorClass}`}>
-                      <Icon className="h-4 w-4" />
+                  {/* Header with From/To */}
+                  <div className="flex items-start gap-3 p-3">
+                    {/* Avatar */}
+                    <div className={`flex-shrink-0 h-10 w-10 rounded-full flex items-center justify-center ${colorClass} relative`}>
+                      <span className="text-xs font-semibold">
+                        {comm.direction === 'outbound' 
+                          ? (userEmail?.slice(0, 2).toUpperCase() || 'ME')
+                          : (contactName?.slice(0, 2).toUpperCase() || contactEmail?.slice(0, 2).toUpperCase() || '??')
+                        }
+                      </span>
+                      <div className="absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full bg-background flex items-center justify-center">
+                        <Icon className="h-2.5 w-2.5 text-muted-foreground" />
+                      </div>
                     </div>
 
-                    {/* Title */}
+                    {/* From/To Info */}
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <DirectionIcon className={`h-3 w-3 ${comm.direction === 'outbound' ? 'text-green-500' : 'text-blue-500'}`} />
-                        <span className="text-sm font-medium">
-                          {comm.type === 'email' ? 'Email' : comm.type === 'call' ? 'Call' : 'SMS'} {comm.direction === 'outbound' ? 'Sent' : 'Received'}
-                        </span>
-                        {comm.type === 'call' && (
-                          <span className="text-xs text-muted-foreground">
-                            {getOutcomeLabel(comm.outcome)}
-                            {comm.duration_seconds && ` • ${formatDuration(comm.duration_seconds)}`}
-                          </span>
-                        )}
-                      </div>
+                      <p className="text-sm font-medium">
+                        {comm.direction === 'outbound' ? (userEmail || 'You') : contactEmail}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        <span className="font-medium">To:</span>{' '}
+                        {comm.direction === 'outbound' 
+                          ? `${contactName} <${contactEmail}>`
+                          : userEmail || 'You'
+                        }
+                      </p>
                       {/* Subject for emails */}
-                      {comm.subject && (
-                        <p className="text-sm font-medium mt-0.5">{comm.subject}</p>
+                      {comm.subject && comm.type === 'email' && (
+                        <p className="text-sm font-medium mt-1.5">{comm.subject}</p>
+                      )}
+                      {comm.type === 'call' && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {getOutcomeLabel(comm.outcome)}
+                          {comm.duration_seconds && ` • ${formatDuration(comm.duration_seconds)}`}
+                        </p>
                       )}
                     </div>
 
-                    {/* Time */}
-                    <div className="flex-shrink-0 text-xs text-muted-foreground">
-                      {time}
+                    {/* Date/Time */}
+                    <div className="flex-shrink-0 text-right">
+                      <p className="text-xs text-muted-foreground">
+                        {format(parseISO(comm.created_at), 'MMM d, yyyy')}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {time}
+                      </p>
                     </div>
                   </div>
 
