@@ -134,17 +134,17 @@ export function ContactSidebar({ contact, onBack }: ContactSidebarProps) {
       </div>
 
       {/* Contact Header */}
-      <div className="p-4 pb-6">
-        <div className="flex gap-3 mb-4">
-          <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xl font-semibold flex-shrink-0">
+      <div className="p-4 pb-4">
+        <div className="flex gap-3 mb-3">
+          <div className="h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center text-primary text-lg font-semibold flex-shrink-0">
             {initials}
           </div>
-          <div className="min-w-0">
-            <h1 className="text-xl font-semibold text-foreground truncate">{displayName}</h1>
+          <div className="min-w-0 flex-1">
+            <h1 className="text-lg font-semibold text-foreground truncate">{displayName}</h1>
             <p className="text-sm text-muted-foreground">{contactTypeLabel}</p>
-            <div className="flex items-center gap-1 mt-1">
-              <span className="text-sm text-muted-foreground truncate">{contact.email}</span>
-              <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => navigator.clipboard.writeText(contact.email)}>
+            <div className="flex items-center gap-1 mt-0.5">
+              <span className="text-xs text-muted-foreground truncate">{contact.email}</span>
+              <Button variant="ghost" size="icon" className="h-5 w-5 flex-shrink-0" onClick={() => navigator.clipboard.writeText(contact.email)}>
                 <Copy className="h-3 w-3 text-muted-foreground" />
               </Button>
             </div>
@@ -152,25 +152,25 @@ export function ContactSidebar({ contact, onBack }: ContactSidebarProps) {
         </div>
 
         {/* Quick Actions */}
-        <div className="flex gap-1 flex-wrap">
-          <Button variant="outline" size="sm" className="flex flex-col items-center gap-0.5 h-auto py-2 px-3 min-w-[52px]">
-            <FileText className="h-4 w-4" />
+        <div className="flex gap-1">
+          <Button variant="outline" size="sm" className="flex flex-col items-center gap-0.5 h-auto py-1.5 px-2.5 flex-1">
+            <FileText className="h-3.5 w-3.5" />
             <span className="text-[10px]">Note</span>
           </Button>
-          <Button variant="outline" size="sm" className="flex flex-col items-center gap-0.5 h-auto py-2 px-3 min-w-[52px]">
-            <Mail className="h-4 w-4" />
+          <Button variant="outline" size="sm" className="flex flex-col items-center gap-0.5 h-auto py-1.5 px-2.5 flex-1">
+            <Mail className="h-3.5 w-3.5" />
             <span className="text-[10px]">Email</span>
           </Button>
-          <Button variant="outline" size="sm" className="flex flex-col items-center gap-0.5 h-auto py-2 px-3 min-w-[52px]">
-            <Phone className="h-4 w-4" />
+          <Button variant="outline" size="sm" className="flex flex-col items-center gap-0.5 h-auto py-1.5 px-2.5 flex-1">
+            <Phone className="h-3.5 w-3.5" />
             <span className="text-[10px]">Call</span>
           </Button>
-          <Button variant="outline" size="sm" className="flex flex-col items-center gap-0.5 h-auto py-2 px-3 min-w-[52px]">
-            <Calendar className="h-4 w-4" />
+          <Button variant="outline" size="sm" className="flex flex-col items-center gap-0.5 h-auto py-1.5 px-2.5 flex-1">
+            <Calendar className="h-3.5 w-3.5" />
             <span className="text-[10px]">Task</span>
           </Button>
-          <Button variant="outline" size="sm" className="flex flex-col items-center gap-0.5 h-auto py-2 px-3 min-w-[52px]">
-            <MoreHorizontal className="h-4 w-4" />
+          <Button variant="outline" size="sm" className="flex flex-col items-center gap-0.5 h-auto py-1.5 px-2.5 flex-1">
+            <MoreHorizontal className="h-3.5 w-3.5" />
             <span className="text-[10px]">More</span>
           </Button>
         </div>
