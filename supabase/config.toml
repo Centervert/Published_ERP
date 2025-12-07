@@ -33,3 +33,10 @@ verify_jwt = true
 # AI Image generation - requires auth
 [functions.generate-image]
 verify_jwt = true
+
+# Outlook OAuth - start requires auth, callback is public
+[functions.outlook-oauth-start]
+verify_jwt = true
+
+[functions.outlook-oauth-callback]
+verify_jwt = false
