@@ -200,6 +200,30 @@ export function ContactSidebar({ contact, onBack }: ContactSidebarProps) {
         {/* Name */}
         <h1 className="text-lg font-semibold text-foreground mb-3">{displayName}</h1>
 
+        {/* Quick Actions - right below name */}
+        <div className="flex gap-1 mb-4">
+          <Button variant="outline" size="sm" className="flex flex-col items-center gap-0.5 h-auto py-1.5 px-2.5 flex-1">
+            <FileText className="h-3.5 w-3.5" />
+            <span className="text-[10px]">Note</span>
+          </Button>
+          <Button variant="outline" size="sm" className="flex flex-col items-center gap-0.5 h-auto py-1.5 px-2.5 flex-1">
+            <Mail className="h-3.5 w-3.5" />
+            <span className="text-[10px]">Email</span>
+          </Button>
+          <Button variant="outline" size="sm" className="flex flex-col items-center gap-0.5 h-auto py-1.5 px-2.5 flex-1">
+            <Phone className="h-3.5 w-3.5" />
+            <span className="text-[10px]">Call</span>
+          </Button>
+          <Button variant="outline" size="sm" className="flex flex-col items-center gap-0.5 h-auto py-1.5 px-2.5 flex-1">
+            <Calendar className="h-3.5 w-3.5" />
+            <span className="text-[10px]">Task</span>
+          </Button>
+          <Button variant="outline" size="sm" className="flex flex-col items-center gap-0.5 h-auto py-1.5 px-2.5 flex-1">
+            <MoreHorizontal className="h-3.5 w-3.5" />
+            <span className="text-[10px]">More</span>
+          </Button>
+        </div>
+
         {/* Key Info Grid */}
         <div className="space-y-2 mb-4">
           {/* Type - Inline Select */}
@@ -265,30 +289,6 @@ export function ContactSidebar({ contact, onBack }: ContactSidebarProps) {
               {contact.created_at ? format(parseISO(contact.created_at), 'MMM d, yyyy') : '--'}
             </span>
           </div>
-        </div>
-
-        {/* Quick Actions */}
-        <div className="flex gap-1 mb-4">
-          <Button variant="outline" size="sm" className="flex flex-col items-center gap-0.5 h-auto py-1.5 px-2.5 flex-1">
-            <FileText className="h-3.5 w-3.5" />
-            <span className="text-[10px]">Note</span>
-          </Button>
-          <Button variant="outline" size="sm" className="flex flex-col items-center gap-0.5 h-auto py-1.5 px-2.5 flex-1">
-            <Mail className="h-3.5 w-3.5" />
-            <span className="text-[10px]">Email</span>
-          </Button>
-          <Button variant="outline" size="sm" className="flex flex-col items-center gap-0.5 h-auto py-1.5 px-2.5 flex-1">
-            <Phone className="h-3.5 w-3.5" />
-            <span className="text-[10px]">Call</span>
-          </Button>
-          <Button variant="outline" size="sm" className="flex flex-col items-center gap-0.5 h-auto py-1.5 px-2.5 flex-1">
-            <Calendar className="h-3.5 w-3.5" />
-            <span className="text-[10px]">Task</span>
-          </Button>
-          <Button variant="outline" size="sm" className="flex flex-col items-center gap-0.5 h-auto py-1.5 px-2.5 flex-1">
-            <MoreHorizontal className="h-3.5 w-3.5" />
-            <span className="text-[10px]">More</span>
-          </Button>
         </div>
 
         {/* Contact Info - Inline Editable */}
