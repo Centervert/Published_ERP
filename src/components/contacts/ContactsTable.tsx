@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useContacts, Contact } from '@/hooks/useContacts';
 import { useImprints } from '@/hooks/useImprints';
 import { Button } from '@/components/ui/button';
@@ -50,6 +51,7 @@ const CONTACT_TYPES = [
 ];
 
 export function ContactsTable() {
+  const navigate = useNavigate();
   const { contacts, isLoading, updateContact, deleteContact } = useContacts();
   const { imprints } = useImprints();
   const [search, setSearch] = useState('');
@@ -57,6 +59,10 @@ export function ContactsTable() {
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [imprintFilter, setImprintFilter] = useState<string>('all');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  const handleRowClick = (contactId: string) => {
+    navigate(`/contacts/${contactId}`);
+  };
 
   const filteredContacts = contacts.filter(contact => {
     const matchesSearch = 
@@ -195,34 +201,38 @@ export function ContactsTable() {
             </TableHeader>
             <TableBody>
               {filteredContacts.map((contact) => (
-                <TableRow key={contact.id}>
-                  <TableCell>
+                <TableRow 
+                  key={contact.id} 
+                  className="cursor-pointer hover:bg-muted/50"
+                  onClick={() => handleRowClick(contact.id)}
+                >
+                  <TableCell onClick={(e) => e.stopPropagation()}>
                     <Checkbox
                       checked={selectedIds.has(contact.id)}
                       onCheckedChange={() => toggleSelect(contact.id)}
                     />
                   </TableCell>
-                  <TableCell>
+                  <TableCell onClick={(e) => e.stopPropagation()}>
                     <EditableCell
                       value={contact.first_name || ''}
                       onSave={(value) => handleUpdateField(contact.id, 'first_name', value)}
                       placeholder="—"
                     />
                   </TableCell>
-                  <TableCell>
+                  <TableCell onClick={(e) => e.stopPropagation()}>
                     <EditableCell
                       value={contact.last_name || ''}
                       onSave={(value) => handleUpdateField(contact.id, 'last_name', value)}
                       placeholder="—"
                     />
                   </TableCell>
-                  <TableCell>
+                  <TableCell onClick={(e) => e.stopPropagation()}>
                     <EditableCell
                       value={contact.email}
                       onSave={(value) => handleUpdateField(contact.id, 'email', value)}
                     />
                   </TableCell>
-                  <TableCell>
+                  <TableCell onClick={(e) => e.stopPropagation()}>
                     <EditableCell
                       value={contact.phone || ''}
                       onSave={(value) => handleUpdateField(contact.id, 'phone', value)}
@@ -230,7 +240,7 @@ export function ContactsTable() {
                       placeholder="—"
                     />
                   </TableCell>
-                  <TableCell>
+                  <TableCell onClick={(e) => e.stopPropagation()}>
                     <EditableCell
                       value={contact.contact_type || 'lead'}
                       onSave={(value) => handleUpdateField(contact.id, 'contact_type', value)}
@@ -238,7 +248,7 @@ export function ContactsTable() {
                       options={CONTACT_TYPES}
                     />
                   </TableCell>
-                  <TableCell>
+                  <TableCell onClick={(e) => e.stopPropagation()}>
                     <EditableCell
                       value={contact.imprint_id || 'none'}
                       onSave={(value) => handleUpdateField(contact.id, 'imprint_id', value === 'none' ? '' : value)}
@@ -258,7 +268,7 @@ export function ContactsTable() {
                   <TableCell className="text-muted-foreground text-sm">
                     {format(new Date(contact.created_at), 'MMM d, yyyy')}
                   </TableCell>
-                  <TableCell>
+                  <TableCell onClick={(e) => e.stopPropagation()}>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon" className="h-8 w-8">
