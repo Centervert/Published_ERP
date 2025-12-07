@@ -203,41 +203,45 @@ export function ContactSidebar({ contact, onBack }: ContactSidebarProps) {
         {/* Key Info Grid */}
         <div className="space-y-2 mb-4">
           {/* Type - Inline Select */}
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground">Type</span>
-            <Select value={formData.contact_type} onValueChange={(v) => handleChange('contact_type', v)}>
-              <SelectTrigger className="h-6 w-auto min-w-[80px] border-0 bg-transparent p-0 text-sm font-medium focus:ring-0 [&>svg]:h-3 [&>svg]:w-3">
-                <span className={`inline-block text-xs font-medium px-2 py-0.5 rounded-sm ${getTypeColor(formData.contact_type)}`}>
-                  {contactTypeLabel}
-                </span>
-              </SelectTrigger>
-              <SelectContent>
-                {CONTACT_TYPES.map(type => (
-                  <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="flex items-center min-h-[28px]">
+            <span className="text-xs text-muted-foreground w-16 flex-shrink-0">Type</span>
+            <div className="flex-1 flex justify-end">
+              <Select value={formData.contact_type} onValueChange={(v) => handleChange('contact_type', v)}>
+                <SelectTrigger className="h-6 w-auto border-0 bg-transparent p-0 text-sm font-medium focus:ring-0 [&>svg]:h-3 [&>svg]:w-3">
+                  <span className={`inline-block text-xs font-medium px-2 py-0.5 rounded-sm ${getTypeColor(formData.contact_type)}`}>
+                    {contactTypeLabel}
+                  </span>
+                </SelectTrigger>
+                <SelectContent>
+                  {CONTACT_TYPES.map(type => (
+                    <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {/* Status - Inline Select */}
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground">Status</span>
-            <Select value={formData.status} onValueChange={(v) => handleChange('status', v)}>
-              <SelectTrigger className="h-6 w-auto min-w-[80px] border-0 bg-transparent p-0 text-sm focus:ring-0 [&>svg]:h-3 [&>svg]:w-3">
-                <span className="text-sm">{STATUS_OPTIONS.find(s => s.value === formData.status)?.label || 'Active'}</span>
-              </SelectTrigger>
-              <SelectContent>
-                {STATUS_OPTIONS.map(status => (
-                  <SelectItem key={status.value} value={status.value}>{status.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="flex items-center min-h-[28px]">
+            <span className="text-xs text-muted-foreground w-16 flex-shrink-0">Status</span>
+            <div className="flex-1 flex justify-end">
+              <Select value={formData.status} onValueChange={(v) => handleChange('status', v)}>
+                <SelectTrigger className="h-6 w-auto border-0 bg-transparent p-0 text-sm focus:ring-0 [&>svg]:h-3 [&>svg]:w-3">
+                  <span className="text-sm">{STATUS_OPTIONS.find(s => s.value === formData.status)?.label || 'Active'}</span>
+                </SelectTrigger>
+                <SelectContent>
+                  {STATUS_OPTIONS.map(status => (
+                    <SelectItem key={status.value} value={status.value}>{status.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {/* ASC */}
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground">A.S.C.</span>
-            <span className="text-sm">
+          <div className="flex items-center min-h-[28px]">
+            <span className="text-xs text-muted-foreground w-16 flex-shrink-0">A.S.C.</span>
+            <span className="text-sm flex-1 text-right">
               {formData.assigned_asc !== 'none' 
                 ? teamMembers.find(m => m.id === formData.assigned_asc)?.full_name || teamMembers.find(m => m.id === formData.assigned_asc)?.email || '--'
                 : '--'}
@@ -245,9 +249,9 @@ export function ContactSidebar({ contact, onBack }: ContactSidebarProps) {
           </div>
 
           {/* AE */}
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground">A.E.</span>
-            <span className="text-sm">
+          <div className="flex items-center min-h-[28px]">
+            <span className="text-xs text-muted-foreground w-16 flex-shrink-0">A.E.</span>
+            <span className="text-sm flex-1 text-right">
               {formData.assigned_ae !== 'none' 
                 ? teamMembers.find(m => m.id === formData.assigned_ae)?.full_name || teamMembers.find(m => m.id === formData.assigned_ae)?.email || '--'
                 : '--'}
@@ -255,9 +259,9 @@ export function ContactSidebar({ contact, onBack }: ContactSidebarProps) {
           </div>
 
           {/* Created */}
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground">Created</span>
-            <span className="text-sm">
+          <div className="flex items-center min-h-[28px]">
+            <span className="text-xs text-muted-foreground w-16 flex-shrink-0">Created</span>
+            <span className="text-sm flex-1 text-right">
               {contact.created_at ? format(parseISO(contact.created_at), 'MMM d, yyyy') : '--'}
             </span>
           </div>
@@ -312,12 +316,12 @@ export function ContactSidebar({ contact, onBack }: ContactSidebarProps) {
                   />
                 </div>
               ) : (
-                <button 
+                <span 
                   onClick={() => setEditingField('name')}
-                  className="text-sm hover:text-primary transition-colors text-right w-full"
+                  className="text-sm hover:text-primary transition-colors cursor-pointer block text-right"
                 >
                   {displayName || <span className="text-muted-foreground">Add name</span>}
-                </button>
+                </span>
               )}
             </div>
           </div>
@@ -325,7 +329,7 @@ export function ContactSidebar({ contact, onBack }: ContactSidebarProps) {
           {/* Email */}
           <div className="flex items-center group min-h-[28px]">
             <div className="flex items-center gap-1.5 w-20 flex-shrink-0">
-              <Mail className="h-3.5 w-3.5 text-muted-foreground" />
+              <Mail className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
               <span className="text-xs text-muted-foreground">Email</span>
             </div>
             <div className="flex-1 flex items-center justify-end gap-1">
@@ -333,19 +337,19 @@ export function ContactSidebar({ contact, onBack }: ContactSidebarProps) {
                 <Input
                   value={formData.email}
                   onChange={(e) => handleChange('email', e.target.value)}
-                  className="h-7 text-sm"
+                  className="h-7 text-sm w-full"
                   autoFocus
                   onBlur={() => setEditingField(null)}
                   onKeyDown={(e) => e.key === 'Enter' && setEditingField(null)}
                 />
               ) : (
                 <>
-                  <button 
+                  <span 
                     onClick={() => setEditingField('email')}
-                    className="text-sm hover:text-primary transition-colors truncate"
+                    className="text-sm hover:text-primary transition-colors truncate cursor-pointer"
                   >
                     {formData.email || <span className="text-muted-foreground">Add email</span>}
-                  </button>
+                  </span>
                   {formData.email && (
                     <Button variant="ghost" size="icon" className="h-5 w-5 flex-shrink-0 opacity-0 group-hover:opacity-100" onClick={() => navigator.clipboard.writeText(formData.email)}>
                       <Copy className="h-3 w-3 text-muted-foreground" />
@@ -359,7 +363,7 @@ export function ContactSidebar({ contact, onBack }: ContactSidebarProps) {
           {/* Phone */}
           <div className="flex items-center group min-h-[28px]">
             <div className="flex items-center gap-1.5 w-20 flex-shrink-0">
-              <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+              <Phone className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
               <span className="text-xs text-muted-foreground">Phone</span>
             </div>
             <div className="flex-1 text-right">
@@ -367,18 +371,18 @@ export function ContactSidebar({ contact, onBack }: ContactSidebarProps) {
                 <Input
                   value={formData.phone}
                   onChange={(e) => handleChange('phone', formatPhoneNumber(e.target.value))}
-                  className="h-7 text-sm"
+                  className="h-7 text-sm w-full"
                   autoFocus
                   onBlur={() => setEditingField(null)}
                   onKeyDown={(e) => e.key === 'Enter' && setEditingField(null)}
                 />
               ) : (
-                <button 
+                <span 
                   onClick={() => setEditingField('phone')}
-                  className="text-sm hover:text-primary transition-colors"
+                  className="text-sm hover:text-primary transition-colors cursor-pointer"
                 >
                   {formData.phone || <span className="text-muted-foreground">Add phone</span>}
-                </button>
+                </span>
               )}
             </div>
           </div>
@@ -386,7 +390,7 @@ export function ContactSidebar({ contact, onBack }: ContactSidebarProps) {
           {/* Address */}
           <div className="flex items-start group min-h-[28px]">
             <div className="flex items-center gap-1.5 w-20 flex-shrink-0 pt-0.5">
-              <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
+              <MapPin className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
               <span className="text-xs text-muted-foreground">Address</span>
             </div>
             <div className="flex-1 text-right">
@@ -409,12 +413,12 @@ export function ContactSidebar({ contact, onBack }: ContactSidebarProps) {
                   </Button>
                 </div>
               ) : (
-                <button 
+                <span 
                   onClick={() => setEditingField('address')}
-                  className="text-sm hover:text-primary transition-colors text-right"
+                  className="text-sm hover:text-primary transition-colors cursor-pointer"
                 >
                   {formData.address || <span className="text-muted-foreground">Add address</span>}
-                </button>
+                </span>
               )}
             </div>
           </div>
@@ -422,15 +426,15 @@ export function ContactSidebar({ contact, onBack }: ContactSidebarProps) {
           {/* Timezone */}
           <div className="flex items-center group min-h-[28px]">
             <div className="flex items-center gap-1.5 w-20 flex-shrink-0">
-              <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+              <Clock className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
               <span className="text-xs text-muted-foreground">Timezone</span>
             </div>
-            <button 
+            <span 
               onClick={openTimezoneDialog}
-              className="text-sm hover:text-primary transition-colors text-right flex-1"
+              className="text-sm hover:text-primary transition-colors text-right flex-1 cursor-pointer"
             >
               {formData.timezone || <span className="text-muted-foreground">Auto-detect</span>}
-            </button>
+            </span>
           </div>
 
           {/* Save Button - shown when there are changes */}
