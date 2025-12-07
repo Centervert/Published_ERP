@@ -340,7 +340,7 @@ export function ContactSidebar({ contact, onBack, onSelectTab }: ContactSidebarP
               ) : (
                 <span 
                   onClick={() => setEditingField('name')}
-                  className="text-sm hover:text-primary transition-colors cursor-pointer block text-right"
+                  className="text-sm hover:text-primary transition-colors cursor-pointer block"
                 >
                   {displayName || <span className="text-muted-foreground">Add name</span>}
                 </span>
@@ -351,7 +351,7 @@ export function ContactSidebar({ contact, onBack, onSelectTab }: ContactSidebarP
           {/* Email */}
           <div className="flex items-center group min-h-[28px]">
             <span className="text-xs text-muted-foreground w-20 flex-shrink-0">Email</span>
-            <div className="flex-1 flex items-center justify-end gap-1">
+            <div className="flex-1 flex items-center gap-1">
               {editingField === 'email' ? (
                 <Input
                   value={formData.email}
@@ -382,7 +382,7 @@ export function ContactSidebar({ contact, onBack, onSelectTab }: ContactSidebarP
           {/* Phone */}
           <div className="flex items-center group min-h-[28px]">
             <span className="text-xs text-muted-foreground w-20 flex-shrink-0">Phone</span>
-            <div className="flex-1 text-right">
+            <div className="flex-1">
               {editingField === 'phone' ? (
                 <Input
                   value={formData.phone}
@@ -406,9 +406,9 @@ export function ContactSidebar({ contact, onBack, onSelectTab }: ContactSidebarP
           {/* Address */}
           <div className="flex items-start group min-h-[28px]">
             <span className="text-xs text-muted-foreground w-20 flex-shrink-0 pt-0.5">Address</span>
-            <div className="flex-1 text-right">
+            <div className="flex-1">
               {editingField === 'address' ? (
-                <div className="text-left">
+                <div>
                   <AddressAutocomplete
                     value={formData.address}
                     onChange={(value) => handleChange('address', value)}
@@ -441,7 +441,7 @@ export function ContactSidebar({ contact, onBack, onSelectTab }: ContactSidebarP
             <span className="text-xs text-muted-foreground w-20 flex-shrink-0">Timezone</span>
             <span 
               onClick={openTimezoneDialog}
-              className="text-sm hover:text-primary transition-colors text-right flex-1 cursor-pointer"
+              className="text-sm hover:text-primary transition-colors flex-1 cursor-pointer"
             >
               {formData.timezone || <span className="text-muted-foreground">Auto-detect</span>}
             </span>
