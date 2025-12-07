@@ -182,8 +182,8 @@ export function ContactSidebar({ contact, onBack }: ContactSidebarProps) {
   return (
     <div className="flex flex-col h-full">
       {/* Header with back button */}
-      <div className="p-4 border-b flex items-center gap-2">
-        <Button variant="ghost" size="sm" onClick={onBack} className="text-primary hover:text-primary">
+      <div className="px-4 py-2 border-b flex items-center gap-2">
+        <Button variant="ghost" size="sm" onClick={onBack} className="text-primary hover:text-primary -ml-2">
           <ArrowLeft className="h-4 w-4 mr-1" />
           Contacts
         </Button>
@@ -196,7 +196,7 @@ export function ContactSidebar({ contact, onBack }: ContactSidebarProps) {
       </div>
 
       {/* Contact Header - Info Section */}
-      <div className="p-4 pb-2">
+      <div className="p-4 pt-3 pb-2">
         <div className="flex gap-3 mb-4">
           <div className="h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center text-primary text-lg font-semibold flex-shrink-0">
             {initials}
