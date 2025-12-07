@@ -230,14 +230,14 @@ export function ContactsTable({ filterByUser }: ContactsTableProps) {
                   </TableHead>
                   <TableHead className="font-semibold">
                     <div className="flex items-center gap-1">
-                      ASSIGNED BSS
+                      ASSIGNED AE
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
                           </TooltipTrigger>
                           <TooltipContent>
-                            <p>Book Support Specialist</p>
+                            <p>Account Executive</p>
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
