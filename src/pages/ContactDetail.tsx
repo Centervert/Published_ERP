@@ -1,7 +1,9 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useContact } from '@/hooks/useContacts';
+import { useContact, useUpdateContact } from '@/hooks/useContacts';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { ContactSidebar } from '@/components/contacts/ContactSidebar';
 import { ContactActivityFeed } from '@/components/contacts/ContactActivityFeed';
 import { ContactSummaryPanel } from '@/components/contacts/ContactSummaryPanel';
@@ -10,6 +12,40 @@ export default function ContactDetail() {
   const { contactId } = useParams<{ contactId: string }>();
   const navigate = useNavigate();
   const { contact, isLoading } = useContact(contactId || '');
+  const updateContact = useUpdateContact();
+
+  // Fetch team members for assignment dropdowns
+  const { data: teamMembers = [] } = useQuery({
+    queryKey: ['profiles'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, full_name, email')
+        .order('full_name');
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  // Get display names for assigned users
+  const getAssignedName = (userId: string | null) => {
+    if (!userId) return null;
+    const member = teamMembers.find(m => m.id === userId);
+    return member ? (member.full_name || member.email) : null;
+  };
+
+  const handleAssignmentChange = async (field: 'assigned_asc' | 'assigned_ae', value: string | null) => {
+    if (!contact) return;
+    
+    await updateContact.mutateAsync({
+      id: contact.id,
+      originalData: {
+        assigned_asc: contact.assigned_asc,
+        assigned_ae: contact.assigned_ae,
+      },
+      [field]: value,
+    });
+  };
 
   if (isLoading) {
     return (
@@ -42,8 +78,12 @@ export default function ContactDetail() {
       <div className="flex-1 overflow-y-auto">
         <ContactActivityFeed 
           contactId={contact.id} 
-          assignedAsc={contact.assigned_asc}
-          assignedAe={contact.assigned_ae}
+          assignedAsc={getAssignedName(contact.assigned_asc)}
+          assignedAe={getAssignedName(contact.assigned_ae)}
+          assignedAscId={contact.assigned_asc}
+          assignedAeId={contact.assigned_ae}
+          teamMembers={teamMembers}
+          onAssignmentChange={handleAssignmentChange}
         />
       </div>
 
