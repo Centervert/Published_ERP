@@ -40,3 +40,7 @@ verify_jwt = true
 
 [functions.outlook-oauth-callback]
 verify_jwt = false
+
+# Google Places autocomplete - requires auth
+[functions.places-autocomplete]
+verify_jwt = true
