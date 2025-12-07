@@ -38,6 +38,7 @@ export function EmailComposer({
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
   const [fromEmail, setFromEmail] = useState<string>('');
+  const [initialized, setInitialized] = useState(false);
 
   // Fetch user's connected email accounts
   const { data: emailConnections = [] } = useQuery({
@@ -100,6 +101,33 @@ export function EmailComposer({
     }
   }, [emailConnections, userProfile, fromEmail]);
 
+  // Get time-based greeting
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good morning';
+    if (hour < 17) return 'Good afternoon';
+    return 'Good evening';
+  };
+
+  // Get contact's first name
+  const getContactFirstName = () => {
+    const firstName = contactName.split(' ')[0];
+    return firstName || '';
+  };
+
+  // Initialize body with greeting and signature when data is loaded
+  useEffect(() => {
+    if (!initialized && userProfile) {
+      const greeting = getGreeting();
+      const firstName = getContactFirstName();
+      const greetingLine = firstName ? `${greeting} ${firstName},` : `${greeting},`;
+      const signature = buildSignature();
+      
+      setBody(`<p>${greetingLine}</p><p><br></p><p><br></p>${signature}`);
+      setInitialized(true);
+    }
+  }, [userProfile, contactImprint, initialized, contactName]);
+
   // Build email signature
   const buildSignature = () => {
     const parts: string[] = [];
@@ -138,19 +166,20 @@ export function EmailComposer({
   const handleSend = async () => {
     if (!subject.trim() || !body.trim()) return;
 
-    // Append signature to body
-    const signature = buildSignature();
-    const bodyWithSignature = body.trim() + signature;
-
     await onSend({
       subject: subject.trim(),
-      body: bodyWithSignature,
+      body: body.trim(),
       from_email: fromEmail || undefined,
     });
 
-    // Reset form
+    // Reset form with new greeting and signature
+    const greeting = getGreeting();
+    const firstName = getContactFirstName();
+    const greetingLine = firstName ? `${greeting} ${firstName},` : `${greeting},`;
+    const signature = buildSignature();
+    
     setSubject('');
-    setBody('');
+    setBody(`<p>${greetingLine}</p><p><br></p><p><br></p>${signature}`);
   };
 
   const hasConnectedEmail = emailConnections.length > 0;
