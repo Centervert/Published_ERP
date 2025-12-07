@@ -1,13 +1,6 @@
-import { useState } from 'react';
 import { useContactActivity } from '@/hooks/useContacts';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
 import { 
-  Search,
-  ChevronDown,
-  ChevronRight,
   UserPlus, 
   Edit, 
   Mail, 
@@ -18,10 +11,9 @@ import {
   Send,
   Clock,
   Loader2,
-  Phone,
-  Calendar
+  ArrowRight
 } from 'lucide-react';
-import { format, parseISO, isToday, isYesterday } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 
 interface ContactActivityFeedProps {
   contactId: string;
@@ -33,8 +25,9 @@ interface ActivityItem {
   id: string;
   type: string;
   description: string;
-  metadata?: unknown;
+  metadata?: any;
   created_at: string;
+  created_by?: string | null;
   source: 'crm' | 'marketing';
 }
 
@@ -83,57 +76,45 @@ const getActivityColor = (type: string, source: string) => {
   }
 };
 
-const groupActivitiesByDate = (activities: ActivityItem[]) => {
-  const groups: { label: string; items: ActivityItem[] }[] = [];
-  const groupMap = new Map<string, ActivityItem[]>();
+const formatFieldName = (field: string) => {
+  return field
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, l => l.toUpperCase());
+};
+
+const renderFieldChanges = (metadata: any) => {
+  if (!metadata) return null;
   
-  activities.forEach(activity => {
-    const date = parseISO(activity.created_at);
-    let key: string;
-    
-    if (isToday(date)) {
-      key = 'Today';
-    } else if (isYesterday(date)) {
-      key = 'Yesterday';
-    } else {
-      key = format(date, 'MMMM yyyy');
-    }
-    
-    if (!groupMap.has(key)) {
-      groupMap.set(key, []);
-    }
-    groupMap.get(key)!.push(activity);
-  });
+  // Handle old/new value changes
+  if (metadata.changes && typeof metadata.changes === 'object') {
+    return (
+      <div className="mt-2 space-y-1">
+        {Object.entries(metadata.changes).map(([field, change]: [string, any]) => (
+          <div key={field} className="text-xs flex items-center gap-1.5 text-muted-foreground">
+            <span className="font-medium text-foreground">{formatFieldName(field)}:</span>
+            <span className="text-muted-foreground line-through">{change.from || '(empty)'}</span>
+            <ArrowRight className="h-3 w-3" />
+            <span className="text-foreground">{change.to || '(empty)'}</span>
+          </div>
+        ))}
+      </div>
+    );
+  }
   
-  groupMap.forEach((items, label) => {
-    groups.push({ label, items });
-  });
+  // Handle simple field list (older format)
+  if (metadata.fields && Array.isArray(metadata.fields)) {
+    return (
+      <div className="mt-1 text-xs text-muted-foreground">
+        Updated: {metadata.fields.map(formatFieldName).join(', ')}
+      </div>
+    );
+  }
   
-  return groups;
+  return null;
 };
 
 export function ContactActivityFeed({ contactId, assignedAsc, assignedAe }: ContactActivityFeedProps) {
   const { activities, isLoading } = useContactActivity(contactId);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
-
-  const filteredActivities = activities.filter(a => 
-    a.description.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-  
-  const groupedActivities = groupActivitiesByDate(filteredActivities);
-
-  const toggleExpanded = (id: string) => {
-    setExpandedItems(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
-      return next;
-    });
-  };
 
   return (
     <div className="h-full flex flex-col">
@@ -183,169 +164,51 @@ export function ContactActivityFeed({ contactId, assignedAsc, assignedAe }: Cont
             </div>
           </TabsContent>
 
-          <TabsContent value="activities" className="mt-0">
-            {/* Search and Filter Bar */}
-            <div className="px-6 py-4 flex items-center gap-4">
-              <div className="relative flex-1 max-w-sm">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search activities"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9 h-9"
-                />
+          <TabsContent value="activities" className="mt-0 p-4">
+            {isLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>
-              <Button variant="outline" size="sm" className="text-primary">
-                Collapse all
-                <ChevronDown className="h-4 w-4 ml-1" />
-              </Button>
-            </div>
-
-            {/* Activity Type Tabs */}
-            <div className="px-6 pb-2 flex items-center gap-4 border-b">
-              <Tabs defaultValue="activity" className="w-full">
-                <TabsList className="h-auto p-0 bg-transparent border-b-0 gap-4">
-                  <TabsTrigger 
-                    value="activity" 
-                    className="px-0 pb-2 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none text-sm"
-                  >
-                    Activity
-                  </TabsTrigger>
-                  <TabsTrigger 
-                    value="notes" 
-                    className="px-0 pb-2 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none text-sm"
-                  >
-                    Notes
-                  </TabsTrigger>
-                  <TabsTrigger 
-                    value="emails" 
-                    className="px-0 pb-2 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none text-sm"
-                  >
-                    Emails
-                  </TabsTrigger>
-                  <TabsTrigger 
-                    value="calls" 
-                    className="px-0 pb-2 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none text-sm"
-                  >
-                    Calls
-                  </TabsTrigger>
-                  <TabsTrigger 
-                    value="tasks" 
-                    className="px-0 pb-2 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none text-sm"
-                  >
-                    Tasks
-                  </TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="activity" className="mt-0 pt-4">
-                  {/* Filter badges */}
-                  <div className="px-6 pb-4 flex items-center gap-3">
-                    <Badge variant="secondary" className="cursor-pointer">
-                      ({activities.length}) Activity
-                      <button className="ml-1 text-muted-foreground hover:text-foreground">&times;</button>
-                    </Badge>
-                    <Button variant="ghost" size="sm" className="text-xs text-muted-foreground">
-                      All time so far
-                    </Button>
-                  </div>
-
-                  {/* Activity List */}
-                  <div className="px-6 pb-6">
-                    {isLoading ? (
-                      <div className="flex items-center justify-center py-12">
-                        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            ) : activities.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <Clock className="h-8 w-8 text-muted-foreground mb-2" />
+                <p className="text-sm text-muted-foreground">No activity yet</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {activities.map((activity: ActivityItem) => {
+                  const Icon = getActivityIcon(activity.type);
+                  const colorClass = getActivityColor(activity.type, activity.source);
+                  const date = parseISO(activity.created_at);
+                  
+                  return (
+                    <div 
+                      key={activity.id} 
+                      className="flex items-start gap-3 py-3 border-b last:border-b-0"
+                    >
+                      <div className={`flex-shrink-0 h-7 w-7 rounded-full flex items-center justify-center ${colorClass}`}>
+                        <Icon className="h-3.5 w-3.5" />
                       </div>
-                    ) : groupedActivities.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center py-12 text-center">
-                        <Clock className="h-8 w-8 text-muted-foreground mb-2" />
-                        <p className="text-sm text-muted-foreground">No activity yet</p>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-foreground">
+                          {activity.description}
+                        </p>
+                        {renderFieldChanges(activity.metadata)}
+                        <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+                          <span>{format(date, 'MMM d, yyyy')} at {format(date, 'h:mm a')}</span>
+                          {activity.source === 'marketing' && (
+                            <>
+                              <span>•</span>
+                              <span className="text-purple-600">Marketing</span>
+                            </>
+                          )}
+                        </div>
                       </div>
-                    ) : (
-                      <div className="space-y-6">
-                        {groupedActivities.map(({ label, items }) => (
-                          <div key={label}>
-                            <h3 className="text-sm font-medium text-muted-foreground mb-4">{label}</h3>
-                            <div className="space-y-3">
-                              {items.map((activity) => {
-                                const Icon = getActivityIcon(activity.type);
-                                const colorClass = getActivityColor(activity.type, activity.source);
-                                const isExpanded = expandedItems.has(activity.id);
-                                
-                                return (
-                                  <div 
-                                    key={activity.id} 
-                                    className="border rounded-lg p-4 hover:bg-muted/30 transition-colors"
-                                  >
-                                    <div className="flex items-start gap-3">
-                                      <button 
-                                        onClick={() => toggleExpanded(activity.id)}
-                                        className="mt-0.5 text-muted-foreground hover:text-foreground"
-                                      >
-                                        {isExpanded ? (
-                                          <ChevronDown className="h-4 w-4" />
-                                        ) : (
-                                          <ChevronRight className="h-4 w-4" />
-                                        )}
-                                      </button>
-                                      <div className={`flex-shrink-0 h-8 w-8 rounded-full flex items-center justify-center ${colorClass}`}>
-                                        <Icon className="h-4 w-4" />
-                                      </div>
-                                      <div className="flex-1 min-w-0">
-                                        <div className="flex items-center justify-between gap-2">
-                                          <p className="text-sm font-medium text-foreground">
-                                            {activity.description}
-                                          </p>
-                                          <span className="text-xs text-muted-foreground whitespace-nowrap">
-                                            {format(parseISO(activity.created_at), 'MMM d, h:mm a')}
-                                          </span>
-                                        </div>
-                                        {activity.source === 'marketing' && (
-                                          <Badge variant="outline" className="mt-1 text-xs text-purple-600 border-purple-200">
-                                            Marketing
-                                          </Badge>
-                                        )}
-                                      </div>
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </TabsContent>
-
-                <TabsContent value="notes" className="mt-0 pt-4">
-                  <div className="px-6 py-12 text-center text-muted-foreground">
-                    <FileText className="h-8 w-8 mx-auto mb-2" />
-                    <p>Notes coming soon</p>
-                  </div>
-                </TabsContent>
-
-                <TabsContent value="emails" className="mt-0 pt-4">
-                  <div className="px-6 py-12 text-center text-muted-foreground">
-                    <Mail className="h-8 w-8 mx-auto mb-2" />
-                    <p>Emails coming soon</p>
-                  </div>
-                </TabsContent>
-
-                <TabsContent value="calls" className="mt-0 pt-4">
-                  <div className="px-6 py-12 text-center text-muted-foreground">
-                    <Phone className="h-8 w-8 mx-auto mb-2" />
-                    <p>Calls coming soon</p>
-                  </div>
-                </TabsContent>
-
-                <TabsContent value="tasks" className="mt-0 pt-4">
-                  <div className="px-6 py-12 text-center text-muted-foreground">
-                    <Calendar className="h-8 w-8 mx-auto mb-2" />
-                    <p>Tasks coming soon</p>
-                  </div>
-                </TabsContent>
-              </Tabs>
-            </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </TabsContent>
         </Tabs>
       </div>
