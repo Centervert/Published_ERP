@@ -1,6 +1,8 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useContacts, Contact } from '@/hooks/useContacts';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -48,6 +50,24 @@ export function ContactsTable({ filterByUser }: ContactsTableProps) {
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
+
+  // Fetch team members for displaying assigned names
+  const { data: teamMembers = [] } = useQuery({
+    queryKey: ['profiles'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, full_name, email')
+        .order('full_name');
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  // Create a map for quick lookup
+  const teamMemberMap = useMemo(() => {
+    return new Map(teamMembers.map(m => [m.id, m.full_name || m.email]));
+  }, [teamMembers]);
 
   const handleRowClick = (contactId: string) => {
     navigate(`/contacts/${contactId}`);
@@ -281,8 +301,12 @@ export function ContactsTable({ filterByUser }: ContactsTableProps) {
                       <TableCell className="text-muted-foreground">
                         {getStatusLabel(contact.status)}
                       </TableCell>
-                      <TableCell className="text-muted-foreground">--</TableCell>
-                      <TableCell className="text-muted-foreground">--</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {contact.assigned_asc ? teamMemberMap.get(contact.assigned_asc) || '--' : '--'}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {contact.assigned_ae ? teamMemberMap.get(contact.assigned_ae) || '--' : '--'}
+                      </TableCell>
                       <TableCell className="text-muted-foreground">
                         {format(new Date(contact.created_at), 'MM/dd/yyyy')}
                       </TableCell>
