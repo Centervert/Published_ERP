@@ -164,7 +164,7 @@ export function ContactActivityFeed({
     <div className="h-full flex flex-col">
       {/* Tab Header */}
       <Tabs value={selectedTab} onValueChange={onTabChange} className="flex-1 flex flex-col">
-        <div className="border-b bg-background sticky top-0 z-10 px-6 pt-4">
+        <div className="border-b bg-background sticky top-0 z-10 px-6 h-[57px] flex items-end">
           <TabsList className="h-auto p-0 bg-transparent border-b-0 gap-6">
             <TabsTrigger 
               value="contact" 

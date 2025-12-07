@@ -30,11 +30,11 @@ export function ContactSummaryPanel({ contact }: ContactSummaryPanelProps) {
     <div className="flex flex-col h-full">
       {/* AI Summary Section */}
       <Collapsible open={summaryOpen} onOpenChange={setSummaryOpen}>
-        <CollapsibleTrigger className="flex items-center gap-2 w-full px-4 py-3 border-b hover:bg-muted/50 text-left">
+        <CollapsibleTrigger className="flex items-center gap-2 w-full px-6 h-[57px] border-b hover:bg-muted/50 text-left">
           <ChevronDown className={`h-4 w-4 transition-transform ${summaryOpen ? '' : '-rotate-90'}`} />
           <span className="font-medium text-sm">Contact summary</span>
         </CollapsibleTrigger>
-        <CollapsibleContent className="p-4">
+        <CollapsibleContent className="p-6">
           <Card className="border-primary/20 bg-primary/5">
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
@@ -84,7 +84,7 @@ export function ContactSummaryPanel({ contact }: ContactSummaryPanelProps) {
 
       {/* Deals Section */}
       <Collapsible open={dealsOpen} onOpenChange={setDealsOpen}>
-        <CollapsibleTrigger className="flex items-center justify-between w-full px-4 py-3 border-b hover:bg-muted/50 text-left">
+        <CollapsibleTrigger className="flex items-center justify-between w-full px-6 py-4 border-b hover:bg-muted/50 text-left">
           <div className="flex items-center gap-2">
             <ChevronDown className={`h-4 w-4 transition-transform ${dealsOpen ? '' : '-rotate-90'}`} />
             <span className="font-medium text-sm">Deals (0)</span>
@@ -94,7 +94,7 @@ export function ContactSummaryPanel({ contact }: ContactSummaryPanelProps) {
             Add
           </Button>
         </CollapsibleTrigger>
-        <CollapsibleContent className="p-4">
+        <CollapsibleContent className="p-6">
           <div className="flex flex-col items-center justify-center py-6 text-center">
             <Briefcase className="h-8 w-8 text-muted-foreground mb-2" />
             <p className="text-sm text-muted-foreground">
