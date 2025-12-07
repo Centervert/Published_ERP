@@ -1,6 +1,8 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import { NavLink } from '@/components/NavLink';
 import { useAuth } from '@/contexts/AuthContext';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import {
   Sidebar,
   SidebarContent,
@@ -60,9 +62,54 @@ export function AppSidebar() {
   const { user, signOut } = useAuth();
   const collapsed = state === 'collapsed';
 
+  // Fetch user profile and role
+  const { data: userProfile } = useQuery({
+    queryKey: ['user-profile', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', user.id)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id,
+  });
+
+  const { data: userRole } = useQuery({
+    queryKey: ['user-role', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const { data, error } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (error) throw error;
+      return data?.role || 'member';
+    },
+    enabled: !!user?.id,
+  });
+
   const getInitials = () => {
+    if (userProfile?.full_name) {
+      const names = userProfile.full_name.split(' ');
+      return names.map(n => n.charAt(0).toUpperCase()).slice(0, 2).join('');
+    }
     if (!user?.email) return 'U';
     return user.email.charAt(0).toUpperCase();
+  };
+
+  const getDisplayName = () => {
+    if (userProfile?.full_name) return userProfile.full_name;
+    return user?.email?.split('@')[0] || 'User';
+  };
+
+  const getRoleLabel = (role: string | null | undefined) => {
+    if (role === 'admin') return 'Admin';
+    return 'Member';
   };
 
   const isGroupActive = (items: typeof marketingItems) => 
@@ -177,10 +224,10 @@ export function AppSidebar() {
             <>
               <div className="flex flex-1 flex-col overflow-hidden">
                 <span className="truncate text-sm font-medium text-sidebar-foreground">
-                  {user?.email?.split('@')[0]}
+                  {getDisplayName()}
                 </span>
                 <span className="truncate text-xs text-muted-foreground">
-                  {user?.email}
+                  {getRoleLabel(userRole)}
                 </span>
               </div>
               <Button
