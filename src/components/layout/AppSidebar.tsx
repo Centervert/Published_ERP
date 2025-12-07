@@ -215,14 +215,17 @@ export function AppSidebar() {
 
       <SidebarFooter className="p-3 border-t border-sidebar-border">
         <div className={`flex items-center ${collapsed ? 'justify-center' : 'gap-3'}`}>
-          <Avatar className="h-9 w-9 shrink-0">
-            <AvatarFallback className="bg-primary text-primary-foreground text-sm font-medium">
-              {getInitials()}
-            </AvatarFallback>
-          </Avatar>
-          {!collapsed && (
-            <>
-              <div className="flex flex-1 flex-col overflow-hidden">
+          <button
+            onClick={() => navigate('/profile')}
+            className="flex items-center gap-3 flex-1 hover:bg-sidebar-accent/50 rounded-lg p-1 -m-1 transition-colors"
+          >
+            <Avatar className="h-9 w-9 shrink-0">
+              <AvatarFallback className="bg-primary text-primary-foreground text-sm font-medium">
+                {getInitials()}
+              </AvatarFallback>
+            </Avatar>
+            {!collapsed && (
+              <div className="flex flex-1 flex-col overflow-hidden text-left">
                 <span className="truncate text-sm font-medium text-sidebar-foreground">
                   {getDisplayName()}
                 </span>
@@ -230,16 +233,18 @@ export function AppSidebar() {
                   {getRoleLabel(userRole)}
                 </span>
               </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 shrink-0 text-muted-foreground hover:text-foreground"
-                onClick={signOut}
-                title="Sign out"
-              >
-                <LogOut className="h-4 w-4" />
-              </Button>
-            </>
+            )}
+          </button>
+          {!collapsed && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 shrink-0 text-muted-foreground hover:text-foreground"
+              onClick={signOut}
+              title="Sign out"
+            >
+              <LogOut className="h-4 w-4" />
+            </Button>
           )}
         </div>
       </SidebarFooter>
