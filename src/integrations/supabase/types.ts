@@ -738,6 +738,7 @@ export type Database = {
           created_at: string
           email: string
           id: string
+          last_inbox_sync_at: string | null
           provider: string
           refresh_token: string | null
           token_expires_at: string | null
@@ -749,6 +750,7 @@ export type Database = {
           created_at?: string
           email: string
           id?: string
+          last_inbox_sync_at?: string | null
           provider?: string
           refresh_token?: string | null
           token_expires_at?: string | null
@@ -760,6 +762,7 @@ export type Database = {
           created_at?: string
           email?: string
           id?: string
+          last_inbox_sync_at?: string | null
           provider?: string
           refresh_token?: string | null
           token_expires_at?: string | null

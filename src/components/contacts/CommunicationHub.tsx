@@ -36,12 +36,17 @@ export function CommunicationHub({ contactId, contactEmail, contactName }: Commu
     }
   };
 
-  const handleSendEmail = async (data: Parameters<typeof sendEmail.mutateAsync>[0]) => {
+  const handleSendEmail = async (data: { subject: string; body: string; from_email?: string }) => {
     try {
-      await sendEmail.mutateAsync(data);
-      toast.success('Email logged successfully');
+      await sendEmail.mutateAsync({
+        to: contactEmail,
+        subject: data.subject,
+        body: data.body,
+      });
+      toast.success('Email sent successfully');
     } catch (error) {
-      toast.error('Failed to send email');
+      const message = error instanceof Error ? error.message : 'Failed to send email';
+      toast.error(message);
     }
   };
 
