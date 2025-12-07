@@ -185,7 +185,7 @@ export function ContactSidebar({ contact, onBack, onSelectTab }: ContactSidebarP
   return (
     <div className="flex flex-col h-full">
       {/* Header with back button */}
-      <div className="px-6 py-4 border-b flex items-center gap-2">
+      <div className="px-6 h-[57px] border-b flex items-center gap-2">
         <Button variant="ghost" size="sm" onClick={onBack} className="text-primary hover:text-primary -ml-2">
           <ArrowLeft className="h-4 w-4 mr-1" />
           Contacts
