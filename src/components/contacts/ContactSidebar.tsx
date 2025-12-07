@@ -200,8 +200,13 @@ export function ContactSidebar({ contact, onBack, onSelectTab }: ContactSidebarP
 
       {/* Contact Header - Info Section */}
       <div className="p-4 pt-3 pb-2">
-        {/* Name */}
-        <h1 className="text-lg font-semibold text-foreground mb-3">{displayName}</h1>
+        {/* Avatar and Name */}
+        <div className="flex items-center gap-3 mb-3">
+          <div className="h-12 w-12 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-base font-semibold flex-shrink-0">
+            {initials}
+          </div>
+          <h1 className="text-lg font-semibold text-foreground">{displayName}</h1>
+        </div>
 
         {/* Quick Actions - right below name */}
         <div className="flex gap-1 mb-4">
