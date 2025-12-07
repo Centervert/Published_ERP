@@ -43,7 +43,7 @@ export default function ContactDetail() {
         <ContactActivityFeed 
           contactId={contact.id} 
           assignedAsc={contact.assigned_asc}
-          assignedBss={contact.assigned_bss}
+          assignedAe={contact.assigned_ae}
         />
       </div>
 

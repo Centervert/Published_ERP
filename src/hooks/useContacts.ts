@@ -24,7 +24,7 @@ export interface Contact {
   notes: string | null;
   status: string;
   assigned_asc: string | null;
-  assigned_bss: string | null;
+  assigned_ae: string | null;
   created_at: string;
   updated_at: string;
   imprint?: {

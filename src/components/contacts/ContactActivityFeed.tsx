@@ -26,7 +26,7 @@ import { format, parseISO, isToday, isYesterday } from 'date-fns';
 interface ContactActivityFeedProps {
   contactId: string;
   assignedAsc?: string | null;
-  assignedBss?: string | null;
+  assignedAe?: string | null;
 }
 
 interface ActivityItem {
@@ -112,7 +112,7 @@ const groupActivitiesByDate = (activities: ActivityItem[]) => {
   return groups;
 };
 
-export function ContactActivityFeed({ contactId, assignedAsc, assignedBss }: ContactActivityFeedProps) {
+export function ContactActivityFeed({ contactId, assignedAsc, assignedAe }: ContactActivityFeedProps) {
   const { activities, isLoading } = useContactActivity(contactId);
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
@@ -178,7 +178,7 @@ export function ContactActivityFeed({ contactId, assignedAsc, assignedBss }: Con
                     <span className="text-xs text-muted-foreground">(Account Executive)</span>
                   </div>
                   <p className="text-sm text-foreground">
-                    {assignedBss ? assignedBss : <span className="text-muted-foreground">Not assigned</span>}
+                    {assignedAe ? assignedAe : <span className="text-muted-foreground">Not assigned</span>}
                   </p>
                 </div>
               </div>
