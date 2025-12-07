@@ -194,8 +194,8 @@ export function ContactSidebar({ contact, onBack }: ContactSidebarProps) {
           </div>
           <div className="min-w-0 flex-1">
             <h1 className="text-lg font-semibold text-foreground truncate">{displayName}</h1>
-            <p className="text-sm text-muted-foreground">{contactTypeLabel}</p>
-            <p className="text-xs text-muted-foreground mt-0.5">
+            <span className="inline-block text-xs font-medium px-2 py-0.5 bg-muted text-muted-foreground rounded-sm">{contactTypeLabel}</span>
+            <p className="text-xs text-muted-foreground mt-1">
               Created {contact.created_at ? format(parseISO(contact.created_at), 'MMM d, yyyy') : '--'}
             </p>
           </div>
