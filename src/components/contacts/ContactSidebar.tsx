@@ -40,7 +40,9 @@ import {
   Settings,
   Save,
   Copy,
-  Pencil
+  Pencil,
+  DollarSign,
+  MessageSquare
 } from 'lucide-react';
 import { formatPhoneNumber } from '@/lib/phone-utils';
 import { format, parseISO } from 'date-fns';
@@ -72,9 +74,10 @@ const LINK_TYPES = [
 interface ContactSidebarProps {
   contact: Contact;
   onBack: () => void;
+  onSelectTab?: (tab: string) => void;
 }
 
-export function ContactSidebar({ contact, onBack }: ContactSidebarProps) {
+export function ContactSidebar({ contact, onBack, onSelectTab }: ContactSidebarProps) {
   const { imprints } = useImprints();
   const updateContact = useUpdateContact();
   const { links, addLink, deleteLink } = useContactLinks(contact.id);
@@ -202,21 +205,40 @@ export function ContactSidebar({ contact, onBack }: ContactSidebarProps) {
 
         {/* Quick Actions - right below name */}
         <div className="flex gap-1 mb-4">
-          <Button variant="outline" size="sm" className="flex flex-col items-center gap-0.5 h-auto py-1.5 px-2.5 flex-1">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="flex flex-col items-center gap-0.5 h-auto py-1.5 px-2.5 flex-1"
+            onClick={() => onSelectTab?.('notes')}
+          >
             <FileText className="h-3.5 w-3.5" />
             <span className="text-[10px]">Note</span>
           </Button>
-          <Button variant="outline" size="sm" className="flex flex-col items-center gap-0.5 h-auto py-1.5 px-2.5 flex-1">
-            <Mail className="h-3.5 w-3.5" />
-            <span className="text-[10px]">Email</span>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="flex flex-col items-center gap-0.5 h-auto py-1.5 px-2.5 flex-1"
+            onClick={() => onSelectTab?.('contact')}
+          >
+            <MessageSquare className="h-3.5 w-3.5" />
+            <span className="text-[10px]">Contact</span>
           </Button>
-          <Button variant="outline" size="sm" className="flex flex-col items-center gap-0.5 h-auto py-1.5 px-2.5 flex-1">
-            <Phone className="h-3.5 w-3.5" />
-            <span className="text-[10px]">Call</span>
-          </Button>
-          <Button variant="outline" size="sm" className="flex flex-col items-center gap-0.5 h-auto py-1.5 px-2.5 flex-1">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="flex flex-col items-center gap-0.5 h-auto py-1.5 px-2.5 flex-1"
+            onClick={() => onSelectTab?.('tasks')}
+          >
             <Calendar className="h-3.5 w-3.5" />
             <span className="text-[10px]">Task</span>
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="flex flex-col items-center gap-0.5 h-auto py-1.5 px-2.5 flex-1"
+          >
+            <DollarSign className="h-3.5 w-3.5" />
+            <span className="text-[10px]">Deal</span>
           </Button>
           <Button variant="outline" size="sm" className="flex flex-col items-center gap-0.5 h-auto py-1.5 px-2.5 flex-1">
             <MoreHorizontal className="h-3.5 w-3.5" />
