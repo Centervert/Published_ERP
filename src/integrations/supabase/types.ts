@@ -109,6 +109,44 @@ export type Database = {
           },
         ]
       }
+      contact_activity: {
+        Row: {
+          activity_type: string
+          contact_id: string
+          created_at: string | null
+          created_by: string | null
+          description: string
+          id: string
+          metadata: Json | null
+        }
+        Insert: {
+          activity_type: string
+          contact_id: string
+          created_at?: string | null
+          created_by?: string | null
+          description: string
+          id?: string
+          metadata?: Json | null
+        }
+        Update: {
+          activity_type?: string
+          contact_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          description?: string
+          id?: string
+          metadata?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contact_activity_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contact_links: {
         Row: {
           contact_id: string

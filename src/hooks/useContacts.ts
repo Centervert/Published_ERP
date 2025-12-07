@@ -101,6 +101,16 @@ export function useContacts() {
       
       if (error) throw error;
 
+      // Log activity for contact creation
+      if (data) {
+        await supabase.from('contact_activity').insert({
+          contact_id: data.id,
+          activity_type: 'contact_created',
+          description: `Contact created: ${contactData.email}`,
+          metadata: { first_name: contactData.first_name, last_name: contactData.last_name },
+        });
+      }
+
       // Insert links if provided
       if (links && links.length > 0 && data) {
         const linksToInsert = links.map(link => ({
@@ -205,6 +215,233 @@ export function useContacts() {
     deleteContact,
     bulkCreateContacts,
   };
+}
+
+// Hook for fetching a single contact with links
+export function useContact(contactId: string) {
+  const contactQuery = useQuery({
+    queryKey: ['contact', contactId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('contacts')
+        .select(`
+          *,
+          imprint:imprints(id, name),
+          contact_links(*)
+        `)
+        .eq('id', contactId)
+        .single();
+      
+      if (error) throw error;
+      return data as Contact;
+    },
+    enabled: !!contactId,
+  });
+
+  return {
+    contact: contactQuery.data,
+    isLoading: contactQuery.isLoading,
+  };
+}
+
+// Standalone hook for updating contacts (can be used without fetching all contacts)
+export function useUpdateContact() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, ...updates }: Partial<Contact> & { id: string }) => {
+      const { imprint, contact_links, ...cleanUpdates } = updates as any;
+      
+      const { data, error } = await supabase
+        .from('contacts')
+        .update(cleanUpdates)
+        .eq('id', id)
+        .select()
+        .single();
+      
+      if (error) throw error;
+
+      // Log activity for the update
+      await supabase.from('contact_activity').insert({
+        contact_id: id,
+        activity_type: 'contact_updated',
+        description: 'Contact information updated',
+        metadata: { fields: Object.keys(cleanUpdates) },
+      });
+
+      return data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['contacts'] });
+      queryClient.invalidateQueries({ queryKey: ['contact', variables.id] });
+      queryClient.invalidateQueries({ queryKey: ['contact-activity', variables.id] });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error updating contact', description: error.message, variant: 'destructive' });
+    },
+  });
+}
+
+// Hook for managing contact links
+export function useContactLinks(contactId: string) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const linksQuery = useQuery({
+    queryKey: ['contact-links', contactId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('contact_links')
+        .select('*')
+        .eq('contact_id', contactId)
+        .order('created_at', { ascending: true });
+      
+      if (error) throw error;
+      return data as ContactLink[];
+    },
+    enabled: !!contactId,
+  });
+
+  const addLink = useMutation({
+    mutationFn: async (link: { contact_id: string; link_type: string; url: string; label?: string | null }) => {
+      const { data, error } = await supabase
+        .from('contact_links')
+        .insert(link)
+        .select()
+        .single();
+      
+      if (error) throw error;
+
+      // Log activity
+      await supabase.from('contact_activity').insert({
+        contact_id: contactId,
+        activity_type: 'link_added',
+        description: `Added ${link.link_type} link`,
+        metadata: { url: link.url, label: link.label },
+      });
+
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['contact-links', contactId] });
+      queryClient.invalidateQueries({ queryKey: ['contact-activity', contactId] });
+      toast({ title: 'Link added' });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error adding link', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const deleteLink = useMutation({
+    mutationFn: async (linkId: string) => {
+      const { error } = await supabase
+        .from('contact_links')
+        .delete()
+        .eq('id', linkId);
+      
+      if (error) throw error;
+
+      // Log activity
+      await supabase.from('contact_activity').insert({
+        contact_id: contactId,
+        activity_type: 'link_removed',
+        description: 'Removed a link',
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['contact-links', contactId] });
+      queryClient.invalidateQueries({ queryKey: ['contact-activity', contactId] });
+      toast({ title: 'Link removed' });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error removing link', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  return {
+    links: linksQuery.data || [],
+    isLoading: linksQuery.isLoading,
+    addLink,
+    deleteLink,
+  };
+}
+
+// Combined activity from CRM activities and marketing email events
+export function useContactActivity(contactId: string) {
+  const activityQuery = useQuery({
+    queryKey: ['contact-activity', contactId],
+    queryFn: async () => {
+      // Fetch CRM activities
+      const { data: crmActivities, error: crmError } = await supabase
+        .from('contact_activity')
+        .select('*')
+        .eq('contact_id', contactId)
+        .order('created_at', { ascending: false });
+      
+      if (crmError) throw crmError;
+
+      // Fetch email events (marketing)
+      const { data: emailEvents, error: emailError } = await supabase
+        .from('email_events')
+        .select('*, campaign:campaigns(name)')
+        .eq('contact_id', contactId)
+        .order('created_at', { ascending: false });
+      
+      if (emailError) throw emailError;
+
+      // Combine and format activities
+      const activities = [
+        ...(crmActivities || []).map(a => ({
+          id: a.id,
+          type: a.activity_type,
+          description: a.description,
+          metadata: a.metadata,
+          created_at: a.created_at,
+          source: 'crm' as const,
+        })),
+        ...(emailEvents || []).map(e => ({
+          id: e.id,
+          type: e.event_type,
+          description: getEmailEventDescription(e.event_type, (e as any).campaign?.name),
+          metadata: { campaign_id: e.campaign_id, link_url: e.link_url },
+          created_at: e.created_at,
+          source: 'marketing' as const,
+        })),
+      ];
+
+      // Sort by date descending
+      activities.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+      return activities;
+    },
+    enabled: !!contactId,
+  });
+
+  return {
+    activities: activityQuery.data || [],
+    isLoading: activityQuery.isLoading,
+  };
+}
+
+function getEmailEventDescription(eventType: string, campaignName?: string): string {
+  const campaign = campaignName ? ` "${campaignName}"` : '';
+  switch (eventType) {
+    case 'sent':
+      return `Campaign${campaign} was sent`;
+    case 'delivered':
+      return `Campaign${campaign} was delivered`;
+    case 'opened':
+      return `Opened campaign${campaign}`;
+    case 'clicked':
+      return `Clicked a link in campaign${campaign}`;
+    case 'bounced':
+      return `Campaign${campaign} bounced`;
+    case 'unsubscribed':
+      return `Unsubscribed from campaign${campaign}`;
+    default:
+      return `Email event: ${eventType}`;
+  }
 }
 
 export function useLists() {

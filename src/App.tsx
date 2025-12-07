@@ -9,6 +9,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Contacts from "./pages/Contacts";
+import ContactDetail from "./pages/ContactDetail";
 import Campaigns from "./pages/Campaigns";
 import Templates from "./pages/Templates";
 import Imprints from "./pages/Imprints";
@@ -42,6 +43,16 @@ const App = () => (
                 <ProtectedRoute>
                   <DashboardLayout>
                     <Contacts />
+                  </DashboardLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/contacts/:contactId"
+              element={
+                <ProtectedRoute>
+                  <DashboardLayout>
+                    <ContactDetail />
                   </DashboardLayout>
                 </ProtectedRoute>
               }
