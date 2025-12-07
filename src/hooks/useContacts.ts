@@ -110,6 +110,7 @@ export function useContacts() {
           activity_type: 'contact_created',
           description: `Contact created: ${contactData.email}`,
           metadata: { first_name: contactData.first_name, last_name: contactData.last_name },
+          created_by: user?.id,
         });
       }
 
@@ -285,11 +286,13 @@ export function useUpdateContact() {
           ? `Updated ${changedFields[0].replace(/_/g, ' ')}`
           : `Updated ${changedFields.length} fields`;
 
+        const { data: { user } } = await supabase.auth.getUser();
         await supabase.from('contact_activity').insert({
           contact_id: id,
           activity_type: 'contact_updated',
           description,
           metadata: { changes },
+          created_by: user?.id,
         });
       }
 
@@ -337,11 +340,13 @@ export function useContactLinks(contactId: string) {
       if (error) throw error;
 
       // Log activity
+      const { data: { user } } = await supabase.auth.getUser();
       await supabase.from('contact_activity').insert({
         contact_id: contactId,
         activity_type: 'link_added',
         description: `Added ${link.link_type} link`,
         metadata: { url: link.url, label: link.label },
+        created_by: user?.id,
       });
 
       return data;
@@ -366,10 +371,12 @@ export function useContactLinks(contactId: string) {
       if (error) throw error;
 
       // Log activity
+      const { data: { user } } = await supabase.auth.getUser();
       await supabase.from('contact_activity').insert({
         contact_id: contactId,
         activity_type: 'link_removed',
         description: 'Removed a link',
+        created_by: user?.id,
       });
     },
     onSuccess: () => {
@@ -395,10 +402,10 @@ export function useContactActivity(contactId: string) {
   const activityQuery = useQuery({
     queryKey: ['contact-activity', contactId],
     queryFn: async () => {
-      // Fetch CRM activities
+      // Fetch CRM activities with user profile
       const { data: crmActivities, error: crmError } = await supabase
         .from('contact_activity')
-        .select('*')
+        .select('*, profile:profiles!contact_activity_created_by_fkey(full_name, email)')
         .eq('contact_id', contactId)
         .order('created_at', { ascending: false });
       
@@ -415,12 +422,13 @@ export function useContactActivity(contactId: string) {
 
       // Combine and format activities
       const activities = [
-        ...(crmActivities || []).map(a => ({
+        ...(crmActivities || []).map((a: any) => ({
           id: a.id,
           type: a.activity_type,
           description: a.description,
           metadata: a.metadata,
           created_at: a.created_at,
+          created_by_name: a.profile?.full_name || a.profile?.email || null,
           source: 'crm' as const,
         })),
         ...(emailEvents || []).map(e => ({
