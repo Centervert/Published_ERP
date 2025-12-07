@@ -278,14 +278,14 @@ export function CreateContactSheet({ open, onOpenChange }: CreateContactSheetPro
           <div className="space-y-2">
             <Label>Imprint / Group</Label>
             <Select
-              value={formData.imprint_id}
-              onValueChange={(value) => setFormData(prev => ({ ...prev, imprint_id: value }))}
+              value={formData.imprint_id || 'none'}
+              onValueChange={(value) => setFormData(prev => ({ ...prev, imprint_id: value === 'none' ? '' : value }))}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Author Services (default)" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Author Services (default)</SelectItem>
+                <SelectItem value="none">Author Services (default)</SelectItem>
                 {imprints.map((imprint) => (
                   <SelectItem key={imprint.id} value={imprint.id}>
                     {imprint.name}
