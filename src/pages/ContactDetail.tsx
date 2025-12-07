@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -13,6 +14,7 @@ export default function ContactDetail() {
   const navigate = useNavigate();
   const { contact, isLoading } = useContact(contactId || '');
   const updateContact = useUpdateContact();
+  const [selectedTab, setSelectedTab] = useState('contact');
 
   // Fetch team members for assignment dropdowns
   const { data: teamMembers = [] } = useQuery({
@@ -71,12 +73,20 @@ export default function ContactDetail() {
     <div className="h-[calc(100vh-120px)] flex">
       {/* Left Sidebar - Contact Info */}
       <div className="w-[300px] border-r overflow-y-auto flex-shrink-0">
-        <ContactSidebar contact={contact} onBack={() => navigate('/contacts')} />
+        <ContactSidebar 
+          contact={contact} 
+          onBack={() => navigate('/contacts')} 
+          onSelectTab={setSelectedTab}
+        />
       </div>
 
       {/* Center - Tabs */}
       <div className="flex-1 overflow-y-auto">
-        <ContactActivityFeed contactId={contact.id} />
+        <ContactActivityFeed 
+          contactId={contact.id} 
+          selectedTab={selectedTab}
+          onTabChange={setSelectedTab}
+        />
       </div>
 
       {/* Right Sidebar - Summary */}
