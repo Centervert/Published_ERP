@@ -107,8 +107,8 @@ export function EmailComposer({
     })),
   ];
 
-  // Add user's profile email if not already in connections
-  if (userProfile?.email && !emailConnections.some(c => c.email === userProfile.email)) {
+  // Add user's profile email if not already in connections (case-insensitive check)
+  if (userProfile?.email && !emailConnections.some(c => c.email.toLowerCase() === userProfile.email.toLowerCase())) {
     emailOptions.push({ 
       value: userProfile.email, 
       label: `${userProfile.email} (Profile)`,
