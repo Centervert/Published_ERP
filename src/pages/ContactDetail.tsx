@@ -74,17 +74,9 @@ export default function ContactDetail() {
         <ContactSidebar contact={contact} onBack={() => navigate('/contacts')} />
       </div>
 
-      {/* Center - Activity Feed */}
+      {/* Center - Tabs */}
       <div className="flex-1 overflow-y-auto">
-        <ContactActivityFeed 
-          contactId={contact.id} 
-          assignedAsc={getAssignedName(contact.assigned_asc)}
-          assignedAe={getAssignedName(contact.assigned_ae)}
-          assignedAscId={contact.assigned_asc}
-          assignedAeId={contact.assigned_ae}
-          teamMembers={teamMembers}
-          onAssignmentChange={handleAssignmentChange}
-        />
+        <ContactActivityFeed contactId={contact.id} />
       </div>
 
       {/* Right Sidebar - Summary */}

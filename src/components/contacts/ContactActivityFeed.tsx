@@ -1,12 +1,8 @@
+import { useState } from 'react';
 import { useContactActivity } from '@/hooks/useContacts';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
 import { 
   UserPlus, 
   Edit, 
@@ -19,7 +15,11 @@ import {
   Clock,
   Loader2,
   ArrowRight,
-  Users
+  Phone,
+  MessageSquare,
+  CheckSquare,
+  Plus,
+  MoreHorizontal
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 
@@ -107,7 +107,6 @@ const renderFieldChanges = (metadata: any, type: string) => {
   
   // Handle assignment changes
   if (type === 'assignment_changed' && metadata.fromName !== undefined) {
-    const fieldLabel = metadata.field === 'assigned_asc' ? 'A.S.C.' : 'A.E.';
     if (!metadata.from && metadata.to) {
       return null; // Description already says "Assigned to X"
     }
@@ -153,108 +152,117 @@ const renderFieldChanges = (metadata: any, type: string) => {
 
 export function ContactActivityFeed({ 
   contactId, 
-  assignedAsc, 
-  assignedAe,
-  assignedAscId,
-  assignedAeId,
-  teamMembers = [],
-  onAssignmentChange 
 }: ContactActivityFeedProps) {
   const { activities, isLoading } = useContactActivity(contactId);
-
-  const handleAscChange = (value: string) => {
-    onAssignmentChange?.('assigned_asc', value === 'none' ? null : value);
-  };
-
-  const handleAeChange = (value: string) => {
-    onAssignmentChange?.('assigned_ae', value === 'none' ? null : value);
-  };
+  const [noteText, setNoteText] = useState('');
 
   return (
     <div className="h-full flex flex-col">
       {/* Tab Header */}
-      <div className="border-b bg-background sticky top-0 z-10">
-        <Tabs defaultValue="overview" className="w-full">
-          <div className="px-6 pt-4">
-            <TabsList className="h-auto p-0 bg-transparent border-b-0 gap-6">
-              <TabsTrigger 
-                value="overview" 
-                className="px-0 pb-3 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
-              >
-                Overview
-              </TabsTrigger>
-              <TabsTrigger 
-                value="activities" 
-                className="px-0 pb-3 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
-              >
-                Activities
-              </TabsTrigger>
-            </TabsList>
-          </div>
+      <Tabs defaultValue="contact" className="flex-1 flex flex-col">
+        <div className="border-b bg-background sticky top-0 z-10 px-6 pt-4">
+          <TabsList className="h-auto p-0 bg-transparent border-b-0 gap-6">
+            <TabsTrigger 
+              value="contact" 
+              className="px-0 pb-3 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+            >
+              Contact
+            </TabsTrigger>
+            <TabsTrigger 
+              value="notes" 
+              className="px-0 pb-3 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+            >
+              Notes
+            </TabsTrigger>
+            <TabsTrigger 
+              value="tasks" 
+              className="px-0 pb-3 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+            >
+              Tasks
+            </TabsTrigger>
+            <TabsTrigger 
+              value="activity" 
+              className="px-0 pb-3 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+            >
+              Activity
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
-          <TabsContent value="overview" className="mt-0 p-4">
-            <div className="grid grid-cols-2 gap-4">
-              {/* Assigned ASC */}
-              <div className="border rounded-lg p-3">
-                <div className="flex flex-wrap items-baseline gap-x-1.5 mb-2">
-                  <span className="text-sm font-medium text-foreground">Assigned ASC</span>
-                  <span className="text-[11px] text-muted-foreground whitespace-nowrap">(Author Success Coach)</span>
+        {/* Contact Tab - Communication History */}
+        <TabsContent value="contact" className="mt-0 flex-1 overflow-y-auto">
+          <div className="p-6">
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <div className="flex gap-4 mb-4">
+                <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center">
+                  <Mail className="h-5 w-5 text-muted-foreground" />
                 </div>
-                <Select 
-                  value={assignedAscId || 'none'} 
-                  onValueChange={handleAscChange}
-                >
-                  <SelectTrigger className="h-9 bg-background">
-                    <SelectValue placeholder="Select team member">
-                      <div className="flex items-center gap-2">
-                        <Users className="h-4 w-4 text-muted-foreground" />
-                        <span>{assignedAsc || 'Not assigned'}</span>
-                      </div>
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent className="bg-popover z-50">
-                    <SelectItem value="none">Not assigned</SelectItem>
-                    {teamMembers.map(member => (
-                      <SelectItem key={member.id} value={member.id}>
-                        {member.full_name || member.email}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center">
+                  <Phone className="h-5 w-5 text-muted-foreground" />
+                </div>
+                <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center">
+                  <MessageSquare className="h-5 w-5 text-muted-foreground" />
+                </div>
               </div>
+              <h3 className="text-lg font-medium mb-1">Communication History</h3>
+              <p className="text-sm text-muted-foreground mb-4 max-w-sm">
+                Emails, calls, and texts with this contact will appear here once SMTP integration is configured.
+              </p>
+              <p className="text-xs text-muted-foreground">Coming Soon</p>
+            </div>
+          </div>
+        </TabsContent>
 
-              {/* Assigned AE */}
-              <div className="border rounded-lg p-3">
-                <div className="flex flex-wrap items-baseline gap-x-1.5 mb-2">
-                  <span className="text-sm font-medium text-foreground">Assigned AE</span>
-                  <span className="text-[11px] text-muted-foreground whitespace-nowrap">(Account Executive)</span>
-                </div>
-                <Select 
-                  value={assignedAeId || 'none'} 
-                  onValueChange={handleAeChange}
-                >
-                  <SelectTrigger className="h-9 bg-background">
-                    <SelectValue placeholder="Select team member">
-                      <div className="flex items-center gap-2">
-                        <Users className="h-4 w-4 text-muted-foreground" />
-                        <span>{assignedAe || 'Not assigned'}</span>
-                      </div>
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent className="bg-popover z-50">
-                    <SelectItem value="none">Not assigned</SelectItem>
-                    {teamMembers.map(member => (
-                      <SelectItem key={member.id} value={member.id}>
-                        {member.full_name || member.email}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+        {/* Notes Tab */}
+        <TabsContent value="notes" className="mt-0 flex-1 overflow-y-auto">
+          <div className="p-6">
+            {/* Add Note Input */}
+            <div className="mb-6">
+              <Textarea 
+                placeholder="Add a note about this contact..."
+                value={noteText}
+                onChange={(e) => setNoteText(e.target.value)}
+                className="min-h-[100px] resize-none"
+              />
+              <div className="flex justify-end mt-2">
+                <Button size="sm" disabled={!noteText.trim()}>
+                  <Plus className="h-4 w-4 mr-1" />
+                  Add Note
+                </Button>
               </div>
             </div>
-          </TabsContent>
 
-          <TabsContent value="activities" className="mt-0 p-4">
+            {/* Notes List Placeholder */}
+            <div className="flex flex-col items-center justify-center py-8 text-center">
+              <FileText className="h-8 w-8 text-muted-foreground mb-2" />
+              <p className="text-sm text-muted-foreground">No notes yet</p>
+            </div>
+          </div>
+        </TabsContent>
+
+        {/* Tasks Tab */}
+        <TabsContent value="tasks" className="mt-0 flex-1 overflow-y-auto">
+          <div className="p-6">
+            {/* Add Task Button */}
+            <div className="flex justify-end mb-4">
+              <Button size="sm" variant="outline">
+                <Plus className="h-4 w-4 mr-1" />
+                Add Task
+              </Button>
+            </div>
+
+            {/* Tasks List Placeholder */}
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <CheckSquare className="h-8 w-8 text-muted-foreground mb-2" />
+              <p className="text-sm text-muted-foreground mb-1">No tasks yet</p>
+              <p className="text-xs text-muted-foreground">Create tasks to follow up with this contact</p>
+            </div>
+          </div>
+        </TabsContent>
+
+        {/* Activity Tab */}
+        <TabsContent value="activity" className="mt-0 flex-1 overflow-y-auto">
+          <div className="p-6">
             {isLoading ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -305,9 +313,9 @@ export function ContactActivityFeed({
                 })}
               </div>
             )}
-          </TabsContent>
-        </Tabs>
-      </div>
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
