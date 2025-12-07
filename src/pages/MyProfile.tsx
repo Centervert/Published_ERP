@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,11 +16,33 @@ export default function MyProfile() {
   const { user, signOut } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
   
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [phone, setPhone] = useState('');
-  const [isSaving, setIsSaving] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
+
+  // Handle OAuth success/error from URL params
+  useEffect(() => {
+    const oauthSuccess = searchParams.get('oauth_success');
+    const oauthError = searchParams.get('oauth_error');
+    
+    if (oauthSuccess) {
+      toast({ title: 'Outlook connected successfully!' });
+      queryClient.invalidateQueries({ queryKey: ['email-connection'] });
+      // Clean up URL params
+      searchParams.delete('oauth_success');
+      setSearchParams(searchParams, { replace: true });
+    }
+    
+    if (oauthError) {
+      toast({ title: 'Failed to connect Outlook', description: oauthError, variant: 'destructive' });
+      // Clean up URL params
+      searchParams.delete('oauth_error');
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams, toast, queryClient]);
 
   // Fetch user profile
   const { data: profile, isLoading: profileLoading } = useQuery({
@@ -84,19 +107,19 @@ export default function MyProfile() {
     },
   });
 
-  // Connect Outlook
+  // Connect Outlook - redirect in same window
   const connectOutlook = async () => {
     try {
+      setIsConnecting(true);
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         toast({ title: 'Please log in again', variant: 'destructive' });
+        setIsConnecting(false);
         return;
       }
 
       const response = await supabase.functions.invoke('outlook-oauth-start', {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
+        body: { returnUrl: '/profile' },
       });
 
       if (response.error) {
@@ -104,22 +127,14 @@ export default function MyProfile() {
       }
 
       if (response.data?.authUrl) {
-        // Open OAuth popup
-        const popup = window.open(response.data.authUrl, 'outlook-oauth', 'width=600,height=700');
-        
-        // Listen for message from popup
-        const handleMessage = (event: MessageEvent) => {
-          if (event.data?.type === 'OUTLOOK_CONNECTED' && event.data?.success) {
-            queryClient.invalidateQueries({ queryKey: ['email-connection'] });
-            toast({ title: 'Outlook connected successfully!' });
-            window.removeEventListener('message', handleMessage);
-          }
-        };
-        window.addEventListener('message', handleMessage);
+        // Redirect in same window (cleaner UX)
+        window.location.href = response.data.authUrl;
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('OAuth error:', error);
-      toast({ title: 'Failed to connect Outlook', description: error.message, variant: 'destructive' });
+      setIsConnecting(false);
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      toast({ title: 'Failed to connect Outlook', description: message, variant: 'destructive' });
     }
   };
 
