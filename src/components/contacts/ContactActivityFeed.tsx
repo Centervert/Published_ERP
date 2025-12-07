@@ -171,11 +171,11 @@ export function ContactActivityFeed({ contactId, assignedAsc, assignedBss }: Con
                   </p>
                 </div>
 
-                {/* Assigned BSS */}
+                {/* Assigned AE */}
                 <div className="border rounded-lg p-4">
                   <div className="flex items-center gap-2 mb-2">
-                    <span className="text-sm font-medium text-muted-foreground">Assigned BSS</span>
-                    <span className="text-xs text-muted-foreground">(Book Support Specialist)</span>
+                    <span className="text-sm font-medium text-muted-foreground">Assigned AE</span>
+                    <span className="text-xs text-muted-foreground">(Account Executive)</span>
                   </div>
                   <p className="text-sm text-foreground">
                     {assignedBss ? assignedBss : <span className="text-muted-foreground">Not assigned</span>}
