@@ -70,7 +70,7 @@ export default function ContactDetail() {
   }
 
   return (
-    <div className="h-[calc(100vh-56px)] flex -m-6">
+    <div className="h-[calc(100vh-56px)] flex -m-6 overflow-hidden">
       {/* Left Sidebar - Contact Info */}
       <div className="w-[300px] border-r overflow-y-auto flex-shrink-0">
         <ContactSidebar 
@@ -81,7 +81,7 @@ export default function ContactDetail() {
       </div>
 
       {/* Center - Tabs */}
-      <div className="flex-1 overflow-hidden flex flex-col">
+      <div className="flex-1 min-w-[400px] overflow-hidden flex flex-col">
         <ContactActivityFeed 
           contactId={contact.id} 
           contactEmail={contact.email}
@@ -91,8 +91,8 @@ export default function ContactDetail() {
         />
       </div>
 
-      {/* Right Sidebar - Summary */}
-      <div className="w-[320px] border-l overflow-y-auto flex-shrink-0 hidden xl:block">
+      {/* Right Sidebar - Summary - hidden on smaller screens */}
+      <div className="w-[320px] border-l overflow-y-auto flex-shrink-0 hidden 2xl:block">
         <ContactSummaryPanel contact={contact} />
       </div>
     </div>
