@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Contact, useUpdateContact, useContactLinks } from '@/hooks/useContacts';
 import { useImprints } from '@/hooks/useImprints';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -77,6 +79,19 @@ export function ContactSidebar({ contact, onBack }: ContactSidebarProps) {
   const updateContact = useUpdateContact();
   const { links, addLink, deleteLink } = useContactLinks(contact.id);
   
+  // Fetch team members for ASC/AE assignment
+  const { data: teamMembers = [] } = useQuery({
+    queryKey: ['profiles'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, full_name, email')
+        .order('full_name');
+      if (error) throw error;
+      return data || [];
+    },
+  });
+  
   const [aboutOpen, setAboutOpen] = useState(true);
   const [linksOpen, setLinksOpen] = useState(false);
   const [notesOpen, setNotesOpen] = useState(false);
@@ -94,6 +109,8 @@ export function ContactSidebar({ contact, onBack }: ContactSidebarProps) {
     imprint_id: contact.imprint_id || 'none',
     status: contact.status || 'active',
     notes: contact.notes || '',
+    assigned_asc: contact.assigned_asc || 'none',
+    assigned_ae: contact.assigned_ae || 'none',
   });
 
   const [newLink, setNewLink] = useState({ type: 'website', url: '', label: '' });
@@ -127,9 +144,13 @@ export function ContactSidebar({ contact, onBack }: ContactSidebarProps) {
         contact_type: contact.contact_type,
         status: contact.status,
         notes: contact.notes,
+        assigned_asc: contact.assigned_asc,
+        assigned_ae: contact.assigned_ae,
       },
       ...formData,
       imprint_id: formData.imprint_id === 'none' ? null : formData.imprint_id,
+      assigned_asc: formData.assigned_asc === 'none' ? null : formData.assigned_asc,
+      assigned_ae: formData.assigned_ae === 'none' ? null : formData.assigned_ae,
     });
     setHasChanges(false);
   };
@@ -299,7 +320,42 @@ export function ContactSidebar({ contact, onBack }: ContactSidebarProps) {
               </Select>
             </div>
 
-            {/* Imprint */}
+            {/* Assigned ASC */}
+            <div>
+              <Label className="text-xs text-muted-foreground">Assigned A.S.C.</Label>
+              <Select value={formData.assigned_asc} onValueChange={(v) => handleChange('assigned_asc', v)}>
+                <SelectTrigger className="h-8 mt-1">
+                  <SelectValue placeholder="Select team member" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Unassigned</SelectItem>
+                  {teamMembers.map(member => (
+                    <SelectItem key={member.id} value={member.id}>
+                      {member.full_name || member.email}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Assigned AE */}
+            <div>
+              <Label className="text-xs text-muted-foreground">Assigned A.E.</Label>
+              <Select value={formData.assigned_ae} onValueChange={(v) => handleChange('assigned_ae', v)}>
+                <SelectTrigger className="h-8 mt-1">
+                  <SelectValue placeholder="Select team member" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Unassigned</SelectItem>
+                  {teamMembers.map(member => (
+                    <SelectItem key={member.id} value={member.id}>
+                      {member.full_name || member.email}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <div>
               <Label className="text-xs text-muted-foreground flex items-center gap-1">
                 <Building2 className="h-3 w-3" /> Imprint
