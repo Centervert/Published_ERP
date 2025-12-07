@@ -252,7 +252,7 @@ export function useUpdateContact() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, ...updates }: Partial<Contact> & { id: string }) => {
+    mutationFn: async ({ id, originalData, ...updates }: Partial<Contact> & { id: string; originalData?: Partial<Contact> }) => {
       const { imprint, contact_links, ...cleanUpdates } = updates as any;
       
       const { data, error } = await supabase
@@ -264,13 +264,34 @@ export function useUpdateContact() {
       
       if (error) throw error;
 
-      // Log activity for the update
-      await supabase.from('contact_activity').insert({
-        contact_id: id,
-        activity_type: 'contact_updated',
-        description: 'Contact information updated',
-        metadata: { fields: Object.keys(cleanUpdates) },
-      });
+      // Build changes object showing from -> to for each field
+      const changes: Record<string, { from: string; to: string }> = {};
+      const fieldsToTrack = ['first_name', 'last_name', 'email', 'phone', 'address', 'timezone', 'contact_type', 'status', 'notes'];
+      
+      for (const field of fieldsToTrack) {
+        if (field in cleanUpdates) {
+          const oldValue = originalData?.[field as keyof Contact] ?? '';
+          const newValue = cleanUpdates[field] ?? '';
+          if (oldValue !== newValue) {
+            changes[field] = { from: String(oldValue || ''), to: String(newValue || '') };
+          }
+        }
+      }
+
+      // Only log activity if there were actual changes
+      if (Object.keys(changes).length > 0) {
+        const changedFields = Object.keys(changes);
+        const description = changedFields.length === 1 
+          ? `Updated ${changedFields[0].replace(/_/g, ' ')}`
+          : `Updated ${changedFields.length} fields`;
+
+        await supabase.from('contact_activity').insert({
+          contact_id: id,
+          activity_type: 'contact_updated',
+          description,
+          metadata: { changes },
+        });
+      }
 
       return data;
     },

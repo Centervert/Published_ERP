@@ -117,6 +117,17 @@ export function ContactSidebar({ contact, onBack }: ContactSidebarProps) {
   const handleSave = async () => {
     await updateContact.mutateAsync({
       id: contact.id,
+      originalData: {
+        first_name: contact.first_name,
+        last_name: contact.last_name,
+        email: contact.email,
+        phone: contact.phone,
+        address: contact.address,
+        timezone: contact.timezone,
+        contact_type: contact.contact_type,
+        status: contact.status,
+        notes: contact.notes,
+      },
       ...formData,
       imprint_id: formData.imprint_id === 'none' ? null : formData.imprint_id,
     });
