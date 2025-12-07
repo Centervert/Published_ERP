@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { useContacts, Contact } from '@/hooks/useContacts';
+import { useImprints } from '@/hooks/useImprints';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { EditableCell } from './EditableCell';
 import {
   Table,
   TableBody,
@@ -35,21 +37,41 @@ const statusColors: Record<string, string> = {
   complained: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300',
 };
 
+const contactTypeColors: Record<string, string> = {
+  lead: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
+  author: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300',
+  bad: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
+};
+
+const CONTACT_TYPES = [
+  { value: 'lead', label: 'Lead' },
+  { value: 'author', label: 'Author' },
+  { value: 'bad', label: 'Bad' },
+];
+
 export function ContactsTable() {
-  const { contacts, isLoading, deleteContact } = useContacts();
+  const { contacts, isLoading, updateContact, deleteContact } = useContacts();
+  const { imprints } = useImprints();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [typeFilter, setTypeFilter] = useState<string>('all');
+  const [imprintFilter, setImprintFilter] = useState<string>('all');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const filteredContacts = contacts.filter(contact => {
     const matchesSearch = 
       contact.email.toLowerCase().includes(search.toLowerCase()) ||
       contact.first_name?.toLowerCase().includes(search.toLowerCase()) ||
-      contact.last_name?.toLowerCase().includes(search.toLowerCase());
+      contact.last_name?.toLowerCase().includes(search.toLowerCase()) ||
+      contact.phone?.includes(search);
     
     const matchesStatus = statusFilter === 'all' || contact.status === statusFilter;
+    const matchesType = typeFilter === 'all' || contact.contact_type === typeFilter;
+    const matchesImprint = imprintFilter === 'all' || 
+      (imprintFilter === 'none' && !contact.imprint_id) ||
+      contact.imprint_id === imprintFilter;
     
-    return matchesSearch && matchesStatus;
+    return matchesSearch && matchesStatus && matchesType && matchesImprint;
   });
 
   const toggleSelectAll = () => {
@@ -76,6 +98,10 @@ export function ContactsTable() {
     }
   };
 
+  const handleUpdateField = async (contactId: string, field: string, value: string) => {
+    await updateContact.mutateAsync({ id: contactId, [field]: value || null });
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -86,8 +112,8 @@ export function ContactsTable() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-4">
-        <div className="relative flex-1 max-w-sm">
+      <div className="flex flex-wrap items-center gap-4">
+        <div className="relative flex-1 min-w-[200px] max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search contacts..."
@@ -96,9 +122,34 @@ export function ContactsTable() {
             className="pl-9"
           />
         </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
+        <Select value={typeFilter} onValueChange={setTypeFilter}>
+          <SelectTrigger className="w-[130px]">
+            <SelectValue placeholder="Type" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Types</SelectItem>
+            <SelectItem value="lead">Lead</SelectItem>
+            <SelectItem value="author">Author</SelectItem>
+            <SelectItem value="bad">Bad</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={imprintFilter} onValueChange={setImprintFilter}>
           <SelectTrigger className="w-[150px]">
-            <SelectValue placeholder="Filter status" />
+            <SelectValue placeholder="Imprint" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Imprints</SelectItem>
+            <SelectItem value="none">Author Services</SelectItem>
+            {imprints.map(imprint => (
+              <SelectItem key={imprint.id} value={imprint.id}>
+                {imprint.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-[140px]">
+            <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Status</SelectItem>
@@ -121,7 +172,7 @@ export function ContactsTable() {
           {search && <p className="text-sm">Try adjusting your search</p>}
         </div>
       ) : (
-        <div className="border rounded-lg">
+        <div className="border rounded-lg overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -131,8 +182,12 @@ export function ContactsTable() {
                     onCheckedChange={toggleSelectAll}
                   />
                 </TableHead>
+                <TableHead>First Name</TableHead>
+                <TableHead>Last Name</TableHead>
                 <TableHead>Email</TableHead>
-                <TableHead>Name</TableHead>
+                <TableHead>Phone</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead>Imprint</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Added</TableHead>
                 <TableHead className="w-12"></TableHead>
@@ -147,18 +202,60 @@ export function ContactsTable() {
                       onCheckedChange={() => toggleSelect(contact.id)}
                     />
                   </TableCell>
-                  <TableCell className="font-medium">{contact.email}</TableCell>
                   <TableCell>
-                    {contact.first_name || contact.last_name
-                      ? `${contact.first_name || ''} ${contact.last_name || ''}`.trim()
-                      : '—'}
+                    <EditableCell
+                      value={contact.first_name || ''}
+                      onSave={(value) => handleUpdateField(contact.id, 'first_name', value)}
+                      placeholder="—"
+                    />
                   </TableCell>
                   <TableCell>
-                    <Badge variant="secondary" className={statusColors[contact.status]}>
+                    <EditableCell
+                      value={contact.last_name || ''}
+                      onSave={(value) => handleUpdateField(contact.id, 'last_name', value)}
+                      placeholder="—"
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <EditableCell
+                      value={contact.email}
+                      onSave={(value) => handleUpdateField(contact.id, 'email', value)}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <EditableCell
+                      value={contact.phone || ''}
+                      onSave={(value) => handleUpdateField(contact.id, 'phone', value)}
+                      type="phone"
+                      placeholder="—"
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <EditableCell
+                      value={contact.contact_type || 'lead'}
+                      onSave={(value) => handleUpdateField(contact.id, 'contact_type', value)}
+                      type="select"
+                      options={CONTACT_TYPES}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <EditableCell
+                      value={contact.imprint_id || ''}
+                      onSave={(value) => handleUpdateField(contact.id, 'imprint_id', value)}
+                      type="select"
+                      options={[
+                        { value: '', label: 'Author Services' },
+                        ...imprints.map(i => ({ value: i.id, label: i.name }))
+                      ]}
+                      placeholder="Author Services"
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="secondary" className={statusColors[contact.status] || ''}>
                       {contact.status}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-muted-foreground">
+                  <TableCell className="text-muted-foreground text-sm">
                     {format(new Date(contact.created_at), 'MMM d, yyyy')}
                   </TableCell>
                   <TableCell>

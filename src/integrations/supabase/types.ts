@@ -109,6 +109,41 @@ export type Database = {
           },
         ]
       }
+      contact_links: {
+        Row: {
+          contact_id: string
+          created_at: string | null
+          id: string
+          label: string | null
+          link_type: string
+          url: string
+        }
+        Insert: {
+          contact_id: string
+          created_at?: string | null
+          id?: string
+          label?: string | null
+          link_type: string
+          url: string
+        }
+        Update: {
+          contact_id?: string
+          created_at?: string | null
+          id?: string
+          label?: string | null
+          link_type?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contact_links_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contact_lists: {
         Row: {
           added_at: string | null
@@ -177,36 +212,62 @@ export type Database = {
       }
       contacts: {
         Row: {
+          address: string | null
+          contact_type: string | null
           created_at: string | null
           created_by: string | null
           email: string
           first_name: string | null
           id: string
+          imprint_id: string | null
           last_name: string | null
+          notes: string | null
+          phone: string | null
           status: string | null
+          timezone: string | null
           updated_at: string | null
         }
         Insert: {
+          address?: string | null
+          contact_type?: string | null
           created_at?: string | null
           created_by?: string | null
           email: string
           first_name?: string | null
           id?: string
+          imprint_id?: string | null
           last_name?: string | null
+          notes?: string | null
+          phone?: string | null
           status?: string | null
+          timezone?: string | null
           updated_at?: string | null
         }
         Update: {
+          address?: string | null
+          contact_type?: string | null
           created_at?: string | null
           created_by?: string | null
           email?: string
           first_name?: string | null
           id?: string
+          imprint_id?: string | null
           last_name?: string | null
+          notes?: string | null
+          phone?: string | null
           status?: string | null
+          timezone?: string | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "contacts_imprint_id_fkey"
+            columns: ["imprint_id"]
+            isOneToOne: false
+            referencedRelation: "imprints"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       email_events: {
         Row: {

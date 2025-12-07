@@ -43,7 +43,7 @@ const marketingItems = [
   { title: 'Templates', url: '/templates', icon: FileText },
 ];
 
-const audienceItems = [
+const crmItems = [
   { title: 'Contacts', url: '/contacts', icon: Users },
 ];
 
@@ -158,8 +158,8 @@ export function AppSidebar() {
         {/* Marketing Group */}
         {renderCollapsibleGroup('Marketing', Megaphone, marketingItems)}
 
-        {/* Audience Group */}
-        {renderCollapsibleGroup('Audience', UserCog, audienceItems)}
+        {/* CRM Group */}
+        {renderCollapsibleGroup('CRM', UserCog, crmItems)}
 
         {/* Configuration Group */}
         {renderCollapsibleGroup('Configuration', Settings, configItems)}
