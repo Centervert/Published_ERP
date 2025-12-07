@@ -8,6 +8,11 @@ interface Prediction {
   secondaryText?: string;
 }
 
+interface TimezoneResult {
+  timezone: string;
+  timezoneName: string;
+}
+
 export function usePlacesAutocomplete() {
   const [predictions, setPredictions] = useState<Prediction[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -28,7 +33,7 @@ export function usePlacesAutocomplete() {
       setIsLoading(true);
       try {
         const { data, error } = await supabase.functions.invoke('places-autocomplete', {
-          body: { input, sessionToken: sessionTokenRef.current },
+          body: { action: 'autocomplete', input, sessionToken: sessionTokenRef.current },
         });
 
         if (error) throw error;
@@ -43,10 +48,32 @@ export function usePlacesAutocomplete() {
   }, []);
 
   const selectPlace = useCallback((prediction: Prediction) => {
-    // Generate new session token after selection (as per Google's billing recommendations)
-    sessionTokenRef.current = crypto.randomUUID();
     setPredictions([]);
     return prediction.description;
+  }, []);
+
+  const getTimezoneForPlace = useCallback(async (placeId: string): Promise<TimezoneResult | null> => {
+    try {
+      const { data, error } = await supabase.functions.invoke('places-autocomplete', {
+        body: { 
+          action: 'getTimezone', 
+          placeId, 
+          sessionToken: sessionTokenRef.current 
+        },
+      });
+
+      // Generate new session token after getting timezone (completes the session)
+      sessionTokenRef.current = crypto.randomUUID();
+
+      if (error) throw error;
+      return {
+        timezone: data.timezone,
+        timezoneName: data.timezoneName,
+      };
+    } catch (err) {
+      console.error('Timezone lookup error:', err);
+      return null;
+    }
   }, []);
 
   const clearPredictions = useCallback(() => {
@@ -66,6 +93,7 @@ export function usePlacesAutocomplete() {
     isLoading,
     search,
     selectPlace,
+    getTimezoneForPlace,
     clearPredictions,
   };
 }

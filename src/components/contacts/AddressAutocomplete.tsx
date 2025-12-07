@@ -7,19 +7,21 @@ import { cn } from '@/lib/utils';
 interface AddressAutocompleteProps {
   value: string;
   onChange: (value: string) => void;
+  onTimezoneDetected?: (timezone: string) => void;
   placeholder?: string;
   className?: string;
 }
 
 export function AddressAutocomplete({ 
   value, 
-  onChange, 
+  onChange,
+  onTimezoneDetected,
   placeholder = "Start typing an address...",
   className 
 }: AddressAutocompleteProps) {
   const [inputValue, setInputValue] = useState(value);
   const [showDropdown, setShowDropdown] = useState(false);
-  const { predictions, isLoading, search, selectPlace, clearPredictions } = usePlacesAutocomplete();
+  const { predictions, isLoading, search, selectPlace, getTimezoneForPlace, clearPredictions } = usePlacesAutocomplete();
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -46,11 +48,19 @@ export function AddressAutocomplete({
     setShowDropdown(true);
   };
 
-  const handleSelect = (prediction: { placeId: string; description: string }) => {
+  const handleSelect = async (prediction: { placeId: string; description: string }) => {
     const address = selectPlace(prediction);
     setInputValue(address);
     onChange(address);
     setShowDropdown(false);
+
+    // Auto-detect timezone if callback provided
+    if (onTimezoneDetected) {
+      const result = await getTimezoneForPlace(prediction.placeId);
+      if (result?.timezone) {
+        onTimezoneDetected(result.timezone);
+      }
+    }
   };
 
   return (
