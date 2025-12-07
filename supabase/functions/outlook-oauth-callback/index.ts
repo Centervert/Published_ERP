@@ -1,6 +1,12 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+// Get the app URL from environment or use a default
+const getAppUrl = () => {
+  // In production, this should be set to your app's URL
+  return Deno.env.get('APP_URL') || 'https://d23f8566-3f14-446e-8064-8aae6e9ffb2b.lovableproject.com';
+};
+
 serve(async (req) => {
   try {
     const url = new URL(req.url);
@@ -9,35 +15,33 @@ serve(async (req) => {
     const error = url.searchParams.get('error');
     const errorDescription = url.searchParams.get('error_description');
 
+    const appUrl = getAppUrl();
+
     console.log('OAuth callback received, code present:', !!code, 'error:', error);
 
     if (error) {
       console.error('OAuth error:', error, errorDescription);
-      return new Response(
-        `<html><body><h1>Authentication Failed</h1><p>${errorDescription || error}</p><script>window.close();</script></body></html>`,
-        { headers: { 'Content-Type': 'text/html' } }
-      );
+      const errorUrl = `${appUrl}/profile?oauth_error=${encodeURIComponent(errorDescription || error)}`;
+      return Response.redirect(errorUrl, 302);
     }
 
     if (!code || !state) {
       console.error('Missing code or state');
-      return new Response(
-        `<html><body><h1>Authentication Failed</h1><p>Missing authorization code</p><script>window.close();</script></body></html>`,
-        { headers: { 'Content-Type': 'text/html' } }
-      );
+      const errorUrl = `${appUrl}/profile?oauth_error=${encodeURIComponent('Missing authorization code')}`;
+      return Response.redirect(errorUrl, 302);
     }
 
-    // Decode state to get userId
+    // Decode state to get userId and returnUrl
     let userId: string;
+    let returnUrl = '/profile';
     try {
       const stateData = JSON.parse(atob(state));
       userId = stateData.userId;
+      returnUrl = stateData.returnUrl || '/profile';
     } catch {
       console.error('Invalid state parameter');
-      return new Response(
-        `<html><body><h1>Authentication Failed</h1><p>Invalid state</p><script>window.close();</script></body></html>`,
-        { headers: { 'Content-Type': 'text/html' } }
-      );
+      const errorUrl = `${appUrl}/profile?oauth_error=${encodeURIComponent('Invalid state')}`;
+      return Response.redirect(errorUrl, 302);
     }
 
     const clientId = Deno.env.get('AZURE_CLIENT_ID');
@@ -64,10 +68,8 @@ serve(async (req) => {
 
     if (tokenData.error) {
       console.error('Token exchange error:', tokenData.error, tokenData.error_description);
-      return new Response(
-        `<html><body><h1>Authentication Failed</h1><p>${tokenData.error_description || tokenData.error}</p><script>window.close();</script></body></html>`,
-        { headers: { 'Content-Type': 'text/html' } }
-      );
+      const errorUrl = `${appUrl}/profile?oauth_error=${encodeURIComponent(tokenData.error_description || tokenData.error)}`;
+      return Response.redirect(errorUrl, 302);
     }
 
     console.log('Token exchange successful for user:', userId);
@@ -107,36 +109,20 @@ serve(async (req) => {
 
     if (upsertError) {
       console.error('Database error:', upsertError);
-      return new Response(
-        `<html><body><h1>Authentication Failed</h1><p>Failed to save credentials</p><script>window.close();</script></body></html>`,
-        { headers: { 'Content-Type': 'text/html' } }
-      );
+      const errorUrl = `${appUrl}/profile?oauth_error=${encodeURIComponent('Failed to save credentials')}`;
+      return Response.redirect(errorUrl, 302);
     }
 
     console.log('Successfully saved OAuth tokens for user:', userId);
 
-    // Success - close the popup and notify parent window
-    return new Response(
-      `<html>
-        <body>
-          <h1>Success!</h1>
-          <p>Your Outlook account has been connected. This window will close automatically.</p>
-          <script>
-            if (window.opener) {
-              window.opener.postMessage({ type: 'OUTLOOK_CONNECTED', success: true }, '*');
-            }
-            setTimeout(() => window.close(), 1500);
-          </script>
-        </body>
-      </html>`,
-      { headers: { 'Content-Type': 'text/html' } }
-    );
+    // Redirect back to the app with success
+    const successUrl = `${appUrl}${returnUrl}?oauth_success=true`;
+    return Response.redirect(successUrl, 302);
   } catch (error: unknown) {
     console.error('Error in outlook-oauth-callback:', error);
+    const appUrl = getAppUrl();
     const message = error instanceof Error ? error.message : 'Unknown error';
-    return new Response(
-      `<html><body><h1>Authentication Failed</h1><p>${message}</p><script>window.close();</script></body></html>`,
-      { headers: { 'Content-Type': 'text/html' } }
-    );
+    const errorUrl = `${appUrl}/profile?oauth_error=${encodeURIComponent(message)}`;
+    return Response.redirect(errorUrl, 302);
   }
 });

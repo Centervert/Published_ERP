@@ -48,9 +48,15 @@ serve(async (req) => {
       });
     }
 
+    // Get the return URL from the request body
+    const { returnUrl } = await req.json().catch(() => ({}));
+
     // Build the Microsoft OAuth URL
     const redirectUri = `${supabaseUrl}/functions/v1/outlook-oauth-callback`;
-    const state = btoa(JSON.stringify({ userId: user.id }));
+    const state = btoa(JSON.stringify({ 
+      userId: user.id,
+      returnUrl: returnUrl || '/profile'
+    }));
     
     const scopes = [
       'openid',
