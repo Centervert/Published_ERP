@@ -277,8 +277,8 @@ export function ContactSidebar({ contact, onBack }: ContactSidebarProps) {
                   <SelectValue placeholder="Select imprint" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">Author Services</SelectItem>
-                  {imprints.map(imprint => (
+                  <SelectItem value="none">Author Services (Default)</SelectItem>
+                  {imprints.filter(imprint => imprint.name.toLowerCase() !== 'author services').map(imprint => (
                     <SelectItem key={imprint.id} value={imprint.id}>{imprint.name}</SelectItem>
                   ))}
                 </SelectContent>
