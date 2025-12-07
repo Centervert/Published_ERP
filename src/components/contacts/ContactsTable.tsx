@@ -236,12 +236,14 @@ export function ContactsTable({ filterByUser }: ContactsTableProps) {
                   <TableHead className="font-semibold">
                     <div className="flex items-center gap-1">
                       ASSIGNED ASC
-                      <TooltipProvider>
+                      <TooltipProvider delayDuration={0}>
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                            <button type="button" className="inline-flex">
+                              <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                            </button>
                           </TooltipTrigger>
-                          <TooltipContent>
+                          <TooltipContent side="top">
                             <p>Author Success Coach</p>
                           </TooltipContent>
                         </Tooltip>
@@ -251,12 +253,14 @@ export function ContactsTable({ filterByUser }: ContactsTableProps) {
                   <TableHead className="font-semibold">
                     <div className="flex items-center gap-1">
                       ASSIGNED AE
-                      <TooltipProvider>
+                      <TooltipProvider delayDuration={0}>
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                            <button type="button" className="inline-flex">
+                              <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                            </button>
                           </TooltipTrigger>
-                          <TooltipContent>
+                          <TooltipContent side="top">
                             <p>Account Executive</p>
                           </TooltipContent>
                         </Tooltip>
