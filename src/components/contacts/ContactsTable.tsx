@@ -240,11 +240,11 @@ export function ContactsTable() {
                   </TableCell>
                   <TableCell>
                     <EditableCell
-                      value={contact.imprint_id || ''}
-                      onSave={(value) => handleUpdateField(contact.id, 'imprint_id', value)}
+                      value={contact.imprint_id || 'none'}
+                      onSave={(value) => handleUpdateField(contact.id, 'imprint_id', value === 'none' ? '' : value)}
                       type="select"
                       options={[
-                        { value: '', label: 'Author Services' },
+                        { value: 'none', label: 'Author Services' },
                         ...imprints.map(i => ({ value: i.id, label: i.name }))
                       ]}
                       placeholder="Author Services"
