@@ -279,19 +279,90 @@ export function useUpdateContact() {
         }
       }
 
-      // Only log activity if there were actual changes
+      // Track ASC and AE assignment changes separately with profile names
+      const assignmentChanges: { field: string; from: string | null; to: string | null; fromName?: string; toName?: string }[] = [];
+      
+      // Check if ASC changed
+      if ('assigned_asc' in cleanUpdates && originalData?.assigned_asc !== cleanUpdates.assigned_asc) {
+        assignmentChanges.push({
+          field: 'assigned_asc',
+          from: originalData?.assigned_asc || null,
+          to: cleanUpdates.assigned_asc || null,
+        });
+      }
+      
+      // Check if AE changed
+      if ('assigned_ae' in cleanUpdates && originalData?.assigned_ae !== cleanUpdates.assigned_ae) {
+        assignmentChanges.push({
+          field: 'assigned_ae',
+          from: originalData?.assigned_ae || null,
+          to: cleanUpdates.assigned_ae || null,
+        });
+      }
+
+      // Fetch profile names for assignment changes
+      if (assignmentChanges.length > 0) {
+        const profileIds = assignmentChanges
+          .flatMap(c => [c.from, c.to])
+          .filter((id): id is string => !!id);
+        
+        if (profileIds.length > 0) {
+          const { data: profiles } = await supabase
+            .from('profiles')
+            .select('id, full_name, email')
+            .in('id', profileIds);
+          
+          const profileMap = new Map(profiles?.map(p => [p.id, p.full_name || p.email]) || []);
+          
+          for (const change of assignmentChanges) {
+            change.fromName = change.from ? profileMap.get(change.from) || 'Unknown' : undefined;
+            change.toName = change.to ? profileMap.get(change.to) || 'Unknown' : undefined;
+          }
+        }
+      }
+
+      const { data: { user } } = await supabase.auth.getUser();
+
+      // Log regular field changes
       if (Object.keys(changes).length > 0) {
         const changedFields = Object.keys(changes);
         const description = changedFields.length === 1 
           ? `Updated ${changedFields[0].replace(/_/g, ' ')}`
           : `Updated ${changedFields.length} fields`;
 
-        const { data: { user } } = await supabase.auth.getUser();
         await supabase.from('contact_activity').insert({
           contact_id: id,
           activity_type: 'contact_updated',
           description,
           metadata: { changes },
+          created_by: user?.id,
+        });
+      }
+
+      // Log assignment changes separately
+      for (const change of assignmentChanges) {
+        const fieldLabel = change.field === 'assigned_asc' ? 'A.S.C.' : 'A.E.';
+        let description: string;
+        
+        if (!change.from && change.to) {
+          description = `Assigned ${fieldLabel} to ${change.toName}`;
+        } else if (change.from && !change.to) {
+          description = `Removed ${fieldLabel} assignment (was ${change.fromName})`;
+        } else {
+          description = `Changed ${fieldLabel} assignment`;
+        }
+
+        await supabase.from('contact_activity').insert({
+          contact_id: id,
+          activity_type: 'assignment_changed',
+          description,
+          metadata: {
+            field: change.field,
+            from: change.from,
+            to: change.to,
+            fromName: change.fromName,
+            toName: change.toName,
+          },
           created_by: user?.id,
         });
       }
