@@ -197,15 +197,8 @@ export function ContactSidebar({ contact, onBack }: ContactSidebarProps) {
 
       {/* Contact Header - Info Section */}
       <div className="p-4 pt-3 pb-2">
-        {/* Name and Avatar */}
-        <div className="flex gap-3 mb-3">
-          <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center text-primary text-base font-semibold flex-shrink-0">
-            {initials}
-          </div>
-          <div className="min-w-0 flex-1">
-            <h1 className="text-lg font-semibold text-foreground truncate">{displayName}</h1>
-          </div>
-        </div>
+        {/* Name */}
+        <h1 className="text-lg font-semibold text-foreground mb-3">{displayName}</h1>
 
         {/* Key Info Grid */}
         <div className="space-y-2 mb-4">
