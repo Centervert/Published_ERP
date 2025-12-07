@@ -157,30 +157,28 @@ export function ContactActivityFeed({ contactId, assignedAsc, assignedAe }: Cont
             </TabsList>
           </div>
 
-          <TabsContent value="overview" className="mt-0 p-6">
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Assigned ASC */}
-                <div className="border rounded-lg p-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-sm font-medium text-muted-foreground">Assigned ASC</span>
-                    <span className="text-xs text-muted-foreground">(Author Success Coach)</span>
-                  </div>
-                  <p className="text-sm text-foreground">
-                    {assignedAsc ? assignedAsc : <span className="text-muted-foreground">Not assigned</span>}
-                  </p>
+          <TabsContent value="overview" className="mt-0 p-4">
+            <div className="grid grid-cols-2 gap-4">
+              {/* Assigned ASC */}
+              <div className="border rounded-lg p-3">
+                <div className="flex flex-wrap items-baseline gap-x-1.5 mb-1">
+                  <span className="text-sm font-medium text-foreground">Assigned ASC</span>
+                  <span className="text-[11px] text-muted-foreground whitespace-nowrap">(Author Success Coach)</span>
                 </div>
+                <p className="text-sm">
+                  {assignedAsc ? assignedAsc : <span className="text-muted-foreground">Not assigned</span>}
+                </p>
+              </div>
 
-                {/* Assigned AE */}
-                <div className="border rounded-lg p-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-sm font-medium text-muted-foreground">Assigned AE</span>
-                    <span className="text-xs text-muted-foreground">(Account Executive)</span>
-                  </div>
-                  <p className="text-sm text-foreground">
-                    {assignedAe ? assignedAe : <span className="text-muted-foreground">Not assigned</span>}
-                  </p>
+              {/* Assigned AE */}
+              <div className="border rounded-lg p-3">
+                <div className="flex flex-wrap items-baseline gap-x-1.5 mb-1">
+                  <span className="text-sm font-medium text-foreground">Assigned AE</span>
+                  <span className="text-[11px] text-muted-foreground whitespace-nowrap">(Account Executive)</span>
                 </div>
+                <p className="text-sm">
+                  {assignedAe ? assignedAe : <span className="text-muted-foreground">Not assigned</span>}
+                </p>
               </div>
             </div>
           </TabsContent>
