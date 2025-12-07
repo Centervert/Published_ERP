@@ -197,16 +197,76 @@ export function ContactSidebar({ contact, onBack }: ContactSidebarProps) {
 
       {/* Contact Header - Info Section */}
       <div className="p-4 pt-3 pb-2">
-        <div className="flex gap-3 mb-4">
-          <div className="h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center text-primary text-lg font-semibold flex-shrink-0">
+        {/* Name and Avatar */}
+        <div className="flex gap-3 mb-3">
+          <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center text-primary text-base font-semibold flex-shrink-0">
             {initials}
           </div>
           <div className="min-w-0 flex-1">
             <h1 className="text-lg font-semibold text-foreground truncate">{displayName}</h1>
-            <span className={`inline-block text-xs font-medium px-2 py-0.5 rounded-sm ${getTypeColor(formData.contact_type)}`}>{contactTypeLabel}</span>
-            <p className="text-xs text-muted-foreground mt-1">
-              Created {contact.created_at ? format(parseISO(contact.created_at), 'MMM d, yyyy') : '--'}
-            </p>
+          </div>
+        </div>
+
+        {/* Key Info Grid */}
+        <div className="space-y-2 mb-4">
+          {/* Type - Inline Select */}
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground">Type</span>
+            <Select value={formData.contact_type} onValueChange={(v) => handleChange('contact_type', v)}>
+              <SelectTrigger className="h-6 w-auto min-w-[80px] border-0 bg-transparent p-0 text-sm font-medium focus:ring-0 [&>svg]:h-3 [&>svg]:w-3">
+                <span className={`inline-block text-xs font-medium px-2 py-0.5 rounded-sm ${getTypeColor(formData.contact_type)}`}>
+                  {contactTypeLabel}
+                </span>
+              </SelectTrigger>
+              <SelectContent>
+                {CONTACT_TYPES.map(type => (
+                  <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Status - Inline Select */}
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground">Status</span>
+            <Select value={formData.status} onValueChange={(v) => handleChange('status', v)}>
+              <SelectTrigger className="h-6 w-auto min-w-[80px] border-0 bg-transparent p-0 text-sm focus:ring-0 [&>svg]:h-3 [&>svg]:w-3">
+                <span className="text-sm">{STATUS_OPTIONS.find(s => s.value === formData.status)?.label || 'Active'}</span>
+              </SelectTrigger>
+              <SelectContent>
+                {STATUS_OPTIONS.map(status => (
+                  <SelectItem key={status.value} value={status.value}>{status.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* ASC */}
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground">A.S.C.</span>
+            <span className="text-sm">
+              {formData.assigned_asc !== 'none' 
+                ? teamMembers.find(m => m.id === formData.assigned_asc)?.full_name || teamMembers.find(m => m.id === formData.assigned_asc)?.email || '--'
+                : '--'}
+            </span>
+          </div>
+
+          {/* AE */}
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground">A.E.</span>
+            <span className="text-sm">
+              {formData.assigned_ae !== 'none' 
+                ? teamMembers.find(m => m.id === formData.assigned_ae)?.full_name || teamMembers.find(m => m.id === formData.assigned_ae)?.email || '--'
+                : '--'}
+            </span>
+          </div>
+
+          {/* Created */}
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground">Created</span>
+            <span className="text-sm">
+              {contact.created_at ? format(parseISO(contact.created_at), 'MMM d, yyyy') : '--'}
+            </span>
           </div>
         </div>
 
