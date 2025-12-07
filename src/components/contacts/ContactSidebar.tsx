@@ -14,6 +14,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { 
   ArrowLeft,
   Mail, 
@@ -30,7 +37,8 @@ import {
   ExternalLink,
   Settings,
   Save,
-  Copy
+  Copy,
+  Pencil
 } from 'lucide-react';
 import { formatPhoneNumber } from '@/lib/phone-utils';
 import { format, parseISO } from 'date-fns';
@@ -72,6 +80,8 @@ export function ContactSidebar({ contact, onBack }: ContactSidebarProps) {
   const [aboutOpen, setAboutOpen] = useState(true);
   const [linksOpen, setLinksOpen] = useState(false);
   const [notesOpen, setNotesOpen] = useState(false);
+  const [timezoneDialogOpen, setTimezoneDialogOpen] = useState(false);
+  const [timezoneInput, setTimezoneInput] = useState('');
   
   const [formData, setFormData] = useState({
     first_name: contact.first_name || '',
@@ -88,6 +98,16 @@ export function ContactSidebar({ contact, onBack }: ContactSidebarProps) {
 
   const [newLink, setNewLink] = useState({ type: 'website', url: '', label: '' });
   const [hasChanges, setHasChanges] = useState(false);
+
+  const openTimezoneDialog = () => {
+    setTimezoneInput(formData.timezone);
+    setTimezoneDialogOpen(true);
+  };
+
+  const handleTimezoneOverride = () => {
+    handleChange('timezone', timezoneInput);
+    setTimezoneDialogOpen(false);
+  };
 
   const handleChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -306,12 +326,16 @@ export function ContactSidebar({ contact, onBack }: ContactSidebarProps) {
                 <Clock className="h-3 w-3" /> Timezone
                 <span className="text-[10px] text-muted-foreground/70">(auto-detected)</span>
               </Label>
-              <Input
-                value={formData.timezone}
-                onChange={(e) => handleChange('timezone', e.target.value)}
-                placeholder="Auto-detected from address"
-                className="h-8 mt-1"
-              />
+              <button
+                type="button"
+                onClick={openTimezoneDialog}
+                className="w-full h-8 mt-1 px-3 text-left text-sm border rounded-md bg-background hover:bg-muted/50 transition-colors flex items-center justify-between group"
+              >
+                <span className={formData.timezone ? 'text-foreground' : 'text-muted-foreground'}>
+                  {formData.timezone || 'Auto-detected from address'}
+                </span>
+                <Pencil className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+              </button>
             </div>
 
             {/* Create date */}
@@ -416,6 +440,41 @@ export function ContactSidebar({ contact, onBack }: ContactSidebarProps) {
           </CollapsibleContent>
         </Collapsible>
       </div>
+
+      {/* Timezone Override Dialog */}
+      <Dialog open={timezoneDialogOpen} onOpenChange={setTimezoneDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Override Timezone</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p className="text-sm text-muted-foreground">
+              The timezone is automatically detected from the address. You can manually override it here if needed.
+            </p>
+            <div>
+              <Label htmlFor="timezone-input">Timezone</Label>
+              <Input
+                id="timezone-input"
+                value={timezoneInput}
+                onChange={(e) => setTimezoneInput(e.target.value)}
+                placeholder="e.g., America/New_York"
+                className="mt-1"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Use IANA timezone format (e.g., America/New_York, Europe/London)
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setTimezoneDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleTimezoneOverride}>
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
