@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Plus, Upload } from 'lucide-react';
 import { ContactsTable } from '@/components/contacts/ContactsTable';
-import { AddContactDialog } from '@/components/contacts/AddContactDialog';
+import { CreateContactSheet } from '@/components/contacts/CreateContactSheet';
 import { ImportCSVDialog } from '@/components/contacts/ImportCSVDialog';
 import { ListsManager } from '@/components/contacts/ListsManager';
 import { TagsManager } from '@/components/contacts/TagsManager';
@@ -53,7 +53,7 @@ export default function Contacts() {
         </TabsContent>
       </Tabs>
 
-      <AddContactDialog open={addDialogOpen} onOpenChange={setAddDialogOpen} />
+      <CreateContactSheet open={addDialogOpen} onOpenChange={setAddDialogOpen} />
       <ImportCSVDialog open={importDialogOpen} onOpenChange={setImportDialogOpen} />
     </div>
   );

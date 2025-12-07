@@ -3,14 +3,33 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 
+export interface ContactLink {
+  id?: string;
+  contact_id?: string;
+  link_type: string;
+  url: string;
+  label?: string;
+}
+
 export interface Contact {
   id: string;
   email: string;
   first_name: string | null;
   last_name: string | null;
+  phone: string | null;
+  address: string | null;
+  timezone: string | null;
+  contact_type: string | null;
+  imprint_id: string | null;
+  notes: string | null;
   status: string;
   created_at: string;
   updated_at: string;
+  imprint?: {
+    id: string;
+    name: string;
+  } | null;
+  contact_links?: ContactLink[];
 }
 
 export interface List {
@@ -37,7 +56,10 @@ export function useContacts() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('contacts')
-        .select('*')
+        .select(`
+          *,
+          imprint:imprints(id, name)
+        `)
         .order('created_at', { ascending: false });
       
       if (error) throw error;
@@ -46,19 +68,57 @@ export function useContacts() {
   });
 
   const createContact = useMutation({
-    mutationFn: async (contact: { email: string; first_name?: string; last_name?: string }) => {
+    mutationFn: async (contact: {
+      email: string;
+      first_name?: string;
+      last_name?: string;
+      phone?: string;
+      address?: string;
+      timezone?: string;
+      contact_type?: string;
+      imprint_id?: string;
+      notes?: string;
+      links?: { type: string; url: string; label?: string }[];
+    }) => {
+      const { links, ...contactData } = contact;
+      
       const { data, error } = await supabase
         .from('contacts')
         .insert({
-          email: contact.email,
-          first_name: contact.first_name || null,
-          last_name: contact.last_name || null,
+          email: contactData.email,
+          first_name: contactData.first_name || null,
+          last_name: contactData.last_name || null,
+          phone: contactData.phone || null,
+          address: contactData.address || null,
+          timezone: contactData.timezone || null,
+          contact_type: contactData.contact_type || 'lead',
+          imprint_id: contactData.imprint_id || null,
+          notes: contactData.notes || null,
           created_by: user?.id,
         })
         .select()
         .single();
       
       if (error) throw error;
+
+      // Insert links if provided
+      if (links && links.length > 0 && data) {
+        const linksToInsert = links.map(link => ({
+          contact_id: data.id,
+          link_type: link.type,
+          url: link.url,
+          label: link.label || null,
+        }));
+
+        const { error: linksError } = await supabase
+          .from('contact_links')
+          .insert(linksToInsert);
+
+        if (linksError) {
+          console.error('Error inserting links:', linksError);
+        }
+      }
+
       return data;
     },
     onSuccess: () => {
@@ -76,9 +136,12 @@ export function useContacts() {
 
   const updateContact = useMutation({
     mutationFn: async ({ id, ...updates }: Partial<Contact> & { id: string }) => {
+      // Remove nested objects before update
+      const { imprint, contact_links, ...cleanUpdates } = updates as any;
+      
       const { data, error } = await supabase
         .from('contacts')
-        .update(updates)
+        .update(cleanUpdates)
         .eq('id', id)
         .select()
         .single();
@@ -88,7 +151,6 @@ export function useContacts() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['contacts'] });
-      toast({ title: 'Contact updated' });
     },
     onError: (error: Error) => {
       toast({ title: 'Error updating contact', description: error.message, variant: 'destructive' });
