@@ -27,7 +27,7 @@ interface ActivityItem {
   description: string;
   metadata?: any;
   created_at: string;
-  created_by?: string | null;
+  created_by_name?: string | null;
   source: 'crm' | 'marketing';
 }
 
@@ -196,6 +196,12 @@ export function ContactActivityFeed({ contactId, assignedAsc, assignedAe }: Cont
                         {renderFieldChanges(activity.metadata)}
                         <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
                           <span>{format(date, 'MMM d, yyyy')} at {format(date, 'h:mm a')}</span>
+                          {activity.created_by_name && (
+                            <>
+                              <span>•</span>
+                              <span>by {activity.created_by_name}</span>
+                            </>
+                          )}
                           {activity.source === 'marketing' && (
                             <>
                               <span>•</span>
