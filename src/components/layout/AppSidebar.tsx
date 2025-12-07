@@ -47,7 +47,8 @@ const crmItems = [
   { title: 'Contacts', url: '/contacts', icon: Users },
 ];
 
-const configItems = [
+const backofficeItems = [
+  { title: 'Users', url: '/users', icon: Users },
   { title: 'Imprints', url: '/imprints', icon: Building2 },
   { title: 'Settings', url: '/settings', icon: Settings },
 ];
@@ -161,8 +162,8 @@ export function AppSidebar() {
         {/* CRM Group */}
         {renderCollapsibleGroup('CRM', UserCog, crmItems)}
 
-        {/* Configuration Group */}
-        {renderCollapsibleGroup('Configuration', Settings, configItems)}
+        {/* Backoffice Group */}
+        {renderCollapsibleGroup('Backoffice', Settings, backofficeItems)}
       </SidebarContent>
 
       <SidebarFooter className="p-3 border-t border-sidebar-border">
