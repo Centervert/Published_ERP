@@ -20,9 +20,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Loader2, Plus, X, Globe, BookOpen, Facebook, Twitter, Instagram, Linkedin } from 'lucide-react';
 import { formatPhoneNumber } from '@/lib/phone-utils';
 import { z } from 'zod';
+import { cn } from '@/lib/utils';
 
 const TIMEZONES = [
   { value: 'America/New_York', label: 'Eastern Time (ET)' },
@@ -55,9 +66,9 @@ const LINK_TYPES = [
 ];
 
 const contactSchema = z.object({
-  email: z.string().trim().email('Please enter a valid email address'),
-  first_name: z.string().trim().max(100).optional(),
+  first_name: z.string().trim().min(1, 'First name is required').max(100),
   last_name: z.string().trim().max(100).optional(),
+  email: z.string().trim().email('Please enter a valid email address').optional().or(z.literal('')),
   phone: z.string().optional(),
   address: z.string().optional(),
   timezone: z.string().optional(),
@@ -94,6 +105,10 @@ export function CreateContactSheet({ open, onOpenChange }: CreateContactSheetPro
   });
   const [links, setLinks] = useState<ContactLink[]>([]);
   const [error, setError] = useState('');
+  const [showNoContactWarning, setShowNoContactWarning] = useState(false);
+
+  const hasName = formData.first_name.trim().length > 0;
+  const hasContactMethod = formData.email.trim().length > 0 || formData.phone.trim().length > 0;
 
   const resetForm = () => {
     setFormData({
@@ -109,17 +124,13 @@ export function CreateContactSheet({ open, onOpenChange }: CreateContactSheetPro
     });
     setLinks([]);
     setError('');
+    setShowNoContactWarning(false);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-
+  const saveContact = async () => {
     try {
-      contactSchema.parse(formData);
-
       await createContact.mutateAsync({
-        email: formData.email,
+        email: formData.email || undefined,
         first_name: formData.first_name || undefined,
         last_name: formData.last_name || undefined,
         phone: formData.phone || undefined,
@@ -134,10 +145,34 @@ export function CreateContactSheet({ open, onOpenChange }: CreateContactSheetPro
       resetForm();
       onOpenChange(false);
     } catch (err) {
+      // Error handled by mutation
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+
+    try {
+      contactSchema.parse(formData);
+
+      // Check if no contact method provided
+      if (!hasContactMethod) {
+        setShowNoContactWarning(true);
+        return;
+      }
+
+      await saveContact();
+    } catch (err) {
       if (err instanceof z.ZodError) {
         setError(err.errors[0].message);
       }
     }
+  };
+
+  const handleConfirmNoContact = async () => {
+    setShowNoContactWarning(false);
+    await saveContact();
   };
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -164,216 +199,257 @@ export function CreateContactSheet({ open, onOpenChange }: CreateContactSheetPro
   };
 
   return (
-    <Sheet open={open} onOpenChange={(isOpen) => {
-      if (!isOpen) resetForm();
-      onOpenChange(isOpen);
-    }}>
-      <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
-        <SheetHeader>
-          <SheetTitle>Add Contact</SheetTitle>
-          <SheetDescription>
-            Add a new contact to your CRM.
-          </SheetDescription>
-        </SheetHeader>
-        
-        <form onSubmit={handleSubmit} className="space-y-6 py-6">
-          {/* Name Row */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="first_name">First Name</Label>
-              <Input
-                id="first_name"
-                placeholder="John"
-                value={formData.first_name}
-                onChange={(e) => setFormData(prev => ({ ...prev, first_name: e.target.value }))}
-              />
+    <>
+      <Sheet open={open} onOpenChange={(isOpen) => {
+        if (!isOpen) resetForm();
+        onOpenChange(isOpen);
+      }}>
+        <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>Add Contact</SheetTitle>
+            <SheetDescription>
+              Start by entering the contact's name.
+            </SheetDescription>
+          </SheetHeader>
+          
+          <form onSubmit={handleSubmit} className="space-y-6 py-6">
+            {/* Name Row - Always visible and enabled */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="first_name">First Name *</Label>
+                <Input
+                  id="first_name"
+                  placeholder="John"
+                  value={formData.first_name}
+                  onChange={(e) => setFormData(prev => ({ ...prev, first_name: e.target.value }))}
+                  autoFocus
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="last_name">Last Name</Label>
+                <Input
+                  id="last_name"
+                  placeholder="Doe"
+                  value={formData.last_name}
+                  onChange={(e) => setFormData(prev => ({ ...prev, last_name: e.target.value }))}
+                  disabled={!hasName}
+                  className={cn(!hasName && "opacity-50")}
+                />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="last_name">Last Name</Label>
-              <Input
-                id="last_name"
-                placeholder="Doe"
-                value={formData.last_name}
-                onChange={(e) => setFormData(prev => ({ ...prev, last_name: e.target.value }))}
-              />
-            </div>
-          </div>
 
-          {/* Email */}
-          <div className="space-y-2">
-            <Label htmlFor="email">Email *</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="contact@example.com"
-              value={formData.email}
-              onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-              required
-            />
-          </div>
+            {/* Blurred section until name is entered */}
+            <div className={cn(
+              "space-y-6 transition-all duration-200",
+              !hasName && "opacity-40 pointer-events-none select-none blur-[1px]"
+            )}>
+              {!hasName && (
+                <p className="text-sm text-muted-foreground text-center py-2">
+                  Enter first name to continue
+                </p>
+              )}
 
-          {/* Phone */}
-          <div className="space-y-2">
-            <Label htmlFor="phone">Phone</Label>
-            <Input
-              id="phone"
-              placeholder="(555) 123-4567"
-              value={formData.phone}
-              onChange={handlePhoneChange}
-            />
-          </div>
+              {/* Email */}
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="contact@example.com"
+                  value={formData.email}
+                  onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                  disabled={!hasName}
+                />
+              </div>
 
-          {/* Address */}
-          <div className="space-y-2">
-            <Label htmlFor="address">Address</Label>
-            <Input
-              id="address"
-              placeholder="123 Main St, City, State 12345"
-              value={formData.address}
-              onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
-            />
-          </div>
+              {/* Phone */}
+              <div className="space-y-2">
+                <Label htmlFor="phone">Phone</Label>
+                <Input
+                  id="phone"
+                  placeholder="(555) 123-4567"
+                  value={formData.phone}
+                  onChange={handlePhoneChange}
+                  disabled={!hasName}
+                />
+              </div>
 
-          {/* Timezone */}
-          <div className="space-y-2">
-            <Label>Time Zone</Label>
-            <Select
-              value={formData.timezone}
-              onValueChange={(value) => setFormData(prev => ({ ...prev, timezone: value }))}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select timezone" />
-              </SelectTrigger>
-              <SelectContent>
-                {TIMEZONES.map((tz) => (
-                  <SelectItem key={tz.value} value={tz.value}>
-                    {tz.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+              {/* Address */}
+              <div className="space-y-2">
+                <Label htmlFor="address">Address</Label>
+                <Input
+                  id="address"
+                  placeholder="123 Main St, City, State 12345"
+                  value={formData.address}
+                  onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
+                  disabled={!hasName}
+                />
+              </div>
 
-          {/* Contact Type */}
-          <div className="space-y-2">
-            <Label>Contact Type</Label>
-            <Select
-              value={formData.contact_type}
-              onValueChange={(value) => setFormData(prev => ({ ...prev, contact_type: value }))}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select type" />
-              </SelectTrigger>
-              <SelectContent>
-                {CONTACT_TYPES.map((type) => (
-                  <SelectItem key={type.value} value={type.value}>
-                    {type.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+              {/* Timezone */}
+              <div className="space-y-2">
+                <Label>Time Zone</Label>
+                <Select
+                  value={formData.timezone || 'none'}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, timezone: value === 'none' ? '' : value }))}
+                  disabled={!hasName}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select timezone" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Select timezone</SelectItem>
+                    {TIMEZONES.map((tz) => (
+                      <SelectItem key={tz.value} value={tz.value}>
+                        {tz.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-          {/* Imprint/Group */}
-          <div className="space-y-2">
-            <Label>Imprint / Group</Label>
-            <Select
-              value={formData.imprint_id || 'none'}
-              onValueChange={(value) => setFormData(prev => ({ ...prev, imprint_id: value === 'none' ? '' : value }))}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Author Services (default)" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">Author Services (default)</SelectItem>
-                {imprints.map((imprint) => (
-                  <SelectItem key={imprint.id} value={imprint.id}>
-                    {imprint.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+              {/* Contact Type */}
+              <div className="space-y-2">
+                <Label>Contact Type</Label>
+                <Select
+                  value={formData.contact_type}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, contact_type: value }))}
+                  disabled={!hasName}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CONTACT_TYPES.map((type) => (
+                      <SelectItem key={type.value} value={type.value}>
+                        {type.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-          {/* Websites & Social */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <Label>Websites & Social</Label>
-              <Button type="button" variant="ghost" size="sm" onClick={addLink}>
-                <Plus className="h-4 w-4 mr-1" />
-                Add
-              </Button>
-            </div>
-            
-            {links.map((link, index) => {
-              const Icon = getLinkIcon(link.type);
-              return (
-                <div key={index} className="flex items-center gap-2">
-                  <Select
-                    value={link.type}
-                    onValueChange={(value) => updateLink(index, 'type', value)}
-                  >
-                    <SelectTrigger className="w-[140px]">
-                      <div className="flex items-center gap-2">
-                        <Icon className="h-4 w-4" />
-                        <SelectValue />
-                      </div>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {LINK_TYPES.map((lt) => (
-                        <SelectItem key={lt.value} value={lt.value}>
-                          <div className="flex items-center gap-2">
-                            <lt.icon className="h-4 w-4" />
-                            {lt.label}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Input
-                    placeholder="https://..."
-                    value={link.url}
-                    onChange={(e) => updateLink(index, 'url', e.target.value)}
-                    className="flex-1"
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => removeLink(index)}
-                  >
-                    <X className="h-4 w-4" />
+              {/* Imprint/Group */}
+              <div className="space-y-2">
+                <Label>Imprint / Group</Label>
+                <Select
+                  value={formData.imprint_id || 'none'}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, imprint_id: value === 'none' ? '' : value }))}
+                  disabled={!hasName}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Author Services (default)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Author Services (default)</SelectItem>
+                    {imprints.map((imprint) => (
+                      <SelectItem key={imprint.id} value={imprint.id}>
+                        {imprint.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Websites & Social */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label>Websites & Social</Label>
+                  <Button type="button" variant="ghost" size="sm" onClick={addLink} disabled={!hasName}>
+                    <Plus className="h-4 w-4 mr-1" />
+                    Add
                   </Button>
                 </div>
-              );
-            })}
-          </div>
+                
+                {links.map((link, index) => {
+                  const Icon = getLinkIcon(link.type);
+                  return (
+                    <div key={index} className="flex items-center gap-2">
+                      <Select
+                        value={link.type}
+                        onValueChange={(value) => updateLink(index, 'type', value)}
+                      >
+                        <SelectTrigger className="w-[140px]">
+                          <div className="flex items-center gap-2">
+                            <Icon className="h-4 w-4" />
+                            <SelectValue />
+                          </div>
+                        </SelectTrigger>
+                        <SelectContent>
+                          {LINK_TYPES.map((lt) => (
+                            <SelectItem key={lt.value} value={lt.value}>
+                              <div className="flex items-center gap-2">
+                                <lt.icon className="h-4 w-4" />
+                                {lt.label}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Input
+                        placeholder="https://..."
+                        value={link.url}
+                        onChange={(e) => updateLink(index, 'url', e.target.value)}
+                        className="flex-1"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removeLink(index)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
 
-          {/* Notes */}
-          <div className="space-y-2">
-            <Label htmlFor="notes">Notes</Label>
-            <Textarea
-              id="notes"
-              placeholder="Additional notes about this contact..."
-              value={formData.notes}
-              onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-              rows={3}
-            />
-          </div>
+              {/* Notes */}
+              <div className="space-y-2">
+                <Label htmlFor="notes">Notes</Label>
+                <Textarea
+                  id="notes"
+                  placeholder="Additional notes about this contact..."
+                  value={formData.notes}
+                  onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+                  rows={3}
+                  disabled={!hasName}
+                />
+              </div>
+            </div>
 
-          {error && <p className="text-sm text-destructive">{error}</p>}
+            {error && <p className="text-sm text-destructive">{error}</p>}
 
-          <SheetFooter className="gap-2">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={createContact.isPending}>
-              {createContact.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Add Contact
-            </Button>
-          </SheetFooter>
-        </form>
-      </SheetContent>
-    </Sheet>
+            <SheetFooter className="gap-2">
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={createContact.isPending || !hasName}>
+                {createContact.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Add Contact
+              </Button>
+            </SheetFooter>
+          </form>
+        </SheetContent>
+      </Sheet>
+
+      <AlertDialog open={showNoContactWarning} onOpenChange={setShowNoContactWarning}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>No Contact Method</AlertDialogTitle>
+            <AlertDialogDescription>
+              This contact has no email or phone number. Are you sure you want to save without a way to contact them?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Go Back</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmNoContact}>
+              Save Anyway
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
