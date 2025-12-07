@@ -126,52 +126,65 @@ export function CommunicationTimeline({ communications, isLoading }: Communicati
               return (
                 <div 
                   key={comm.id}
-                  className="flex items-start gap-3 p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
+                  className="flex flex-col rounded-lg border bg-card overflow-hidden"
                 >
-                  {/* Icon */}
-                  <div className={`flex-shrink-0 h-8 w-8 rounded-full flex items-center justify-center ${colorClass}`}>
-                    <Icon className="h-4 w-4" />
-                  </div>
+                  {/* Header */}
+                  <div className="flex items-center gap-3 p-3 border-b bg-muted/30">
+                    {/* Icon */}
+                    <div className={`flex-shrink-0 h-8 w-8 rounded-full flex items-center justify-center ${colorClass}`}>
+                      <Icon className="h-4 w-4" />
+                    </div>
 
-                  {/* Content */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <DirectionIcon className={`h-3 w-3 ${comm.direction === 'outbound' ? 'text-green-500' : 'text-blue-500'}`} />
-                      <span className="text-sm font-medium capitalize">
-                        {comm.type} {comm.direction === 'outbound' ? 'sent' : 'received'}
-                      </span>
-                      {comm.type === 'call' && (
-                        <span className="text-xs text-muted-foreground">
-                          {getOutcomeLabel(comm.outcome)}
-                          {comm.duration_seconds && ` • ${formatDuration(comm.duration_seconds)}`}
+                    {/* Title */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <DirectionIcon className={`h-3 w-3 ${comm.direction === 'outbound' ? 'text-green-500' : 'text-blue-500'}`} />
+                        <span className="text-sm font-medium">
+                          {comm.type === 'email' ? 'Email' : comm.type === 'call' ? 'Call' : 'SMS'} {comm.direction === 'outbound' ? 'Sent' : 'Received'}
                         </span>
+                        {comm.type === 'call' && (
+                          <span className="text-xs text-muted-foreground">
+                            {getOutcomeLabel(comm.outcome)}
+                            {comm.duration_seconds && ` • ${formatDuration(comm.duration_seconds)}`}
+                          </span>
+                        )}
+                      </div>
+                      {/* Subject for emails */}
+                      {comm.subject && (
+                        <p className="text-sm font-medium mt-0.5">{comm.subject}</p>
                       )}
                     </div>
 
-                    {/* Subject for emails */}
-                    {comm.subject && (
-                      <p className="text-sm font-medium mt-1">{comm.subject}</p>
-                    )}
+                    {/* Time */}
+                    <div className="flex-shrink-0 text-xs text-muted-foreground">
+                      {time}
+                    </div>
+                  </div>
 
-                    {/* Body preview */}
-                    {comm.body && (
-                      <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                        {comm.body}
-                      </p>
-                    )}
+                  {/* Body Content */}
+                  {comm.body && (
+                    <div className="p-3">
+                      {comm.type === 'email' ? (
+                        <div 
+                          className="text-sm text-foreground prose prose-sm max-w-none [&>*]:m-0 [&>p]:mb-2 [&>ul]:my-2 [&>ol]:my-2"
+                          dangerouslySetInnerHTML={{ __html: comm.body }}
+                        />
+                      ) : (
+                        <p className="text-sm text-muted-foreground">
+                          {comm.body}
+                        </p>
+                      )}
+                    </div>
+                  )}
 
-                    {/* Notes for calls */}
-                    {comm.notes && (
-                      <p className="text-sm text-muted-foreground mt-1 italic">
+                  {/* Notes for calls */}
+                  {comm.notes && (
+                    <div className="px-3 pb-3">
+                      <p className="text-sm text-muted-foreground italic">
                         "{comm.notes}"
                       </p>
-                    )}
-                  </div>
-
-                  {/* Time */}
-                  <div className="flex-shrink-0 text-xs text-muted-foreground">
-                    {time}
-                  </div>
+                    </div>
+                  )}
                 </div>
               );
             })}

@@ -388,9 +388,9 @@ export function ContactSidebar({ contact, onBack, onSelectTab }: ContactSidebarP
           </div>
 
           {/* Email */}
-          <div className="flex items-center group min-h-[28px]">
-            <span className="text-xs text-muted-foreground w-20 flex-shrink-0">Email</span>
-            <div className="flex-1 flex items-center gap-1">
+          <div className="flex items-start group min-h-[28px]">
+            <span className="text-xs text-muted-foreground w-20 flex-shrink-0 pt-0.5">Email</span>
+            <div className="flex-1 min-w-0">
               {editingField === 'email' ? (
                 <Input
                   value={formData.email}
@@ -401,19 +401,19 @@ export function ContactSidebar({ contact, onBack, onSelectTab }: ContactSidebarP
                   onKeyDown={(e) => e.key === 'Enter' && setEditingField(null)}
                 />
               ) : (
-                <>
+                <div className="flex items-start gap-1">
                   <span 
                     onClick={() => setEditingField('email')}
-                    className="text-sm hover:text-primary transition-colors truncate cursor-pointer"
+                    className="text-sm hover:text-primary transition-colors cursor-pointer break-all"
                   >
                     {formData.email || <span className="text-muted-foreground">Add email</span>}
                   </span>
                   {formData.email && (
-                    <Button variant="ghost" size="icon" className="h-5 w-5 flex-shrink-0 opacity-0 group-hover:opacity-100" onClick={() => navigator.clipboard.writeText(formData.email)}>
+                    <Button variant="ghost" size="icon" className="h-5 w-5 flex-shrink-0 opacity-0 group-hover:opacity-100 mt-0.5" onClick={() => navigator.clipboard.writeText(formData.email)}>
                       <Copy className="h-3 w-3 text-muted-foreground" />
                     </Button>
                   )}
-                </>
+                </div>
               )}
             </div>
           </div>
