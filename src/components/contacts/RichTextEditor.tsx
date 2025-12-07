@@ -1,8 +1,4 @@
-import { useEditor, EditorContent } from '@tiptap/react';
-import StarterKit from '@tiptap/starter-kit';
-import Underline from '@tiptap/extension-underline';
-import Link from '@tiptap/extension-link';
-import Placeholder from '@tiptap/extension-placeholder';
+import { useRef, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { 
   Bold, 
@@ -15,7 +11,6 @@ import {
   Redo
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useEffect } from 'react';
 
 interface RichTextEditorProps {
   value: string;
@@ -32,63 +27,53 @@ export function RichTextEditor({
   className,
   minHeight = '120px'
 }: RichTextEditorProps) {
-  const editor = useEditor({
-    extensions: [
-      StarterKit.configure({
-        heading: false,
-        codeBlock: false,
-        code: false,
-        blockquote: false,
-        horizontalRule: false,
-      }),
-      Underline,
-      Link.configure({
-        openOnClick: false,
-        HTMLAttributes: {
-          class: 'text-primary underline',
-        },
-      }),
-      Placeholder.configure({
-        placeholder,
-        emptyEditorClass: 'is-editor-empty',
-      }),
-    ],
-    content: value,
-    onUpdate: ({ editor }) => {
-      onChange(editor.getHTML());
-    },
-    editorProps: {
-      attributes: {
-        class: 'prose prose-sm max-w-none focus:outline-none',
-        style: `min-height: ${minHeight}`,
-      },
-    },
-  });
+  const editorRef = useRef<HTMLDivElement>(null);
+  const isInternalChange = useRef(false);
 
-  // Update content when value prop changes externally
+  // Initialize content
   useEffect(() => {
-    if (editor && value !== editor.getHTML()) {
-      editor.commands.setContent(value);
+    if (editorRef.current && !isInternalChange.current) {
+      if (editorRef.current.innerHTML !== value) {
+        editorRef.current.innerHTML = value;
+      }
     }
-  }, [value, editor]);
+    isInternalChange.current = false;
+  }, [value]);
 
-  if (!editor) return null;
+  const handleInput = useCallback(() => {
+    if (editorRef.current) {
+      isInternalChange.current = true;
+      onChange(editorRef.current.innerHTML);
+    }
+  }, [onChange]);
 
-  const addLink = () => {
+  const execCommand = useCallback((command: string, value?: string) => {
+    document.execCommand(command, false, value);
+    editorRef.current?.focus();
+    handleInput();
+  }, [handleInput]);
+
+  const handleBold = () => execCommand('bold');
+  const handleItalic = () => execCommand('italic');
+  const handleUnderline = () => execCommand('underline');
+  const handleBulletList = () => execCommand('insertUnorderedList');
+  const handleOrderedList = () => execCommand('insertOrderedList');
+  const handleUndo = () => execCommand('undo');
+  const handleRedo = () => execCommand('redo');
+  
+  const handleLink = () => {
     const url = window.prompt('Enter URL:');
     if (url) {
-      editor.chain().focus().setLink({ href: url }).run();
+      execCommand('createLink', url);
     }
   };
 
   const ToolbarButton = ({ 
     onClick, 
-    isActive, 
     children,
     title
   }: { 
     onClick: () => void; 
-    isActive?: boolean; 
     children: React.ReactNode;
     title: string;
   }) => (
@@ -96,10 +81,7 @@ export function RichTextEditor({
       type="button"
       variant="ghost"
       size="icon"
-      className={cn(
-        'h-7 w-7',
-        isActive && 'bg-muted text-primary'
-      )}
+      className="h-7 w-7"
       onClick={onClick}
       title={title}
     >
@@ -111,75 +93,50 @@ export function RichTextEditor({
     <div className={cn('border rounded-md bg-background', className)}>
       {/* Toolbar */}
       <div className="flex items-center gap-0.5 px-2 py-1 border-b bg-muted/30">
-        <ToolbarButton
-          onClick={() => editor.chain().focus().toggleBold().run()}
-          isActive={editor.isActive('bold')}
-          title="Bold"
-        >
+        <ToolbarButton onClick={handleBold} title="Bold (Ctrl+B)">
           <Bold className="h-4 w-4" />
         </ToolbarButton>
-        <ToolbarButton
-          onClick={() => editor.chain().focus().toggleItalic().run()}
-          isActive={editor.isActive('italic')}
-          title="Italic"
-        >
+        <ToolbarButton onClick={handleItalic} title="Italic (Ctrl+I)">
           <Italic className="h-4 w-4" />
         </ToolbarButton>
-        <ToolbarButton
-          onClick={() => editor.chain().focus().toggleUnderline().run()}
-          isActive={editor.isActive('underline')}
-          title="Underline"
-        >
+        <ToolbarButton onClick={handleUnderline} title="Underline (Ctrl+U)">
           <UnderlineIcon className="h-4 w-4" />
         </ToolbarButton>
 
         <div className="w-px h-5 bg-border mx-1" />
 
-        <ToolbarButton
-          onClick={() => editor.chain().focus().toggleBulletList().run()}
-          isActive={editor.isActive('bulletList')}
-          title="Bullet List"
-        >
+        <ToolbarButton onClick={handleBulletList} title="Bullet List">
           <List className="h-4 w-4" />
         </ToolbarButton>
-        <ToolbarButton
-          onClick={() => editor.chain().focus().toggleOrderedList().run()}
-          isActive={editor.isActive('orderedList')}
-          title="Numbered List"
-        >
+        <ToolbarButton onClick={handleOrderedList} title="Numbered List">
           <ListOrdered className="h-4 w-4" />
         </ToolbarButton>
 
         <div className="w-px h-5 bg-border mx-1" />
 
-        <ToolbarButton
-          onClick={addLink}
-          isActive={editor.isActive('link')}
-          title="Add Link"
-        >
+        <ToolbarButton onClick={handleLink} title="Add Link">
           <LinkIcon className="h-4 w-4" />
         </ToolbarButton>
 
         <div className="flex-1" />
 
-        <ToolbarButton
-          onClick={() => editor.chain().focus().undo().run()}
-          title="Undo"
-        >
+        <ToolbarButton onClick={handleUndo} title="Undo">
           <Undo className="h-4 w-4" />
         </ToolbarButton>
-        <ToolbarButton
-          onClick={() => editor.chain().focus().redo().run()}
-          title="Redo"
-        >
+        <ToolbarButton onClick={handleRedo} title="Redo">
           <Redo className="h-4 w-4" />
         </ToolbarButton>
       </div>
 
       {/* Editor Content */}
-      <EditorContent 
-        editor={editor} 
-        className="px-3 py-2 [&_.is-editor-empty:first-child::before]:text-muted-foreground [&_.is-editor-empty:first-child::before]:content-[attr(data-placeholder)] [&_.is-editor-empty:first-child::before]:float-left [&_.is-editor-empty:first-child::before]:h-0 [&_.is-editor-empty:first-child::before]:pointer-events-none"
+      <div
+        ref={editorRef}
+        contentEditable
+        onInput={handleInput}
+        className="px-3 py-2 focus:outline-none prose prose-sm max-w-none [&:empty]:before:content-[attr(data-placeholder)] [&:empty]:before:text-muted-foreground [&:empty]:before:pointer-events-none"
+        style={{ minHeight }}
+        data-placeholder={placeholder}
+        suppressContentEditableWarning
       />
     </div>
   );
