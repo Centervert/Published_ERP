@@ -65,6 +65,8 @@ const getActivityColor = (type: string, source: string) => {
       return 'text-green-600 bg-green-100 dark:bg-green-900/30 dark:text-green-400';
     case 'contact_updated':
       return 'text-blue-600 bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400';
+    case 'assignment_changed':
+      return 'text-orange-600 bg-orange-100 dark:bg-orange-900/30 dark:text-orange-400';
     case 'note_added':
     case 'note_updated':
       return 'text-amber-600 bg-amber-100 dark:bg-amber-900/30 dark:text-amber-400';
@@ -82,8 +84,26 @@ const formatFieldName = (field: string) => {
     .replace(/\b\w/g, l => l.toUpperCase());
 };
 
-const renderFieldChanges = (metadata: any) => {
+const renderFieldChanges = (metadata: any, type: string) => {
   if (!metadata) return null;
+  
+  // Handle assignment changes
+  if (type === 'assignment_changed' && metadata.fromName !== undefined) {
+    const fieldLabel = metadata.field === 'assigned_asc' ? 'A.S.C.' : 'A.E.';
+    if (!metadata.from && metadata.to) {
+      return null; // Description already says "Assigned to X"
+    }
+    if (metadata.from && metadata.to) {
+      return (
+        <div className="mt-2 text-xs flex items-center gap-1.5 text-muted-foreground">
+          <span className="line-through">{metadata.fromName}</span>
+          <ArrowRight className="h-3 w-3" />
+          <span className="text-foreground">{metadata.toName}</span>
+        </div>
+      );
+    }
+    return null;
+  }
   
   // Handle old/new value changes
   if (metadata.changes && typeof metadata.changes === 'object') {
@@ -193,7 +213,7 @@ export function ContactActivityFeed({ contactId, assignedAsc, assignedAe }: Cont
                         <p className="text-sm text-foreground">
                           {activity.description}
                         </p>
-                        {renderFieldChanges(activity.metadata)}
+                        {renderFieldChanges(activity.metadata, activity.type)}
                         <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
                           <span>{format(date, 'MMM d, yyyy')} at {format(date, 'h:mm a')}</span>
                           {activity.created_by_name && (
