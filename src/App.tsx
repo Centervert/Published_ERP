@@ -15,6 +15,7 @@ import Templates from "./pages/Templates";
 import Imprints from "./pages/Imprints";
 import Settings from "./pages/Settings";
 import Users from "./pages/Users";
+import MyProfile from "./pages/MyProfile";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -103,6 +104,16 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <Users />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <DashboardLayout>
+                    <MyProfile />
+                  </DashboardLayout>
                 </ProtectedRoute>
               }
             />
