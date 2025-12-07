@@ -18,9 +18,10 @@ interface CommunicationHubProps {
   contactId: string;
   contactEmail: string;
   contactName: string;
+  contactImprintId?: string | null;
 }
 
-export function CommunicationHub({ contactId, contactEmail, contactName }: CommunicationHubProps) {
+export function CommunicationHub({ contactId, contactEmail, contactName, contactImprintId }: CommunicationHubProps) {
   const { communications, isLoading, logCall, sendEmail } = useContactCommunications(contactId);
   const [showLogCallDialog, setShowLogCallDialog] = useState(false);
   const [composerExpanded, setComposerExpanded] = useState(false);
@@ -158,6 +159,7 @@ export function CommunicationHub({ contactId, contactEmail, contactName }: Commu
             <EmailComposer
               contactEmail={contactEmail}
               contactName={contactName}
+              contactImprintId={contactImprintId}
               onSend={handleSendEmail}
               isSending={sendEmail.isPending}
               expanded={composerExpanded}

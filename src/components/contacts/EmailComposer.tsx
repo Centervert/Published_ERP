@@ -18,6 +18,7 @@ import {
 interface EmailComposerProps {
   contactEmail: string;
   contactName: string;
+  contactImprintId?: string | null;
   onSend: (data: { subject: string; body: string; from_email?: string }) => Promise<void>;
   isSending?: boolean;
   expanded?: boolean;
@@ -27,6 +28,7 @@ interface EmailComposerProps {
 export function EmailComposer({ 
   contactEmail, 
   contactName,
+  contactImprintId,
   onSend, 
   isSending,
   expanded,
@@ -53,14 +55,14 @@ export function EmailComposer({
     enabled: !!user?.id,
   });
 
-  // Fetch user's profile email as fallback
+  // Fetch user's profile for signature
   const { data: userProfile } = useQuery({
-    queryKey: ['user-profile', user?.id],
+    queryKey: ['user-profile-full', user?.id],
     queryFn: async () => {
       if (!user?.id) return null;
       const { data, error } = await supabase
         .from('profiles')
-        .select('email')
+        .select('email, full_name, title, phone')
         .eq('id', user.id)
         .maybeSingle();
       
@@ -68,6 +70,23 @@ export function EmailComposer({
       return data;
     },
     enabled: !!user?.id,
+  });
+
+  // Fetch contact's imprint for signature
+  const { data: contactImprint } = useQuery({
+    queryKey: ['contact-imprint', contactImprintId],
+    queryFn: async () => {
+      if (!contactImprintId) return null;
+      const { data, error } = await supabase
+        .from('imprints')
+        .select('name, logo_url, website_url')
+        .eq('id', contactImprintId)
+        .maybeSingle();
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!contactImprintId,
   });
 
   // Auto-select the first connected email or user's profile email
@@ -81,12 +100,51 @@ export function EmailComposer({
     }
   }, [emailConnections, userProfile, fromEmail]);
 
+  // Build email signature
+  const buildSignature = () => {
+    const parts: string[] = [];
+    
+    // Add separator
+    parts.push('<br><br>--<br>');
+    
+    // Logo (if imprint has one)
+    if (contactImprint?.logo_url) {
+      parts.push(`<img src="${contactImprint.logo_url}" alt="${contactImprint.name || 'Logo'}" style="max-height: 60px; max-width: 200px; margin-bottom: 8px;"><br>`);
+    }
+    
+    // User's name
+    if (userProfile?.full_name) {
+      parts.push(`<strong>${userProfile.full_name}</strong><br>`);
+    }
+    
+    // User's title
+    if (userProfile?.title) {
+      parts.push(`${userProfile.title}<br>`);
+    }
+    
+    // Imprint website
+    if (contactImprint?.website_url) {
+      parts.push(`<a href="${contactImprint.website_url}">${contactImprint.website_url}</a><br>`);
+    }
+    
+    // User's phone
+    if (userProfile?.phone) {
+      parts.push(`${userProfile.phone}<br>`);
+    }
+    
+    return parts.join('');
+  };
+
   const handleSend = async () => {
     if (!subject.trim() || !body.trim()) return;
 
+    // Append signature to body
+    const signature = buildSignature();
+    const bodyWithSignature = body.trim() + signature;
+
     await onSend({
       subject: subject.trim(),
-      body: body.trim(),
+      body: bodyWithSignature,
       from_email: fromEmail || undefined,
     });
 

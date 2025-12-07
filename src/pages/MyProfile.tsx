@@ -20,6 +20,7 @@ export default function MyProfile() {
   
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
+  const [title, setTitle] = useState('');
   const [phone, setPhone] = useState('');
   const [isConnecting, setIsConnecting] = useState(false);
 
@@ -83,6 +84,8 @@ export default function MyProfile() {
       const names = profile.full_name?.split(' ') || [];
       setFirstName(names[0] || '');
       setLastName(names.slice(1).join(' ') || '');
+      setTitle(profile.title || '');
+      setPhone(profile.phone || '');
     }
   }, [profile]);
 
@@ -93,7 +96,7 @@ export default function MyProfile() {
       const fullName = `${firstName} ${lastName}`.trim();
       const { error } = await supabase
         .from('profiles')
-        .update({ full_name: fullName })
+        .update({ full_name: fullName, title, phone })
         .eq('id', user.id);
       if (error) throw error;
     },
@@ -244,6 +247,18 @@ export default function MyProfile() {
                 </div>
               </div>
 
+              {/* Title */}
+              <div className="space-y-1.5">
+                <Label htmlFor="title" className="text-xs font-normal text-muted-foreground">Title</Label>
+                <Input
+                  id="title"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="e.g. Author Success Coach"
+                  className="h-9 text-sm"
+                />
+              </div>
+
               {/* Email & Phone */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
@@ -263,7 +278,7 @@ export default function MyProfile() {
                     id="phone"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
-                    placeholder="Phone"
+                    placeholder="(555) 123-4567"
                     className="h-9 text-sm"
                   />
                 </div>
