@@ -25,83 +25,17 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Plus, Search, X } from 'lucide-react';
+import { Search, X, Loader2 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
+import { useUsers, ROLE_DISPLAY_NAMES, AppRole, useHasRole } from '@/hooks/useUsers';
 
-const USER_TYPES = [
-  'Super Admin',
-  'Admin',
-  'Management',
-  'Author Success Coach',
-  'Account Executive',
-] as const;
+const ROLE_OPTIONS: AppRole[] = ['super_admin', 'admin', 'asc', 'ae', 'member'];
 
-type UserType = typeof USER_TYPES[number];
-
-interface InternalUser {
-  id: string;
-  first_name: string;
-  last_name: string;
-  email: string;
-  mobile_phone: string;
-  work_phone: string;
-  title: UserType;
-}
-
-// Mock data for internal users
-const mockUsers: InternalUser[] = [
-  {
-    id: '1',
-    first_name: 'John',
-    last_name: 'Smith',
-    email: 'john.smith@authorservices.com',
-    mobile_phone: '(555) 123-4567',
-    work_phone: '(555) 987-6543',
-    title: 'Super Admin',
-  },
-  {
-    id: '2',
-    first_name: 'Sarah',
-    last_name: 'Johnson',
-    email: 'sarah.johnson@authorservices.com',
-    mobile_phone: '(555) 234-5678',
-    work_phone: '(555) 876-5432',
-    title: 'Admin',
-  },
-  {
-    id: '3',
-    first_name: 'Mike',
-    last_name: 'Williams',
-    email: 'mike.williams@authorservices.com',
-    mobile_phone: '(555) 345-6789',
-    work_phone: '(555) 765-4321',
-    title: 'Management',
-  },
-  {
-    id: '4',
-    first_name: 'Emily',
-    last_name: 'Davis',
-    email: 'emily.davis@authorservices.com',
-    mobile_phone: '(555) 456-7890',
-    work_phone: '(555) 654-3210',
-    title: 'Author Success Coach',
-  },
-  {
-    id: '5',
-    first_name: 'David',
-    last_name: 'Brown',
-    email: 'david.brown@authorservices.com',
-    mobile_phone: '(555) 567-8901',
-    work_phone: '(555) 543-2109',
-    title: 'Account Executive',
-  },
-];
-
-const getTitleBadgeVariant = (title: UserType): 'default' | 'secondary' | 'outline' => {
-  switch (title) {
-    case 'Super Admin':
+const getRoleBadgeVariant = (role: AppRole): 'default' | 'secondary' | 'outline' => {
+  switch (role) {
+    case 'super_admin':
       return 'default';
-    case 'Admin':
+    case 'admin':
       return 'secondary';
     default:
       return 'outline';
@@ -110,69 +44,109 @@ const getTitleBadgeVariant = (title: UserType): 'default' | 'secondary' | 'outli
 
 export default function Users() {
   const [searchQuery, setSearchQuery] = useState('');
-  const [users] = useState<InternalUser[]>(mockUsers);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<InternalUser | null>(null);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
-    first_name: '',
-    last_name: '',
-    email: '',
-    mobile_phone: '',
-    work_phone: '',
-    title: '' as UserType | '',
+    full_name: '',
+    phone: '',
+    title: '',
+    role: '' as AppRole | '',
   });
+
+  const { users, isLoading, updateUserRole, updateUserProfile } = useUsers();
+  const { hasRole: canManageRoles, currentRole } = useHasRole(['super_admin', 'admin']);
 
   const filteredUsers = users.filter((user) => {
     const searchLower = searchQuery.toLowerCase();
+    const fullName = user.full_name || '';
+    const email = user.email || '';
+    const roleDisplay = ROLE_DISPLAY_NAMES[user.role] || '';
+    
     return (
-      user.first_name.toLowerCase().includes(searchLower) ||
-      user.last_name.toLowerCase().includes(searchLower) ||
-      user.email.toLowerCase().includes(searchLower) ||
-      user.title.toLowerCase().includes(searchLower)
+      fullName.toLowerCase().includes(searchLower) ||
+      email.toLowerCase().includes(searchLower) ||
+      roleDisplay.toLowerCase().includes(searchLower)
     );
   });
 
-  const handleOpenSheet = (user?: InternalUser) => {
+  const handleOpenSheet = (userId: string) => {
+    const user = users.find((u) => u.id === userId);
     if (user) {
-      setSelectedUser(user);
+      setSelectedUserId(userId);
       setFormData({
-        first_name: user.first_name,
-        last_name: user.last_name,
-        email: user.email,
-        mobile_phone: user.mobile_phone,
-        work_phone: user.work_phone,
-        title: user.title,
+        full_name: user.full_name || '',
+        phone: user.phone || '',
+        title: user.title || '',
+        role: user.role,
       });
-    } else {
-      setSelectedUser(null);
-      setFormData({
-        first_name: '',
-        last_name: '',
-        email: '',
-        mobile_phone: '',
-        work_phone: '',
-        title: '',
-      });
+      setIsSheetOpen(true);
     }
-    setIsSheetOpen(true);
   };
 
   const handleCloseSheet = () => {
     setIsSheetOpen(false);
-    setSelectedUser(null);
+    setSelectedUserId(null);
     setFormData({
-      first_name: '',
-      last_name: '',
-      email: '',
-      mobile_phone: '',
-      work_phone: '',
+      full_name: '',
+      phone: '',
       title: '',
+      role: '',
     });
   };
 
-  const getInitials = (firstName: string, lastName: string) => {
-    return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
+  const handleSave = async () => {
+    if (!selectedUserId) return;
+
+    // Update profile info
+    await updateUserProfile.mutateAsync({
+      userId: selectedUserId,
+      updates: {
+        full_name: formData.full_name || undefined,
+        phone: formData.phone || undefined,
+        title: formData.title || undefined,
+      },
+    });
+
+    // Update role if changed and user has permission
+    const currentUser = users.find((u) => u.id === selectedUserId);
+    if (formData.role && formData.role !== currentUser?.role && canManageRoles) {
+      // Super admin can assign any role, admin can only assign non-super_admin roles
+      const canAssignThisRole = 
+        currentRole === 'super_admin' || 
+        (currentRole === 'admin' && formData.role !== 'super_admin');
+      
+      if (canAssignThisRole) {
+        await updateUserRole.mutateAsync({
+          userId: selectedUserId,
+          role: formData.role,
+        });
+      }
+    }
+
+    handleCloseSheet();
   };
+
+  const getInitials = (fullName: string | null) => {
+    if (!fullName) return '??';
+    const parts = fullName.trim().split(' ');
+    if (parts.length >= 2) {
+      return `${parts[0].charAt(0)}${parts[parts.length - 1].charAt(0)}`.toUpperCase();
+    }
+    return fullName.substring(0, 2).toUpperCase();
+  };
+
+  // Determine which roles the current user can assign
+  const getAssignableRoles = (): AppRole[] => {
+    if (currentRole === 'super_admin') {
+      return ROLE_OPTIONS;
+    }
+    if (currentRole === 'admin') {
+      return ROLE_OPTIONS.filter((r) => r !== 'super_admin');
+    }
+    return [];
+  };
+
+  const assignableRoles = getAssignableRoles();
 
   return (
     <DashboardLayout>
@@ -184,10 +158,6 @@ export default function Users() {
               Manage internal team members and their roles
             </p>
           </div>
-          <Button onClick={() => handleOpenSheet()}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add User
-          </Button>
         </div>
 
         <div className="flex items-center gap-4">
@@ -203,69 +173,73 @@ export default function Users() {
         </div>
 
         <div className="border rounded-lg bg-card">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Mobile Phone</TableHead>
-                <TableHead>Work Phone</TableHead>
-                <TableHead>Title</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredUsers.map((user) => (
-                <TableRow
-                  key={user.id}
-                  className="cursor-pointer hover:bg-muted/50"
-                  onClick={() => handleOpenSheet(user)}
-                >
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-8 w-8">
-                        <AvatarFallback className="bg-primary/10 text-primary text-xs">
-                          {getInitials(user.first_name, user.last_name)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span className="font-medium">
-                        {user.first_name} {user.last_name}
-                      </span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {user.email}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {user.mobile_phone}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {user.work_phone}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={getTitleBadgeVariant(user.title)}>
-                      {user.title}
-                    </Badge>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {filteredUsers.length === 0 && (
+          {isLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                    No users found
-                  </TableCell>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Phone</TableHead>
+                  <TableHead>Title</TableHead>
+                  <TableHead>Role</TableHead>
                 </TableRow>
-              )}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {filteredUsers.map((user) => (
+                  <TableRow
+                    key={user.id}
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => handleOpenSheet(user.id)}
+                  >
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-8 w-8">
+                          <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                            {getInitials(user.full_name)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="font-medium">
+                          {user.full_name || 'No name'}
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {user.email}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {user.phone || '—'}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {user.title || '—'}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={getRoleBadgeVariant(user.role)}>
+                        {ROLE_DISPLAY_NAMES[user.role]}
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {filteredUsers.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                      No users found
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          )}
         </div>
       </div>
 
       <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
         <SheetContent className="w-[400px] sm:w-[500px]">
           <SheetHeader className="flex flex-row items-center justify-between">
-            <SheetTitle>
-              {selectedUser ? 'Edit User' : 'Add User'}
-            </SheetTitle>
+            <SheetTitle>Edit User</SheetTitle>
             <Button
               variant="ghost"
               size="icon"
@@ -277,88 +251,69 @@ export default function Users() {
           </SheetHeader>
 
           <div className="mt-6 space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="first_name">First Name</Label>
-                <Input
-                  id="first_name"
-                  value={formData.first_name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, first_name: e.target.value })
-                  }
-                  placeholder="John"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="last_name">Last Name</Label>
-                <Input
-                  id="last_name"
-                  value={formData.last_name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, last_name: e.target.value })
-                  }
-                  placeholder="Smith"
-                />
-              </div>
-            </div>
-
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="full_name">Full Name</Label>
               <Input
-                id="email"
-                type="email"
-                value={formData.email}
+                id="full_name"
+                value={formData.full_name}
                 onChange={(e) =>
-                  setFormData({ ...formData, email: e.target.value })
+                  setFormData({ ...formData, full_name: e.target.value })
                 }
-                placeholder="john.smith@authorservices.com"
+                placeholder="John Smith"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="mobile_phone">Mobile Phone</Label>
+              <Label htmlFor="phone">Phone</Label>
               <Input
-                id="mobile_phone"
-                value={formData.mobile_phone}
+                id="phone"
+                value={formData.phone}
                 onChange={(e) =>
-                  setFormData({ ...formData, mobile_phone: e.target.value })
+                  setFormData({ ...formData, phone: e.target.value })
                 }
                 placeholder="(555) 123-4567"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="work_phone">Work Phone</Label>
+              <Label htmlFor="title">Title</Label>
               <Input
-                id="work_phone"
-                value={formData.work_phone}
+                id="title"
+                value={formData.title}
                 onChange={(e) =>
-                  setFormData({ ...formData, work_phone: e.target.value })
+                  setFormData({ ...formData, title: e.target.value })
                 }
-                placeholder="(555) 987-6543"
+                placeholder="Senior Author Success Coach"
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="title">Title</Label>
-              <Select
-                value={formData.title}
-                onValueChange={(value: UserType) =>
-                  setFormData({ ...formData, title: value })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a title" />
-                </SelectTrigger>
-                <SelectContent>
-                  {USER_TYPES.map((type) => (
-                    <SelectItem key={type} value={type}>
-                      {type}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {canManageRoles && assignableRoles.length > 0 && (
+              <div className="space-y-2">
+                <Label htmlFor="role">Role</Label>
+                <Select
+                  value={formData.role}
+                  onValueChange={(value: AppRole) =>
+                    setFormData({ ...formData, role: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {assignableRoles.map((role) => (
+                      <SelectItem key={role} value={role}>
+                        {ROLE_DISPLAY_NAMES[role]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  {currentRole === 'super_admin' 
+                    ? 'As Super Admin, you can assign any role.'
+                    : 'As Admin, you can assign roles except Super Admin.'}
+                </p>
+              </div>
+            )}
 
             <div className="flex gap-3 pt-4">
               <Button
@@ -368,8 +323,15 @@ export default function Users() {
               >
                 Cancel
               </Button>
-              <Button className="flex-1">
-                {selectedUser ? 'Save Changes' : 'Add User'}
+              <Button 
+                className="flex-1"
+                onClick={handleSave}
+                disabled={updateUserProfile.isPending || updateUserRole.isPending}
+              >
+                {(updateUserProfile.isPending || updateUserRole.isPending) && (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                )}
+                Save Changes
               </Button>
             </div>
           </div>
