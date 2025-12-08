@@ -47,6 +47,7 @@ import {
 import { formatPhoneNumber } from '@/lib/phone-utils';
 import { format, parseISO } from 'date-fns';
 import { AddressAutocomplete } from './AddressAutocomplete';
+import { CreateDealDialog } from './CreateDealDialog';
 
 const CONTACT_TYPES = [
   { value: 'lead', label: 'Lead' },
@@ -100,6 +101,7 @@ export function ContactSidebar({ contact, onBack, onSelectTab }: ContactSidebarP
   const [editingField, setEditingField] = useState<string | null>(null);
   const [timezoneDialogOpen, setTimezoneDialogOpen] = useState(false);
   const [timezoneInput, setTimezoneInput] = useState('');
+  const [dealDialogOpen, setDealDialogOpen] = useState(false);
   
   const [formData, setFormData] = useState({
     first_name: contact.first_name || '',
@@ -241,6 +243,7 @@ export function ContactSidebar({ contact, onBack, onSelectTab }: ContactSidebarP
             variant="outline" 
             size="sm" 
             className="flex flex-col items-center gap-0.5 h-auto py-1.5 px-2.5 flex-1"
+            onClick={() => setDealDialogOpen(true)}
           >
             <DollarSign className="h-3.5 w-3.5" />
             <span className="text-[10px]">Deal</span>
@@ -703,6 +706,14 @@ export function ContactSidebar({ contact, onBack, onSelectTab }: ContactSidebarP
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Create Deal Dialog */}
+      <CreateDealDialog
+        open={dealDialogOpen}
+        onOpenChange={setDealDialogOpen}
+        contactId={contact.id}
+        contactName={displayName}
+      />
     </div>
   );
 }
