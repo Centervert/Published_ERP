@@ -32,16 +32,16 @@ const KANBAN_STAGES: DealStage[] = [
   'proposal_sent',
 ];
 
-const STAGE_COLORS: Record<DealStage, string> = {
-  new: 'bg-blue-500/10 text-blue-600 border-blue-200',
-  outreach: 'bg-purple-500/10 text-purple-600 border-purple-200',
-  contacted: 'bg-cyan-500/10 text-cyan-600 border-cyan-200',
-  qualified: 'bg-amber-500/10 text-amber-600 border-amber-200',
-  nurturing: 'bg-orange-500/10 text-orange-600 border-orange-200',
-  proposal_sent: 'bg-emerald-500/10 text-emerald-600 border-emerald-200',
-  won: 'bg-green-500/10 text-green-600 border-green-200',
-  lost: 'bg-red-500/10 text-red-600 border-red-200',
-  not_interested: 'bg-gray-500/10 text-gray-600 border-gray-200',
+const STAGE_BORDER_COLORS: Record<DealStage, string> = {
+  new: 'border-t-blue-500',
+  outreach: 'border-t-purple-500',
+  contacted: 'border-t-cyan-500',
+  qualified: 'border-t-amber-500',
+  nurturing: 'border-t-orange-500',
+  proposal_sent: 'border-t-emerald-500',
+  won: 'border-t-green-500',
+  lost: 'border-t-red-500',
+  not_interested: 'border-t-gray-500',
 };
 
 function formatCurrency(value: number | null): string {
@@ -128,25 +128,25 @@ function KanbanColumn({ stage, deals, onDragOver, onDrop, onDealClick, onDragSta
 
   return (
     <div
-      className="flex-shrink-0 w-72 bg-muted/30 rounded-lg flex flex-col"
+      className={`flex-shrink-0 w-64 bg-card border border-border rounded-lg flex flex-col shadow-sm border-t-4 ${STAGE_BORDER_COLORS[stage]}`}
       onDragOver={onDragOver}
       onDrop={(e) => onDrop(e, stage)}
     >
-      <div className="p-3 border-b">
+      <div className="px-3 py-3 border-b border-border bg-muted/30">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-foreground">
-              {DEAL_STAGE_LABELS[stage]}
-            </span>
-            <span className="text-sm text-muted-foreground">{deals.length}</span>
+          <span className="text-sm font-semibold text-foreground">
+            {DEAL_STAGE_LABELS[stage]}
+          </span>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <span>{deals.length} Opportunities</span>
+            {showValue && (
+              <span className="font-medium text-foreground">{formatCurrency(totalValue)}</span>
+            )}
           </div>
-          {showValue && (
-            <span className="text-sm font-medium">{formatCurrency(totalValue)}</span>
-          )}
         </div>
       </div>
-      <ScrollArea className="flex-1 p-2">
-        <div className="space-y-2">
+      <ScrollArea className="flex-1">
+        <div className="p-2 space-y-2">
           {deals.map((deal) => (
             <DealCard
               key={deal.id}
