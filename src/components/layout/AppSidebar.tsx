@@ -54,7 +54,7 @@ const crmItems = [
 
 const backofficeItems = [
   { title: 'Users', url: '/users', icon: Users },
-  { title: 'Products', url: '/products', icon: Package },
+  { title: 'Master SKU List', url: '/products', icon: Package },
   { title: 'Imprints', url: '/imprints', icon: Building2 },
   { title: 'Settings', url: '/settings', icon: Settings },
 ];
