@@ -379,10 +379,8 @@ export default function Products() {
                   >
                     <TableCell className="font-mono text-sm">{product.sku}</TableCell>
                     <TableCell className="font-medium">{product.name}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">
-                        {PRODUCT_CATEGORY_LABELS[product.category]}
-                      </Badge>
+                    <TableCell className="text-muted-foreground">
+                      {PRODUCT_CATEGORY_LABELS[product.category]}
                     </TableCell>
                     {canSeeCost && (
                       <TableCell className="text-right text-muted-foreground">
@@ -395,10 +393,8 @@ export default function Products() {
                     <TableCell className="text-right font-medium">
                       {formatCurrency(product.retail_price)}
                     </TableCell>
-                    <TableCell>
-                      <Badge variant={product.active ? 'default' : 'secondary'}>
-                        {product.active ? 'Active' : 'Inactive'}
-                      </Badge>
+                    <TableCell className={product.active ? 'text-foreground' : 'text-muted-foreground'}>
+                      {product.active ? 'Active' : 'Inactive'}
                     </TableCell>
                   </TableRow>
                 ))}
