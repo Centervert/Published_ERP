@@ -1,9 +1,7 @@
 import { useState, useMemo } from 'react';
-import { DashboardLayout } from '@/components/layout/DashboardLayout';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import {
   Select,
@@ -20,8 +18,7 @@ import {
   useUpdateDeal,
   Deal, 
   DealStage, 
-  DEAL_STAGE_LABELS,
-  DEAL_STAGES_ORDER 
+  DEAL_STAGE_LABELS
 } from '@/hooks/useDeals';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -127,6 +124,7 @@ interface KanbanColumnProps {
 
 function KanbanColumn({ stage, deals, onDragOver, onDrop, onDealClick, onDragStart }: KanbanColumnProps) {
   const totalValue = deals.reduce((sum, d) => sum + (d.total_value || 0), 0);
+  const showValue = stage === 'proposal_sent';
 
   return (
     <div
@@ -137,12 +135,14 @@ function KanbanColumn({ stage, deals, onDragOver, onDrop, onDealClick, onDragSta
       <div className="p-3 border-b">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Badge variant="outline" className={STAGE_COLORS[stage]}>
+            <span className="text-sm font-medium text-foreground">
               {DEAL_STAGE_LABELS[stage]}
-            </Badge>
+            </span>
             <span className="text-sm text-muted-foreground">{deals.length}</span>
           </div>
-          <span className="text-sm font-medium">{formatCurrency(totalValue)}</span>
+          {showValue && (
+            <span className="text-sm font-medium">{formatCurrency(totalValue)}</span>
+          )}
         </div>
       </div>
       <ScrollArea className="flex-1 p-2">
@@ -262,103 +262,79 @@ export default function Deals() {
   };
 
   return (
-    <DashboardLayout>
-      <div className="h-full flex flex-col space-y-4">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold text-foreground">Deals Pipeline</h1>
-            <p className="text-muted-foreground mt-1">
-              Track and manage sales opportunities
-            </p>
-          </div>
+    <div className="h-full flex flex-col space-y-4 p-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-foreground">Deals Pipeline</h1>
+          <p className="text-muted-foreground mt-1">
+            Track and manage sales opportunities
+          </p>
         </div>
-
-        {/* Stats Bar */}
-        <div className="flex gap-4">
-          <Card className="flex-1">
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className="p-2 rounded-full bg-primary/10">
-                <Building2 className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Active Deals</p>
-                <p className="text-xl font-semibold">{stats.totalActive}</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="flex-1">
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className="p-2 rounded-full bg-amber-500/10">
-                <DollarSign className="h-5 w-5 text-amber-600" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Pipeline Value</p>
-                <p className="text-xl font-semibold">{formatCurrency(stats.totalValue)}</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="flex-1">
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className="p-2 rounded-full bg-green-500/10">
-                <DollarSign className="h-5 w-5 text-green-600" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Won This Period</p>
-                <p className="text-xl font-semibold">{formatCurrency(stats.wonValue)}</p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Filters */}
-        <div className="flex items-center gap-4">
-          <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search deals..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9"
-            />
-          </div>
-          <Select value={filterMode} onValueChange={(v) => setFilterMode(v as 'all' | 'mine')}>
-            <SelectTrigger className="w-40">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Deals</SelectItem>
-              <SelectItem value="mine">My Deals</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Kanban Board */}
-        {isLoading ? (
-          <div className="flex-1 flex items-center justify-center">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-          </div>
-        ) : (
-          <div className="flex-1 overflow-hidden">
-            <ScrollArea className="h-full">
-              <div className="flex gap-4 pb-4 min-w-max">
-                {KANBAN_STAGES.map((stage) => (
-                  <KanbanColumn
-                    key={stage}
-                    stage={stage}
-                    deals={dealsByStage[stage]}
-                    onDragOver={handleDragOver}
-                    onDrop={handleDrop}
-                    onDealClick={handleDealClick}
-                    onDragStart={handleDragStart}
-                  />
-                ))}
-              </div>
-              <ScrollBar orientation="horizontal" />
-            </ScrollArea>
-          </div>
-        )}
       </div>
-    </DashboardLayout>
+
+      {/* Stats Bar */}
+      <div className="flex gap-4">
+        <Card className="flex-1">
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="p-2 rounded-full bg-primary/10">
+              <Building2 className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Active Deals</p>
+              <p className="text-xl font-semibold">{stats.totalActive}</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Filters */}
+      <div className="flex items-center gap-4">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search deals..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <Select value={filterMode} onValueChange={(v) => setFilterMode(v as 'all' | 'mine')}>
+          <SelectTrigger className="w-40">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Deals</SelectItem>
+            <SelectItem value="mine">My Deals</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Kanban Board */}
+      {isLoading ? (
+        <div className="flex-1 flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      ) : (
+        <div className="flex-1 overflow-hidden">
+          <ScrollArea className="h-full">
+            <div className="flex gap-4 pb-4 min-w-max">
+              {KANBAN_STAGES.map((stage) => (
+                <KanbanColumn
+                  key={stage}
+                  stage={stage}
+                  deals={dealsByStage[stage]}
+                  onDragOver={handleDragOver}
+                  onDrop={handleDrop}
+                  onDealClick={handleDealClick}
+                  onDragStart={handleDragStart}
+                />
+              ))}
+            </div>
+            <ScrollBar orientation="horizontal" />
+          </ScrollArea>
+        </div>
+      )}
+    </div>
   );
 }
