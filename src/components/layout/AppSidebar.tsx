@@ -35,6 +35,8 @@ import {
   ChevronDown,
   Megaphone,
   UserCog,
+  Package,
+  Handshake,
 } from 'lucide-react';
 import authorServicesLogo from '@/assets/author-services-logo.png';
 
@@ -47,10 +49,12 @@ const marketingItems = [
 
 const crmItems = [
   { title: 'Contacts', url: '/contacts', icon: Users },
+  { title: 'Deals', url: '/deals', icon: Handshake },
 ];
 
 const backofficeItems = [
   { title: 'Users', url: '/users', icon: Users },
+  { title: 'Products', url: '/products', icon: Package },
   { title: 'Imprints', url: '/imprints', icon: Building2 },
   { title: 'Settings', url: '/settings', icon: Settings },
 ];
@@ -108,8 +112,13 @@ export function AppSidebar() {
   };
 
   const getRoleLabel = (role: string | null | undefined) => {
-    if (role === 'admin') return 'Admin';
-    return 'Member';
+    switch (role) {
+      case 'super_admin': return 'Super Admin';
+      case 'admin': return 'Admin';
+      case 'asc': return 'Author Success Coach';
+      case 'ae': return 'Account Executive';
+      default: return 'Member';
+    }
   };
 
   const isGroupActive = (items: typeof marketingItems) => 

@@ -16,6 +16,8 @@ import Imprints from "./pages/Imprints";
 import Settings from "./pages/Settings";
 import Users from "./pages/Users";
 import MyProfile from "./pages/MyProfile";
+import Products from "./pages/Products";
+import Deals from "./pages/Deals";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -104,6 +106,24 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <Users />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/products"
+              element={
+                <ProtectedRoute>
+                  <Products />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/deals"
+              element={
+                <ProtectedRoute>
+                  <DashboardLayout>
+                    <Deals />
+                  </DashboardLayout>
                 </ProtectedRoute>
               }
             />
