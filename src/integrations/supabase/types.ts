@@ -147,6 +147,33 @@ export type Database = {
           },
         ]
       }
+      commission_tiers: {
+        Row: {
+          created_at: string
+          id: string
+          max_amount: number | null
+          milestone_bonus: number | null
+          min_amount: number
+          percentage: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          max_amount?: number | null
+          milestone_bonus?: number | null
+          min_amount: number
+          percentage: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          max_amount?: number | null
+          milestone_bonus?: number | null
+          min_amount?: number
+          percentage?: number
+        }
+        Relationships: []
+      }
       contact_activity: {
         Row: {
           activity_type: string
@@ -414,6 +441,62 @@ export type Database = {
           },
         ]
       }
+      deals: {
+        Row: {
+          assigned_asc: string | null
+          closed_at: string | null
+          commission_amount: number | null
+          commission_locked: boolean
+          contact_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          notes: string | null
+          outreach_count: number
+          stage: Database["public"]["Enums"]["deal_stage"]
+          total_value: number | null
+          updated_at: string
+        }
+        Insert: {
+          assigned_asc?: string | null
+          closed_at?: string | null
+          commission_amount?: number | null
+          commission_locked?: boolean
+          contact_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          outreach_count?: number
+          stage?: Database["public"]["Enums"]["deal_stage"]
+          total_value?: number | null
+          updated_at?: string
+        }
+        Update: {
+          assigned_asc?: string | null
+          closed_at?: string | null
+          commission_amount?: number | null
+          commission_locked?: boolean
+          contact_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          outreach_count?: number
+          stage?: Database["public"]["Enums"]["deal_stage"]
+          total_value?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deals_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_events: {
         Row: {
           campaign_id: string | null
@@ -648,6 +731,93 @@ export type Database = {
         }
         Relationships: []
       }
+      package_items: {
+        Row: {
+          created_at: string
+          id: string
+          item_id: string
+          package_id: string
+          quantity: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          item_id: string
+          package_id: string
+          quantity?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          item_id?: string
+          package_id?: string
+          quantity?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "package_items_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "package_items_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      products: {
+        Row: {
+          active: boolean
+          category: Database["public"]["Enums"]["product_category"]
+          cost_price: number | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_package: boolean
+          min_price: number | null
+          name: string
+          retail_price: number | null
+          sku: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          category?: Database["public"]["Enums"]["product_category"]
+          cost_price?: number | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_package?: boolean
+          min_price?: number | null
+          name: string
+          retail_price?: number | null
+          sku: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          category?: Database["public"]["Enums"]["product_category"]
+          cost_price?: number | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_package?: boolean
+          min_price?: number | null
+          name?: string
+          retail_price?: number | null
+          sku?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -803,6 +973,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      calculate_commission: {
+        Args: { cumulative_sales: number; sale_amount: number }
+        Returns: {
+          commission: number
+          milestone_bonus: number
+          tier_percentage: number
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -814,6 +992,17 @@ export type Database = {
     Enums: {
       app_role: "admin" | "member" | "super_admin" | "asc" | "ae"
       campaign_status: "draft" | "scheduled" | "sending" | "sent" | "failed"
+      deal_stage:
+        | "new"
+        | "outreach"
+        | "contacted"
+        | "qualified"
+        | "nurturing"
+        | "proposal_sent"
+        | "won"
+        | "lost"
+        | "not_interested"
+      product_category: "format" | "bundle" | "package" | "service" | "add_on"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -943,6 +1132,18 @@ export const Constants = {
     Enums: {
       app_role: ["admin", "member", "super_admin", "asc", "ae"],
       campaign_status: ["draft", "scheduled", "sending", "sent", "failed"],
+      deal_stage: [
+        "new",
+        "outreach",
+        "contacted",
+        "qualified",
+        "nurturing",
+        "proposal_sent",
+        "won",
+        "lost",
+        "not_interested",
+      ],
+      product_category: ["format", "bundle", "package", "service", "add_on"],
     },
   },
 } as const
