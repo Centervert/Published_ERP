@@ -1,7 +1,9 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback } from 'react';
 import { useImprints } from '@/hooks/useImprints';
 import { useUsers } from '@/hooks/useUsers';
 import { useImportJobs } from '@/hooks/useImportJobs';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import {
@@ -46,6 +48,7 @@ interface ColumnMapping {
 }
 
 export function ImportCSVDialog({ open, onOpenChange }: ImportCSVDialogProps) {
+  const { user } = useAuth();
   const [file, setFile] = useState<File | null>(null);
   const [parsedData, setParsedData] = useState<ParsedData | null>(null);
   const [columnMapping, setColumnMapping] = useState<ColumnMapping>({
@@ -113,15 +116,25 @@ export function ImportCSVDialog({ open, onOpenChange }: ImportCSVDialogProps) {
   }, []);
 
   const handleStartImport = async () => {
-    if (!parsedData || !columnMapping.email || !file) return;
+    if (!parsedData || !columnMapping.email || !file || !user) return;
 
     setSubmitting(true);
     
     try {
-      // Create the import job
+      // Upload CSV to storage first
+      const filePath = `${user.id}/${Date.now()}-${file.name}`;
+      const { error: uploadError } = await supabase.storage
+        .from('import-files')
+        .upload(filePath, file);
+
+      if (uploadError) {
+        throw new Error(`Failed to upload file: ${uploadError.message}`);
+      }
+
+      // Create the import job with file path
       const job = await createJob.mutateAsync({
         fileName: file.name,
-        fileData: parsedData.rawContent,
+        filePath: filePath,
         columnMapping: { ...columnMapping },
         totalRows: parsedData.rows.length,
       });
@@ -135,6 +148,7 @@ export function ImportCSVDialog({ open, onOpenChange }: ImportCSVDialogProps) {
 
       handleClose();
     } catch (error: any) {
+      console.error('Import error:', error);
       toast.error('Failed to start import', {
         description: error.message,
       });
