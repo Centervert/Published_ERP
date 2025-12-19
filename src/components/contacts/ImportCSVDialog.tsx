@@ -131,16 +131,15 @@ export function ImportCSVDialog({ open, onOpenChange }: ImportCSVDialogProps) {
     imprintLookup.set(imp.name.toLowerCase().trim(), imp.id);
   });
 
-  // ASC users lookup (only users with 'asc' role)
-  const ascUsers = users.filter(u => u.role === 'asc');
-  const ascNameLookup = new Map<string, string>();
-  const ascEmailLookup = new Map<string, string>();
-  ascUsers.forEach(u => {
+  // User lookup for ASC assignment - match any user by name or email
+  const userNameLookup = new Map<string, string>();
+  const userEmailLookup = new Map<string, string>();
+  users.forEach(u => {
     if (u.full_name) {
-      ascNameLookup.set(u.full_name.toLowerCase().trim(), u.id);
+      userNameLookup.set(u.full_name.toLowerCase().trim(), u.id);
     }
     if (u.email) {
-      ascEmailLookup.set(u.email.toLowerCase().trim(), u.id);
+      userEmailLookup.set(u.email.toLowerCase().trim(), u.id);
     }
   });
 
@@ -243,7 +242,7 @@ export function ImportCSVDialog({ open, onOpenChange }: ImportCSVDialogProps) {
         if (ascNameIndex >= 0) {
           const ascName = row[ascNameIndex]?.trim();
           if (ascName) {
-            ascId = ascNameLookup.get(ascName.toLowerCase().trim());
+            ascId = userNameLookup.get(ascName.toLowerCase().trim());
             if (!ascId) {
               unmatchedAscs.add(ascName);
             }
@@ -253,7 +252,7 @@ export function ImportCSVDialog({ open, onOpenChange }: ImportCSVDialogProps) {
         if (!ascId && ascEmailIndex >= 0) {
           const ascEmail = row[ascEmailIndex]?.trim();
           if (ascEmail) {
-            ascId = ascEmailLookup.get(ascEmail.toLowerCase().trim());
+            ascId = userEmailLookup.get(ascEmail.toLowerCase().trim());
             if (!ascId && !unmatchedAscs.has(row[ascNameIndex]?.trim() || '')) {
               unmatchedAscs.add(ascEmail);
             }
@@ -513,7 +512,7 @@ export function ImportCSVDialog({ open, onOpenChange }: ImportCSVDialogProps) {
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Available ASCs: {ascUsers.map(u => u.full_name || u.email).join(', ') || 'None with ASC role'}
+                  Available team members: {users.map(u => u.full_name || u.email).join(', ') || 'No users in system'}
                 </p>
               </div>
 
