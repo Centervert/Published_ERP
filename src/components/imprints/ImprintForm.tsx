@@ -14,7 +14,7 @@ import { AssetUpload } from './AssetUpload';
 import { useImprints, Imprint } from '@/hooks/useImprints';
 import { Loader2 } from 'lucide-react';
 
-const EMAIL_DOMAIN = '@authorservices.com';
+const EMAIL_DOMAIN = '@news.authorservices.com';
 
 const imprintSchema = z.object({
   name: z.string().min(1, 'Name is required'),
