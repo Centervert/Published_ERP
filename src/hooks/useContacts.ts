@@ -211,9 +211,8 @@ export function useContacts() {
       if (error) throw error;
       return data;
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['contacts'] });
-      toast({ title: `Imported ${data?.length || 0} contacts` });
     },
     onError: (error: Error) => {
       toast({ title: 'Error importing contacts', description: error.message, variant: 'destructive' });
