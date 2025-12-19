@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { EmailPromptForm, EmailPromptData } from './EmailPromptForm';
+import { EmailPromptForm, EmailPromptData, ImageSource } from './EmailPromptForm';
 import { EmailChat, ChatMessage } from './EmailChat';
 import { EmailPreview } from './EmailPreview';
 import { BlockEditor } from './BlockEditor';
@@ -345,12 +345,116 @@ export function EmailBuilder({
         outputFormat: 'blocks',
       });
 
-      const newBlocks = parseBlocksFromAI(fullJson);
+      let newBlocks = parseBlocksFromAI(fullJson);
+      
+      // Handle image based on source
+      if (data.imageSource !== 'none') {
+        let imageUrl: string | null = null;
+        
+        if (data.imageSource === 'generate' && data.imagePrompt) {
+          setIsGeneratingImage(true);
+          try {
+            const IMAGE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-image`;
+            const resp = await fetch(IMAGE_URL, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+              },
+              body: JSON.stringify({ 
+                prompt: data.imagePrompt,
+                style: data.imageStyle,
+              }),
+            });
+
+            if (!resp.ok) {
+              const error = await resp.json();
+              throw new Error(error.error || `Error: ${resp.status}`);
+            }
+
+            const imgData = await resp.json();
+            imageUrl = imgData.imageUrl;
+          } catch (error) {
+            console.error('Error generating image:', error);
+            toast({
+              title: "Image generation failed",
+              description: "Email was created, but the image couldn't be generated.",
+              variant: "destructive",
+            });
+          } finally {
+            setIsGeneratingImage(false);
+          }
+        } else if (data.imageSource === 'url' && data.imageUrl) {
+          imageUrl = data.imageUrl;
+        } else if (data.imageSource === 'upload' && data.imageFile) {
+          setIsUploadingImage(true);
+          try {
+            const timestamp = Date.now();
+            const randomId = crypto.randomUUID().slice(0, 8);
+            const ext = data.imageFile.name.split('.').pop() || 'png';
+            const fileName = `uploads/${timestamp}-${randomId}.${ext}`;
+
+            const { error: uploadError } = await supabase.storage
+              .from('email-assets')
+              .upload(fileName, data.imageFile, {
+                contentType: data.imageFile.type,
+                cacheControl: '3600',
+              });
+
+            if (uploadError) {
+              throw new Error(uploadError.message);
+            }
+
+            const { data: publicUrlData } = supabase.storage
+              .from('email-assets')
+              .getPublicUrl(fileName);
+
+            imageUrl = publicUrlData.publicUrl;
+          } catch (error) {
+            console.error('Error uploading image:', error);
+            toast({
+              title: "Image upload failed",
+              description: "Email was created, but the image couldn't be uploaded.",
+              variant: "destructive",
+            });
+          } finally {
+            setIsUploadingImage(false);
+          }
+        }
+        
+        // Insert image block after header
+        if (imageUrl) {
+          const headerIndex = newBlocks.findIndex(b => b.type === 'header');
+          const insertIndex = headerIndex !== -1 ? headerIndex + 1 : 0;
+          
+          const imageBlock: EmailBlock = {
+            id: `block_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            type: 'image',
+            src: imageUrl,
+            alt: 'Email hero image',
+            width: 'full',
+            align: 'center',
+          };
+          
+          newBlocks = [
+            ...newBlocks.slice(0, insertIndex),
+            imageBlock,
+            ...newBlocks.slice(insertIndex),
+          ];
+        }
+      }
+      
       setBlocks(newBlocks);
 
       // Add initial messages to chat
       const userMsgId = crypto.randomUUID();
       const assistantMsgId = crypto.randomUUID();
+      
+      const imageInfo = data.imageSource !== 'none' 
+        ? data.imageSource === 'generate' 
+          ? ' I also generated a hero image for you.'
+          : ' I also added your hero image.'
+        : '';
       
       setMessages([
         {
@@ -361,7 +465,7 @@ export function EmailBuilder({
         {
           id: assistantMsgId,
           role: 'assistant',
-          content: `I've created your email with ${newBlocks.length} blocks. You can switch to Visual Edit mode to drag, reorder, and customize each block.`,
+          content: `I've created your email with ${newBlocks.length} blocks.${imageInfo} You can switch to Visual Edit mode to drag, reorder, and customize each block.`,
         },
       ]);
       

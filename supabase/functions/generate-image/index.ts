@@ -8,8 +8,18 @@ const corsHeaders = {
 
 interface GenerateImageRequest {
   prompt: string;
+  style?: string;
   campaignId?: string;
 }
+
+const stylePrompts: Record<string, string> = {
+  photorealistic: "Create a photorealistic image with natural lighting and realistic details.",
+  illustration: "Create a digital illustration with clean lines and vibrant colors in a modern illustration style.",
+  minimalist: "Create a minimalist design with clean shapes, limited colors, and plenty of negative space.",
+  abstract: "Create an abstract image with geometric shapes, patterns, and artistic color combinations.",
+  watercolor: "Create an artistic watercolor-style image with soft edges, flowing colors, and painterly textures.",
+  "flat-design": "Create a flat design graphic with bold colors, simple shapes, and no gradients or shadows.",
+};
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -17,7 +27,7 @@ serve(async (req) => {
   }
 
   try {
-    const { prompt, campaignId }: GenerateImageRequest = await req.json();
+    const { prompt, style, campaignId }: GenerateImageRequest = await req.json();
 
     if (!prompt) {
       throw new Error("Prompt is required");
@@ -28,7 +38,11 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    console.log("Generating image with prompt:", prompt);
+    // Build the full prompt with style guidance
+    const styleGuide = style && stylePrompts[style] ? stylePrompts[style] : stylePrompts.photorealistic;
+    const fullPrompt = `${styleGuide} Generate a professional email-friendly image: ${prompt}. The image should be clean, high-quality, and suitable for embedding in marketing emails. The image should be 600px wide (standard email width).`;
+
+    console.log("Generating image with prompt:", fullPrompt);
 
     // Call Lovable AI image generation model
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -42,7 +56,7 @@ serve(async (req) => {
         messages: [
           {
             role: "user",
-            content: `Generate a professional email-friendly image: ${prompt}. The image should be clean, high-quality, and suitable for embedding in marketing emails. Use vibrant but professional colors. The image should be 600px wide (standard email width).`,
+            content: fullPrompt,
           },
         ],
         modalities: ["image", "text"],
