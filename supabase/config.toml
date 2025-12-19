@@ -56,3 +56,11 @@ verify_jwt = false
 # Process CSV import - requires auth
 [functions.process-import]
 verify_jwt = true
+
+# AI Image prompt enhancement - requires auth
+[functions.enhance-image-prompt]
+verify_jwt = true
+
+# AI Subject generation - requires auth
+[functions.generate-subject]
+verify_jwt = true

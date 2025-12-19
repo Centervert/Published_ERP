@@ -28,6 +28,7 @@ export interface EmailPromptData {
   keyPoints: string;
   callToAction: string;
   tone: string;
+  subject: string;
   imageSource: ImageSource;
   imageStyle?: string;
   imagePrompt?: string;
@@ -70,6 +71,8 @@ export function EmailPromptForm({ onSubmit, isLoading }: EmailPromptFormProps) {
   const [keyPoints, setKeyPoints] = useState('');
   const [callToAction, setCallToAction] = useState('');
   const [tone, setTone] = useState('professional');
+  const [subject, setSubject] = useState('');
+  const [isGeneratingSubject, setIsGeneratingSubject] = useState(false);
   
   // Image options
   const [imageSource, setImageSource] = useState<ImageSource>('none');
@@ -91,12 +94,39 @@ export function EmailPromptForm({ onSubmit, isLoading }: EmailPromptFormProps) {
       keyPoints,
       callToAction,
       tone,
+      subject,
       imageSource,
       imageStyle: imageSource === 'generate' ? imageStyle : undefined,
       imagePrompt: imageSource === 'generate' ? imagePrompt : undefined,
       imageUrl: imageSource === 'url' ? imageUrl : undefined,
       imageFile: imageSource === 'upload' ? imageFile || undefined : undefined,
     });
+  };
+
+  const handleGenerateSubject = async () => {
+    if (!description.trim()) {
+      toast.error('Please describe your email first');
+      return;
+    }
+    
+    setIsGeneratingSubject(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-subject', {
+        body: { emailType, description, tone }
+      });
+      
+      if (error) throw error;
+      
+      if (data?.subject) {
+        setSubject(data.subject);
+        toast.success('Subject generated!');
+      }
+    } catch (error) {
+      console.error('Error generating subject:', error);
+      toast.error('Failed to generate subject. Please try again.');
+    } finally {
+      setIsGeneratingSubject(false);
+    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -248,6 +278,40 @@ export function EmailPromptForm({ onSubmit, isLoading }: EmailPromptFormProps) {
             ))}
           </SelectContent>
         </Select>
+      </div>
+
+      {/* Subject Line */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <Label htmlFor="subject">Subject Line</Label>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={handleGenerateSubject}
+            disabled={isGeneratingSubject || !description.trim()}
+            className="h-7 text-xs"
+          >
+            {isGeneratingSubject ? (
+              <>
+                <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                Generating...
+              </>
+            ) : (
+              <>
+                <Wand2 className="mr-1 h-3 w-3" />
+                Generate with AI
+              </>
+            )}
+          </Button>
+        </div>
+        <Input
+          id="subject"
+          placeholder="Enter or generate a subject line"
+          value={subject}
+          onChange={(e) => setSubject(e.target.value)}
+        />
+        <p className="text-xs text-muted-foreground">AI will auto-generate based on your content, or enter your own</p>
       </div>
 
       {/* Hero Image Section */}
