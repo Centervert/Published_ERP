@@ -21,6 +21,12 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -95,7 +101,7 @@ export function CampaignDetail({ campaign, onBack }: CampaignDetailProps) {
   // Additional recipients state
   const [additionalRecipients, setAdditionalRecipients] = useState<string[]>([]);
   const [newRecipientEmail, setNewRecipientEmail] = useState('');
-
+  const [showAdditionalRecipients, setShowAdditionalRecipients] = useState(false);
   // Handle imprint selection
   const handleImprintChange = (imprintId: string) => {
     setSelectedImprintId(imprintId);
@@ -408,16 +414,97 @@ export function CampaignDetail({ campaign, onBack }: CampaignDetailProps) {
           <Button variant="ghost" onClick={onBack}>
             Finish later
           </Button>
-          <Button 
-            onClick={() => setSendDialogOpen(true)}
-            disabled={!isReadyToSend}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white"
-          >
-            <Send className="mr-2 h-4 w-4" />
-            Schedule
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button 
+                disabled={!isReadyToSend}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white"
+              >
+                <Send className="mr-2 h-4 w-4" />
+                Schedule
+                <ChevronDown className="ml-2 h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setSendDialogOpen(true)}>
+                <Send className="mr-2 h-4 w-4" />
+                Send Campaign
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setShowAdditionalRecipients(!showAdditionalRecipients)}>
+                <Plus className="mr-2 h-4 w-4" />
+                {showAdditionalRecipients ? 'Hide' : 'Add'} Test Recipients
+                {additionalRecipients.length > 0 && (
+                  <Badge variant="secondary" className="ml-2">{additionalRecipients.length}</Badge>
+                )}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
+
+      {/* Additional Recipients Panel */}
+      {showAdditionalRecipients && (
+        <Card className="mb-6 border-dashed">
+          <CardContent className="pt-4">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h4 className="font-medium text-sm">Test Recipients</h4>
+                <p className="text-xs text-muted-foreground">
+                  Add test emails or additional recipients who will also receive this campaign.
+                </p>
+              </div>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-6 w-6"
+                onClick={() => setShowAdditionalRecipients(false)}
+              >
+                <XIcon className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="flex gap-2 mb-3">
+              <Input
+                type="email"
+                placeholder="Enter email address"
+                value={newRecipientEmail}
+                onChange={(e) => setNewRecipientEmail(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAddRecipient();
+                  }
+                }}
+                className="flex-1"
+              />
+              <Button 
+                type="button" 
+                variant="outline" 
+                size="icon"
+                onClick={handleAddRecipient}
+                disabled={!newRecipientEmail.includes('@')}
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+            {additionalRecipients.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {additionalRecipients.map((email) => (
+                  <Badge key={email} variant="secondary" className="flex items-center gap-1 pr-1">
+                    {email}
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveRecipient(email)}
+                      className="ml-1 rounded-full hover:bg-muted-foreground/20 p-0.5"
+                    >
+                      <XIcon className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
         {/* Checklist Section */}
@@ -881,62 +968,6 @@ export function CampaignDetail({ campaign, onBack }: CampaignDetailProps) {
                 {additionalRecipients.length > 0 && ` + ${additionalRecipients.length} additional recipient(s)`}
               </p>
             </div>
-            
-            {/* Additional Recipients */}
-            <Collapsible>
-              <CollapsibleTrigger className="flex items-center gap-2 text-sm font-medium hover:text-primary transition-colors">
-                <ChevronDown className="h-4 w-4" />
-                Additional Recipients
-                {additionalRecipients.length > 0 && (
-                  <Badge variant="secondary" className="ml-1">{additionalRecipients.length}</Badge>
-                )}
-              </CollapsibleTrigger>
-              <CollapsibleContent className="pt-3 space-y-3">
-                <p className="text-xs text-muted-foreground">
-                  Add test emails or additional recipients who will also receive this campaign.
-                </p>
-                <div className="flex gap-2">
-                  <Input
-                    type="email"
-                    placeholder="Enter email address"
-                    value={newRecipientEmail}
-                    onChange={(e) => setNewRecipientEmail(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        handleAddRecipient();
-                      }
-                    }}
-                    className="flex-1"
-                  />
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    size="icon"
-                    onClick={handleAddRecipient}
-                    disabled={!newRecipientEmail.includes('@')}
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-                {additionalRecipients.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {additionalRecipients.map((email) => (
-                      <Badge key={email} variant="secondary" className="flex items-center gap-1 pr-1">
-                        {email}
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveRecipient(email)}
-                          className="ml-1 rounded-full hover:bg-muted-foreground/20 p-0.5"
-                        >
-                          <XIcon className="h-3 w-3" />
-                        </button>
-                      </Badge>
-                    ))}
-                  </div>
-                )}
-              </CollapsibleContent>
-            </Collapsible>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setSendDialogOpen(false)}>
