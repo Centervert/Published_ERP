@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { useContacts } from '@/hooks/useContacts';
 import { useImprints } from '@/hooks/useImprints';
 import { useUsers } from '@/hooks/useUsers';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import {
@@ -201,6 +202,78 @@ export function ImportCSVDialog({ open, onOpenChange }: ImportCSVDialogProps) {
     const ascNameIndex = columnMapping.asc_name ? parsedData.headers.indexOf(columnMapping.asc_name) : -1;
     const ascEmailIndex = columnMapping.asc_email ? parsedData.headers.indexOf(columnMapping.asc_email) : -1;
 
+    const importErrors: string[] = [];
+    const importWarnings: string[] = [];
+    const unmatchedImprints = new Set<string>();
+
+    // First pass: collect unique ASC identifiers that need placeholder profiles
+    const ascIdentifiersToCreate = new Map<string, { name?: string; email?: string }>();
+    
+    parsedData.rows.forEach((row) => {
+      let ascName: string | undefined;
+      let ascEmail: string | undefined;
+      
+      if (ascNameIndex >= 0) {
+        ascName = row[ascNameIndex]?.trim();
+      }
+      if (ascEmailIndex >= 0) {
+        ascEmail = row[ascEmailIndex]?.trim()?.toLowerCase();
+      }
+      
+      if (ascName || ascEmail) {
+        // Check if already exists in users
+        const existingByName = ascName ? userNameLookup.get(ascName.toLowerCase().trim()) : undefined;
+        const existingByEmail = ascEmail ? userEmailLookup.get(ascEmail) : undefined;
+        
+        if (!existingByName && !existingByEmail) {
+          // Use email as key if available, otherwise use name
+          const key = ascEmail || ascName?.toLowerCase().trim();
+          if (key && !ascIdentifiersToCreate.has(key)) {
+            ascIdentifiersToCreate.set(key, { name: ascName, email: ascEmail });
+          }
+        }
+      }
+    });
+
+    // Create placeholder profiles for unmatched ASCs
+    const placeholderLookup = new Map<string, string>(); // key -> profile id
+    
+    if (ascIdentifiersToCreate.size > 0) {
+      const placeholdersToInsert = Array.from(ascIdentifiersToCreate.entries()).map(([key, data]) => ({
+        id: crypto.randomUUID(),
+        email: data.email || `placeholder-${key.replace(/[^a-z0-9]/gi, '-')}@placeholder.local`,
+        full_name: data.name || data.email || key,
+        active: false,
+      }));
+      
+      // Store mapping before insert
+      placeholdersToInsert.forEach((p, idx) => {
+        const key = Array.from(ascIdentifiersToCreate.keys())[idx];
+        placeholderLookup.set(key, p.id);
+        // Also map by name if available
+        const data = ascIdentifiersToCreate.get(key);
+        if (data?.name) {
+          placeholderLookup.set(data.name.toLowerCase().trim(), p.id);
+        }
+        if (data?.email) {
+          placeholderLookup.set(data.email, p.id);
+        }
+      });
+      
+      const { error: insertError } = await supabase
+        .from('profiles')
+        .insert(placeholdersToInsert);
+      
+      if (insertError) {
+        console.error('Error creating placeholder profiles:', insertError);
+        importWarnings.push(`Could not create placeholder profiles: ${insertError.message}`);
+        placeholderLookup.clear(); // Clear on error so we don't use invalid IDs
+      } else {
+        importWarnings.push(`Created ${placeholdersToInsert.length} placeholder team member(s) for history tracking`);
+      }
+    }
+
+    // Second pass: process contacts with placeholder lookup available
     const validContacts: { 
       email: string; 
       first_name?: string; 
@@ -209,10 +282,6 @@ export function ImportCSVDialog({ open, onOpenChange }: ImportCSVDialogProps) {
       imprint_id?: string;
       assigned_asc?: string;
     }[] = [];
-    const importErrors: string[] = [];
-    const importWarnings: string[] = [];
-    const unmatchedImprints = new Set<string>();
-    const unmatchedAscs = new Set<string>();
 
     parsedData.rows.forEach((row, index) => {
       const email = row[emailIndex]?.trim();
@@ -237,25 +306,20 @@ export function ImportCSVDialog({ open, onOpenChange }: ImportCSVDialogProps) {
           }
         }
 
-        // Process ASC assignment
+        // Process ASC assignment - check existing users first, then placeholders
         let ascId: string | undefined;
         if (ascNameIndex >= 0) {
           const ascName = row[ascNameIndex]?.trim();
           if (ascName) {
-            ascId = userNameLookup.get(ascName.toLowerCase().trim());
-            if (!ascId) {
-              unmatchedAscs.add(ascName);
-            }
+            ascId = userNameLookup.get(ascName.toLowerCase().trim()) 
+                 || placeholderLookup.get(ascName.toLowerCase().trim());
           }
         }
         // Fallback to ASC email if name didn't match
         if (!ascId && ascEmailIndex >= 0) {
-          const ascEmail = row[ascEmailIndex]?.trim();
+          const ascEmail = row[ascEmailIndex]?.trim()?.toLowerCase();
           if (ascEmail) {
-            ascId = userEmailLookup.get(ascEmail.toLowerCase().trim());
-            if (!ascId && !unmatchedAscs.has(row[ascNameIndex]?.trim() || '')) {
-              unmatchedAscs.add(ascEmail);
-            }
+            ascId = userEmailLookup.get(ascEmail) || placeholderLookup.get(ascEmail);
           }
         }
 
@@ -283,9 +347,6 @@ export function ImportCSVDialog({ open, onOpenChange }: ImportCSVDialogProps) {
     // Add warnings for unmatched values
     if (unmatchedImprints.size > 0) {
       importWarnings.push(`Unmatched imprints (${unmatchedImprints.size}): ${Array.from(unmatchedImprints).slice(0, 5).join(', ')}${unmatchedImprints.size > 5 ? '...' : ''}`);
-    }
-    if (unmatchedAscs.size > 0) {
-      importWarnings.push(`Unmatched ASCs (${unmatchedAscs.size}): ${Array.from(unmatchedAscs).slice(0, 5).join(', ')}${unmatchedAscs.size > 5 ? '...' : ''}`);
     }
 
     if (validContacts.length > 0) {
@@ -512,7 +573,8 @@ export function ImportCSVDialog({ open, onOpenChange }: ImportCSVDialogProps) {
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Available team members: {users.map(u => u.full_name || u.email).join(', ') || 'No users in system'}
+                  Active team members: {users.filter(u => u.active).map(u => u.full_name || u.email).join(', ') || 'None'}. 
+                  Unmatched names will create placeholder profiles for history tracking.
                 </p>
               </div>
 
