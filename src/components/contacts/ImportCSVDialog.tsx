@@ -67,6 +67,20 @@ function normalizePhone(value: string | undefined): string | null {
   return trimmed;
 }
 
+// Normalize names to Title Case (e.g., "JOHN DOE" → "John Doe", "jane smith" → "Jane Smith")
+function normalizeName(value: string | undefined): string | null {
+  if (!value) return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  
+  // Convert to title case: capitalize first letter of each word, lowercase the rest
+  return trimmed
+    .toLowerCase()
+    .split(/\s+/)
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+}
+
 export function ImportCSVDialog({ open, onOpenChange }: ImportCSVDialogProps) {
   const [file, setFile] = useState<File | null>(null);
   const [parsedData, setParsedData] = useState<ParsedData | null>(null);
@@ -223,8 +237,8 @@ export function ImportCSVDialog({ open, onOpenChange }: ImportCSVDialogProps) {
 
         validContacts.push({
           email,
-          first_name: firstNameIndex >= 0 ? row[firstNameIndex]?.trim() : undefined,
-          last_name: lastNameIndex >= 0 ? row[lastNameIndex]?.trim() : undefined,
+          first_name: firstNameIndex >= 0 ? normalizeName(row[firstNameIndex]) || undefined : undefined,
+          last_name: lastNameIndex >= 0 ? normalizeName(row[lastNameIndex]) || undefined : undefined,
           phone: phoneIndex >= 0 ? normalizePhone(row[phoneIndex]) || undefined : undefined,
           imprint_id: imprintId,
           assigned_asc: ascId,
