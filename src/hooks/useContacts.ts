@@ -185,11 +185,21 @@ export function useContacts() {
   });
 
   const bulkCreateContacts = useMutation({
-    mutationFn: async (contacts: { email: string; first_name?: string; last_name?: string }[]) => {
+    mutationFn: async (contacts: { 
+      email: string; 
+      first_name?: string; 
+      last_name?: string;
+      phone?: string;
+      imprint_id?: string;
+      assigned_asc?: string;
+    }[]) => {
       const contactsWithUser = contacts.map(c => ({
         email: c.email,
         first_name: c.first_name || null,
         last_name: c.last_name || null,
+        phone: c.phone || null,
+        imprint_id: c.imprint_id || null,
+        assigned_asc: c.assigned_asc || null,
         created_by: user?.id,
       }));
 

@@ -1,5 +1,7 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useContacts } from '@/hooks/useContacts';
+import { useImprints } from '@/hooks/useImprints';
+import { useUsers } from '@/hooks/useUsers';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import {
@@ -18,7 +20,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Progress } from '@/components/ui/progress';
-import { Upload, FileText, Loader2, AlertCircle } from 'lucide-react';
+import { Upload, FileText, Loader2, AlertCircle, AlertTriangle } from 'lucide-react';
 import { z } from 'zod';
 
 const emailSchema = z.string().email();
@@ -37,6 +39,32 @@ interface ColumnMapping {
   email: string;
   first_name: string;
   last_name: string;
+  phone: string;
+  imprint: string;
+  asc_name: string;
+  asc_email: string;
+}
+
+// Normalize phone numbers that might be in scientific notation (e.g., 1.26378E+12)
+function normalizePhone(value: string | undefined): string | null {
+  if (!value) return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  
+  // Check if it's in scientific notation
+  if (/[eE]/.test(trimmed)) {
+    try {
+      const num = parseFloat(trimmed);
+      if (!isNaN(num)) {
+        return String(Math.round(num));
+      }
+    } catch {
+      // Fall through to return original
+    }
+  }
+  
+  // Remove any non-digit characters except + at the start
+  return trimmed;
 }
 
 export function ImportCSVDialog({ open, onOpenChange }: ImportCSVDialogProps) {
@@ -46,12 +74,38 @@ export function ImportCSVDialog({ open, onOpenChange }: ImportCSVDialogProps) {
     email: '',
     first_name: '',
     last_name: '',
+    phone: '',
+    imprint: '',
+    asc_name: '',
+    asc_email: '',
   });
   const [importing, setImporting] = useState(false);
   const [progress, setProgress] = useState(0);
   const [errors, setErrors] = useState<string[]>([]);
+  const [warnings, setWarnings] = useState<string[]>([]);
   
   const { bulkCreateContacts } = useContacts();
+  const { imprints } = useImprints();
+  const { users } = useUsers();
+
+  // Create lookup maps
+  const imprintLookup = new Map<string, string>();
+  imprints.forEach(imp => {
+    imprintLookup.set(imp.name.toLowerCase().trim(), imp.id);
+  });
+
+  // ASC users lookup (only users with 'asc' role)
+  const ascUsers = users.filter(u => u.role === 'asc');
+  const ascNameLookup = new Map<string, string>();
+  const ascEmailLookup = new Map<string, string>();
+  ascUsers.forEach(u => {
+    if (u.full_name) {
+      ascNameLookup.set(u.full_name.toLowerCase().trim(), u.id);
+    }
+    if (u.email) {
+      ascEmailLookup.set(u.email.toLowerCase().trim(), u.id);
+    }
+  });
 
   const parseCSV = (text: string): ParsedData => {
     const lines = text.trim().split('\n');
@@ -70,6 +124,7 @@ export function ImportCSVDialog({ open, onOpenChange }: ImportCSVDialogProps) {
 
     setFile(selectedFile);
     setErrors([]);
+    setWarnings([]);
 
     const reader = new FileReader();
     reader.onload = (event) => {
@@ -80,9 +135,13 @@ export function ImportCSVDialog({ open, onOpenChange }: ImportCSVDialogProps) {
       // Auto-detect column mapping
       const lowerHeaders = parsed.headers.map(h => h.toLowerCase());
       setColumnMapping({
-        email: parsed.headers[lowerHeaders.findIndex(h => h.includes('email'))] || '',
+        email: parsed.headers[lowerHeaders.findIndex(h => h.includes('email') && !h.includes('owner'))] || '',
         first_name: parsed.headers[lowerHeaders.findIndex(h => h.includes('first') || h === 'name')] || '',
         last_name: parsed.headers[lowerHeaders.findIndex(h => h.includes('last'))] || '',
+        phone: parsed.headers[lowerHeaders.findIndex(h => h.includes('phone'))] || '',
+        imprint: parsed.headers[lowerHeaders.findIndex(h => h.includes('publisher') || h.includes('imprint'))] || '',
+        asc_name: parsed.headers[lowerHeaders.findIndex(h => h.includes('owner_name') || h.includes('asc_name'))] || '',
+        asc_email: parsed.headers[lowerHeaders.findIndex(h => h.includes('owner_email') || h.includes('asc_email'))] || '',
       });
     };
     reader.readAsText(selectedFile);
@@ -94,13 +153,28 @@ export function ImportCSVDialog({ open, onOpenChange }: ImportCSVDialogProps) {
     setImporting(true);
     setProgress(0);
     setErrors([]);
+    setWarnings([]);
 
     const emailIndex = parsedData.headers.indexOf(columnMapping.email);
     const firstNameIndex = columnMapping.first_name ? parsedData.headers.indexOf(columnMapping.first_name) : -1;
     const lastNameIndex = columnMapping.last_name ? parsedData.headers.indexOf(columnMapping.last_name) : -1;
+    const phoneIndex = columnMapping.phone ? parsedData.headers.indexOf(columnMapping.phone) : -1;
+    const imprintIndex = columnMapping.imprint ? parsedData.headers.indexOf(columnMapping.imprint) : -1;
+    const ascNameIndex = columnMapping.asc_name ? parsedData.headers.indexOf(columnMapping.asc_name) : -1;
+    const ascEmailIndex = columnMapping.asc_email ? parsedData.headers.indexOf(columnMapping.asc_email) : -1;
 
-    const validContacts: { email: string; first_name?: string; last_name?: string }[] = [];
+    const validContacts: { 
+      email: string; 
+      first_name?: string; 
+      last_name?: string;
+      phone?: string;
+      imprint_id?: string;
+      assigned_asc?: string;
+    }[] = [];
     const importErrors: string[] = [];
+    const importWarnings: string[] = [];
+    const unmatchedImprints = new Set<string>();
+    const unmatchedAscs = new Set<string>();
 
     parsedData.rows.forEach((row, index) => {
       const email = row[emailIndex]?.trim();
@@ -112,10 +186,48 @@ export function ImportCSVDialog({ open, onOpenChange }: ImportCSVDialogProps) {
 
       try {
         emailSchema.parse(email);
+        
+        // Process imprint
+        let imprintId: string | undefined;
+        if (imprintIndex >= 0) {
+          const imprintName = row[imprintIndex]?.trim();
+          if (imprintName) {
+            imprintId = imprintLookup.get(imprintName.toLowerCase().trim());
+            if (!imprintId) {
+              unmatchedImprints.add(imprintName);
+            }
+          }
+        }
+
+        // Process ASC assignment
+        let ascId: string | undefined;
+        if (ascNameIndex >= 0) {
+          const ascName = row[ascNameIndex]?.trim();
+          if (ascName) {
+            ascId = ascNameLookup.get(ascName.toLowerCase().trim());
+            if (!ascId) {
+              unmatchedAscs.add(ascName);
+            }
+          }
+        }
+        // Fallback to ASC email if name didn't match
+        if (!ascId && ascEmailIndex >= 0) {
+          const ascEmail = row[ascEmailIndex]?.trim();
+          if (ascEmail) {
+            ascId = ascEmailLookup.get(ascEmail.toLowerCase().trim());
+            if (!ascId && !unmatchedAscs.has(row[ascNameIndex]?.trim() || '')) {
+              unmatchedAscs.add(ascEmail);
+            }
+          }
+        }
+
         validContacts.push({
           email,
           first_name: firstNameIndex >= 0 ? row[firstNameIndex]?.trim() : undefined,
           last_name: lastNameIndex >= 0 ? row[lastNameIndex]?.trim() : undefined,
+          phone: phoneIndex >= 0 ? normalizePhone(row[phoneIndex]) || undefined : undefined,
+          imprint_id: imprintId,
+          assigned_asc: ascId,
         });
       } catch {
         importErrors.push(`Row ${index + 2}: Invalid email "${email}"`);
@@ -123,6 +235,14 @@ export function ImportCSVDialog({ open, onOpenChange }: ImportCSVDialogProps) {
 
       setProgress(Math.round(((index + 1) / parsedData.rows.length) * 50));
     });
+
+    // Add warnings for unmatched values
+    if (unmatchedImprints.size > 0) {
+      importWarnings.push(`Unmatched imprints (${unmatchedImprints.size}): ${Array.from(unmatchedImprints).slice(0, 5).join(', ')}${unmatchedImprints.size > 5 ? '...' : ''}`);
+    }
+    if (unmatchedAscs.size > 0) {
+      importWarnings.push(`Unmatched ASCs (${unmatchedAscs.size}): ${Array.from(unmatchedAscs).slice(0, 5).join(', ')}${unmatchedAscs.size > 5 ? '...' : ''}`);
+    }
 
     if (validContacts.length > 0) {
       // Import in batches of 100
@@ -135,9 +255,10 @@ export function ImportCSVDialog({ open, onOpenChange }: ImportCSVDialogProps) {
     }
 
     setErrors(importErrors.slice(0, 10)); // Show first 10 errors
+    setWarnings(importWarnings);
     setImporting(false);
     
-    if (importErrors.length === 0) {
+    if (importErrors.length === 0 && importWarnings.length === 0) {
       handleClose();
     }
   };
@@ -145,15 +266,16 @@ export function ImportCSVDialog({ open, onOpenChange }: ImportCSVDialogProps) {
   const handleClose = () => {
     setFile(null);
     setParsedData(null);
-    setColumnMapping({ email: '', first_name: '', last_name: '' });
+    setColumnMapping({ email: '', first_name: '', last_name: '', phone: '', imprint: '', asc_name: '', asc_email: '' });
     setProgress(0);
     setErrors([]);
+    setWarnings([]);
     onOpenChange(false);
   };
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Import Contacts from CSV</DialogTitle>
           <DialogDescription>
@@ -256,6 +378,93 @@ export function ImportCSVDialog({ open, onOpenChange }: ImportCSVDialogProps) {
                     </Select>
                   </div>
                 </div>
+
+                <div className="space-y-2">
+                  <Label>Phone Column</Label>
+                  <Select
+                    value={columnMapping.phone}
+                    onValueChange={(v) => setColumnMapping(prev => ({ ...prev, phone: v }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Optional" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">None</SelectItem>
+                      {parsedData.headers.map((header) => (
+                        <SelectItem key={header} value={header}>
+                          {header}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Imprint/Publisher Column</Label>
+                  <Select
+                    value={columnMapping.imprint}
+                    onValueChange={(v) => setColumnMapping(prev => ({ ...prev, imprint: v }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Optional - will match by name" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">None</SelectItem>
+                      {parsedData.headers.map((header) => (
+                        <SelectItem key={header} value={header}>
+                          {header}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Available imprints: {imprints.map(i => i.name).join(', ') || 'None created yet'}
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label>ASC Name Column</Label>
+                    <Select
+                      value={columnMapping.asc_name}
+                      onValueChange={(v) => setColumnMapping(prev => ({ ...prev, asc_name: v }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Optional" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">None</SelectItem>
+                        {parsedData.headers.map((header) => (
+                          <SelectItem key={header} value={header}>
+                            {header}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>ASC Email Column</Label>
+                    <Select
+                      value={columnMapping.asc_email}
+                      onValueChange={(v) => setColumnMapping(prev => ({ ...prev, asc_email: v }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Optional" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">None</SelectItem>
+                        {parsedData.headers.map((header) => (
+                          <SelectItem key={header} value={header}>
+                            {header}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Available ASCs: {ascUsers.map(u => u.full_name || u.email).join(', ') || 'None with ASC role'}
+                </p>
               </div>
 
               {importing && (
@@ -263,6 +472,21 @@ export function ImportCSVDialog({ open, onOpenChange }: ImportCSVDialogProps) {
                   <Progress value={progress} />
                   <p className="text-sm text-muted-foreground text-center">
                     Importing... {progress}%
+                  </p>
+                </div>
+              )}
+
+              {warnings.length > 0 && (
+                <div className="p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg space-y-1">
+                  <div className="flex items-center gap-2 text-yellow-600">
+                    <AlertTriangle className="h-4 w-4" />
+                    <span className="text-sm font-medium">Some values couldn't be matched:</span>
+                  </div>
+                  {warnings.map((warning, i) => (
+                    <p key={i} className="text-xs text-yellow-600">{warning}</p>
+                  ))}
+                  <p className="text-xs text-muted-foreground mt-2">
+                    These contacts were still imported but without the unmatched field values.
                   </p>
                 </div>
               )}
