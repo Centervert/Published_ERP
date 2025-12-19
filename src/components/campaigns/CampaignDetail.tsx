@@ -716,41 +716,6 @@ export function CampaignDetail({ campaign, onBack }: CampaignDetailProps) {
               </Card>
             </Collapsible>
 
-          {/* Subject - Inline Edit */}
-            <Card className="overflow-hidden mt-2">
-              <div className="flex items-start gap-4 p-5">
-                <div className="mt-0.5">
-                  {hasSubject ? (
-                    <div className="h-6 w-6 rounded-full bg-primary flex items-center justify-center">
-                      <Check className="h-4 w-4 text-primary-foreground" />
-                    </div>
-                  ) : (
-                    <Circle className="h-6 w-6 text-muted-foreground" />
-                  )}
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-semibold text-base mb-2">Subject</h3>
-                  <Input
-                    value={subject}
-                    onChange={(e) => setSubject(e.target.value)}
-                    placeholder="Enter your email subject"
-                    className="max-w-lg"
-                    onBlur={() => {
-                      if (subject !== campaign.subject) {
-                        handleUpdateSubject();
-                      }
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        handleUpdateSubject();
-                      }
-                    }}
-                  />
-                </div>
-              </div>
-            </Card>
-
             {/* Send Time */}
             <Collapsible open={sendTimeOpen} onOpenChange={hasFrom ? setSendTimeOpen : undefined}>
               <Card className="overflow-hidden mt-2">
@@ -832,6 +797,41 @@ export function CampaignDetail({ campaign, onBack }: CampaignDetailProps) {
                 >
                   Edit design
                 </Button>
+              </div>
+            </Card>
+
+            {/* Subject - After Content */}
+            <Card className="overflow-hidden mt-2">
+              <div className="flex items-start gap-4 p-5">
+                <div className="mt-0.5">
+                  {hasSubject ? (
+                    <div className="h-6 w-6 rounded-full bg-primary flex items-center justify-center">
+                      <Check className="h-4 w-4 text-primary-foreground" />
+                    </div>
+                  ) : (
+                    <Circle className="h-6 w-6 text-muted-foreground" />
+                  )}
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-base mb-2">Subject</h3>
+                  <Input
+                    value={subject}
+                    onChange={(e) => setSubject(e.target.value)}
+                    placeholder="Enter your email subject"
+                    className="max-w-lg"
+                    onBlur={() => {
+                      if (subject !== campaign.subject) {
+                        handleUpdateSubject();
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleUpdateSubject();
+                      }
+                    }}
+                  />
+                </div>
               </div>
             </Card>
           </div>
