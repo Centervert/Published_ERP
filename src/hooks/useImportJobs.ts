@@ -7,6 +7,7 @@ export interface ImportJob {
   id: string;
   status: string;
   file_name: string;
+  file_path: string | null;
   column_mapping: Record<string, string> | null;
   total_rows: number;
   processed_rows: number;
@@ -72,7 +73,7 @@ export function useImportJobs() {
   const createJob = useMutation({
     mutationFn: async (data: {
       fileName: string;
-      fileData: string;
+      filePath: string;
       columnMapping: Record<string, string>;
       totalRows: number;
     }) => {
@@ -80,7 +81,7 @@ export function useImportJobs() {
         .from('import_jobs')
         .insert({
           file_name: data.fileName,
-          file_data: data.fileData,
+          file_path: data.filePath,
           column_mapping: data.columnMapping,
           total_rows: data.totalRows,
           status: 'pending',

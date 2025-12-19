@@ -631,8 +631,9 @@ export type Database = {
           created_by: string | null
           errors: Json | null
           failed_rows: number | null
-          file_data: string
+          file_data: string | null
           file_name: string
+          file_path: string | null
           id: string
           processed_rows: number | null
           started_at: string | null
@@ -648,8 +649,9 @@ export type Database = {
           created_by?: string | null
           errors?: Json | null
           failed_rows?: number | null
-          file_data: string
+          file_data?: string | null
           file_name: string
+          file_path?: string | null
           id?: string
           processed_rows?: number | null
           started_at?: string | null
@@ -665,8 +667,9 @@ export type Database = {
           created_by?: string | null
           errors?: Json | null
           failed_rows?: number | null
-          file_data?: string
+          file_data?: string | null
           file_name?: string
+          file_path?: string | null
           id?: string
           processed_rows?: number | null
           started_at?: string | null

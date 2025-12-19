@@ -83,8 +83,11 @@ serve(async (req) => {
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
   );
 
+  let jobId: string | undefined;
+
   try {
-    const { jobId } = await req.json();
+    const body = await req.json();
+    jobId = body.jobId;
     
     if (!jobId) {
       return new Response(
@@ -116,10 +119,33 @@ serve(async (req) => {
       .update({ status: "processing", started_at: new Date().toISOString() })
       .eq("id", jobId);
 
+    // Download the CSV file from storage
+    let csvText: string;
+    
+    if (job.file_path) {
+      console.log(`Downloading file from storage: ${job.file_path}`);
+      const { data: fileData, error: downloadError } = await supabase.storage
+        .from("import-files")
+        .download(job.file_path);
+
+      if (downloadError || !fileData) {
+        throw new Error(`Failed to download file: ${downloadError?.message || 'File not found'}`);
+      }
+
+      csvText = await fileData.text();
+    } else if (job.file_data) {
+      // Fallback to file_data if file_path not available
+      csvText = job.file_data;
+    } else {
+      throw new Error("No file data available");
+    }
+
     const columnMapping: ColumnMapping = job.column_mapping;
-    const parsed = parseCSV(job.file_data);
+    const parsed = parseCSV(csvText);
     const totalRows = parsed.rows.length;
     
+    console.log(`Parsed ${totalRows} rows from CSV`);
+
     // Get indices
     const emailIndex = parsed.headers.indexOf(columnMapping.email);
     const firstNameIndex = columnMapping.first_name ? parsed.headers.indexOf(columnMapping.first_name) : -1;
@@ -194,6 +220,7 @@ serve(async (req) => {
         jobWarnings.push(`Could not create placeholder profiles: ${insertError.message}`);
         placeholderLookup.clear();
       } else {
+        console.log(`Created ${placeholdersToInsert.length} placeholder profiles`);
         jobWarnings.push(`Created ${placeholdersToInsert.length} placeholder team member(s)`);
       }
     }
@@ -214,8 +241,8 @@ serve(async (req) => {
         const rowNum = i + batchIndex + 2; // +2 for header and 1-indexing
         const email = row[emailIndex]?.trim();
         
-        if (!email) {
-          errors.push({ row: rowNum, error: 'Empty email' });
+        if (!email || email.toLowerCase() === 'no email') {
+          errors.push({ row: rowNum, error: 'Empty or invalid email' });
           failedRows++;
           return;
         }
@@ -238,14 +265,14 @@ serve(async (req) => {
         let ascId: string | undefined;
         if (ascNameIndex >= 0) {
           const ascName = row[ascNameIndex]?.trim();
-          if (ascName) {
+          if (ascName && ascName.toLowerCase() !== 'unassigned') {
             ascId = userNameLookup.get(ascName.toLowerCase().trim()) 
                  || placeholderLookup.get(ascName.toLowerCase().trim());
           }
         }
         if (!ascId && ascEmailIndex >= 0) {
           const ascEmail = row[ascEmailIndex]?.trim()?.toLowerCase();
-          if (ascEmail) {
+          if (ascEmail && ascEmail !== 'no owner_email') {
             ascId = userEmailLookup.get(ascEmail) || placeholderLookup.get(ascEmail);
           }
         }
@@ -298,6 +325,8 @@ serve(async (req) => {
           errors: errors.slice(0, 100), // Limit stored errors
         })
         .eq("id", jobId);
+      
+      console.log(`Processed ${processedRows}/${totalRows} rows`);
     }
 
     // Add unmatched imprints warning
@@ -334,19 +363,16 @@ serve(async (req) => {
     console.error("Error in process-import:", error);
     
     // Try to mark job as failed
-    try {
-      const { jobId } = await req.clone().json();
-      if (jobId) {
-        await supabase
-          .from("import_jobs")
-          .update({ 
-            status: "failed", 
-            completed_at: new Date().toISOString(),
-            errors: [{ row: 0, error: error.message }]
-          })
-          .eq("id", jobId);
-      }
-    } catch { /* ignore */ }
+    if (jobId) {
+      await supabase
+        .from("import_jobs")
+        .update({ 
+          status: "failed", 
+          completed_at: new Date().toISOString(),
+          errors: [{ row: 0, error: error.message }]
+        })
+        .eq("id", jobId);
+    }
 
     return new Response(
       JSON.stringify({ error: error.message }),
