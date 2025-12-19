@@ -11,7 +11,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Sparkles, Loader2, Image, Link, Upload, X } from 'lucide-react';
+import { Sparkles, Loader2, Image, Link, Upload, X, Wand2 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface EmailPromptFormProps {
   onSubmit: (data: EmailPromptData) => void;
@@ -77,6 +79,7 @@ export function EmailPromptForm({ onSubmit, isLoading }: EmailPromptFormProps) {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [urlError, setUrlError] = useState<string | null>(null);
+  const [isEnhancing, setIsEnhancing] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -134,6 +137,32 @@ export function EmailPromptForm({ onSubmit, isLoading }: EmailPromptFormProps) {
     setUrlError(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
+    }
+  };
+
+  const handleEnhancePrompt = async () => {
+    if (!imagePrompt.trim()) {
+      toast.error('Please enter a description first');
+      return;
+    }
+    
+    setIsEnhancing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('enhance-image-prompt', {
+        body: { prompt: imagePrompt, style: imageStyle }
+      });
+      
+      if (error) throw error;
+      
+      if (data?.enhancedPrompt) {
+        setImagePrompt(data.enhancedPrompt);
+        toast.success('Prompt enhanced!');
+      }
+    } catch (error) {
+      console.error('Error enhancing prompt:', error);
+      toast.error('Failed to enhance prompt. Please try again.');
+    } finally {
+      setIsEnhancing(false);
     }
   };
 
@@ -283,13 +312,35 @@ export function EmailPromptForm({ onSubmit, isLoading }: EmailPromptFormProps) {
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="image-prompt">Describe your image *</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="image-prompt">Describe your image *</Label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleEnhancePrompt}
+                  disabled={isEnhancing || !imagePrompt.trim()}
+                  className="h-7 text-xs"
+                >
+                  {isEnhancing ? (
+                    <>
+                      <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                      Enhancing...
+                    </>
+                  ) : (
+                    <>
+                      <Wand2 className="mr-1 h-3 w-3" />
+                      Enhance with AI
+                    </>
+                  )}
+                </Button>
+              </div>
               <Textarea
                 id="image-prompt"
-                placeholder="e.g., A warm, inviting stack of books on a wooden desk with soft lighting and a cup of coffee..."
+                placeholder="e.g., books and coffee → AI will enhance it for you"
                 value={imagePrompt}
                 onChange={(e) => setImagePrompt(e.target.value)}
-                rows={2}
+                rows={3}
               />
             </div>
           </div>
