@@ -3,7 +3,8 @@ import * as React from "react";
 import type { ToastActionElement, ToastProps } from "@/components/ui/toast";
 
 const TOAST_LIMIT = 1;
-const TOAST_REMOVE_DELAY = 1000000;
+// Keep toasts from piling up forever (especially when many events fire in a row)
+const TOAST_REMOVE_DELAY = 6000;
 
 type ToasterToast = ToastProps & {
   id: string;
@@ -169,12 +170,12 @@ function useToast() {
   React.useEffect(() => {
     listeners.push(setState);
     return () => {
-      const index = listeners.indexOf(setState);
-      if (index > -1) {
-        listeners.splice(index, 1);
+      // remove all occurrences (defensive against accidental double-registration)
+      for (let i = listeners.length - 1; i >= 0; i--) {
+        if (listeners[i] === setState) listeners.splice(i, 1);
       }
     };
-  }, [state]);
+  }, []);
 
   return {
     ...state,
