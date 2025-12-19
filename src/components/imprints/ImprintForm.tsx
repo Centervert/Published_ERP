@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -14,11 +14,13 @@ import { AssetUpload } from './AssetUpload';
 import { useImprints, Imprint } from '@/hooks/useImprints';
 import { Loader2 } from 'lucide-react';
 
+const EMAIL_DOMAIN = '@authorservices.com';
+
 const imprintSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   slug: z.string().min(1, 'Slug is required').regex(/^[a-z0-9-]+$/, 'Slug must be lowercase with hyphens only'),
   from_name: z.string().min(1, 'From name is required'),
-  from_email: z.string().email('Valid email required'),
+  from_email_prefix: z.string().min(1, 'Email prefix is required').regex(/^[a-z0-9._-]+$/i, 'Only letters, numbers, dots, underscores, and hyphens allowed'),
   reply_to_email: z.string().email('Valid email required').optional().or(z.literal('')),
   primary_color: z.string(),
   secondary_color: z.string(),
@@ -40,6 +42,31 @@ interface ImprintFormProps {
   imprint?: Imprint | null;
 }
 
+// Helper to extract prefix from full email
+const extractEmailPrefix = (email: string | null | undefined): string => {
+  if (!email) return '';
+  const atIndex = email.indexOf('@');
+  return atIndex > 0 ? email.substring(0, atIndex) : email;
+};
+
+const getDefaultValues = (imprint?: Imprint | null): ImprintFormValues => ({
+  name: imprint?.name || '',
+  slug: imprint?.slug || '',
+  from_name: imprint?.from_name || '',
+  from_email_prefix: extractEmailPrefix(imprint?.from_email),
+  reply_to_email: imprint?.reply_to_email || '',
+  primary_color: imprint?.primary_color || '#1a1a2e',
+  secondary_color: imprint?.secondary_color || '#16213e',
+  accent_color: imprint?.accent_color || '#0f3460',
+  background_color: imprint?.background_color || '#ffffff',
+  text_color: imprint?.text_color || '#333333',
+  heading_font: imprint?.heading_font || 'Roboto',
+  body_font: imprint?.body_font || 'Open Sans',
+  brand_voice: imprint?.brand_voice || '',
+  tagline: imprint?.tagline || '',
+  website_url: imprint?.website_url || '',
+});
+
 export function ImprintForm({ open, onClose, imprint }: ImprintFormProps) {
   const { createImprint, updateImprint, uploadAsset } = useImprints();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -53,24 +80,16 @@ export function ImprintForm({ open, onClose, imprint }: ImprintFormProps) {
 
   const form = useForm<ImprintFormValues>({
     resolver: zodResolver(imprintSchema),
-    defaultValues: {
-      name: imprint?.name || '',
-      slug: imprint?.slug || '',
-      from_name: imprint?.from_name || '',
-      from_email: imprint?.from_email || '',
-      reply_to_email: imprint?.reply_to_email || '',
-      primary_color: imprint?.primary_color || '#1a1a2e',
-      secondary_color: imprint?.secondary_color || '#16213e',
-      accent_color: imprint?.accent_color || '#0f3460',
-      background_color: imprint?.background_color || '#ffffff',
-      text_color: imprint?.text_color || '#333333',
-      heading_font: imprint?.heading_font || 'Roboto',
-      body_font: imprint?.body_font || 'Open Sans',
-      brand_voice: imprint?.brand_voice || '',
-      tagline: imprint?.tagline || '',
-      website_url: imprint?.website_url || '',
-    },
+    defaultValues: getDefaultValues(imprint),
   });
+
+  // Reset form when opening or when imprint changes
+  useEffect(() => {
+    if (open) {
+      form.reset(getDefaultValues(imprint));
+      setPendingAssets({});
+    }
+  }, [open, imprint, form]);
 
   const generateSlug = (name: string) => {
     return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
@@ -97,15 +116,28 @@ export function ImprintForm({ open, onClose, imprint }: ImprintFormProps) {
         }
       }
 
+      // Construct full email from prefix
+      const fullFromEmail = values.from_email_prefix + EMAIL_DOMAIN;
+
       const payload = {
-        ...values,
+        name: values.name,
+        slug: values.slug,
+        from_name: values.from_name,
+        from_email: fullFromEmail,
         reply_to_email: values.reply_to_email || null,
-        website_url: values.website_url || null,
+        primary_color: values.primary_color,
+        secondary_color: values.secondary_color,
+        accent_color: values.accent_color,
+        background_color: values.background_color,
+        text_color: values.text_color,
+        heading_font: values.heading_font,
+        body_font: values.body_font,
         brand_voice: values.brand_voice || null,
         tagline: values.tagline || null,
+        website_url: values.website_url || null,
         logo_url: assetUrls.logo_url || imprint?.logo_url || null,
         logo_dark_url: assetUrls.logo_dark_url || imprint?.logo_dark_url || null,
-        icon_url: assetUrls.icon_url || imprint?.icon_url || null,
+        icon_url: assetUrls.icon_url || null,
         header_image_url: assetUrls.header_image_url || imprint?.header_image_url || null,
         footer_image_url: assetUrls.footer_image_url || imprint?.footer_image_url || null,
       };
@@ -113,28 +145,7 @@ export function ImprintForm({ open, onClose, imprint }: ImprintFormProps) {
       if (imprint) {
         await updateImprint.mutateAsync({ id: imprint.id, ...payload });
       } else {
-        await createImprint.mutateAsync({
-          name: values.name,
-          slug: values.slug,
-          from_name: values.from_name,
-          from_email: values.from_email,
-          reply_to_email: values.reply_to_email || null,
-          primary_color: values.primary_color,
-          secondary_color: values.secondary_color,
-          accent_color: values.accent_color,
-          background_color: values.background_color,
-          text_color: values.text_color,
-          heading_font: values.heading_font,
-          body_font: values.body_font,
-          brand_voice: values.brand_voice || null,
-          tagline: values.tagline || null,
-          website_url: values.website_url || null,
-          logo_url: assetUrls.logo_url || null,
-          logo_dark_url: assetUrls.logo_dark_url || null,
-          icon_url: assetUrls.icon_url || null,
-          header_image_url: assetUrls.header_image_url || null,
-          footer_image_url: assetUrls.footer_image_url || null,
-        });
+        await createImprint.mutateAsync(payload);
       }
 
       onClose();
@@ -204,12 +215,21 @@ export function ImprintForm({ open, onClose, imprint }: ImprintFormProps) {
 
                   <FormField
                     control={form.control}
-                    name="from_email"
+                    name="from_email_prefix"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>From Email</FormLabel>
                         <FormControl>
-                          <Input {...field} placeholder="xulon@news.authorservices.com" />
+                          <div className="flex items-center">
+                            <Input 
+                              {...field} 
+                              placeholder="news" 
+                              className="rounded-r-none border-r-0"
+                            />
+                            <span className="inline-flex items-center px-3 h-10 text-sm text-muted-foreground bg-muted border border-input rounded-r-md">
+                              {EMAIL_DOMAIN}
+                            </span>
+                          </div>
                         </FormControl>
                         <FormMessage />
                       </FormItem>
