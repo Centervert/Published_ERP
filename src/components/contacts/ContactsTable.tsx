@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useContacts, Contact } from '@/hooks/useContacts';
+import { usePaginatedContacts } from '@/hooks/usePaginatedContacts';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -33,7 +34,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { MoreHorizontal, Search, Trash2, Loader2, ChevronLeft, ChevronRight, Info } from 'lucide-react';
+import { MoreHorizontal, Search, Trash2, Loader2, ChevronLeft, ChevronRight, Info, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface ContactsTableProps {
@@ -44,12 +45,34 @@ const ITEMS_PER_PAGE = 25;
 
 export function ContactsTable({ filterByUser }: ContactsTableProps) {
   const navigate = useNavigate();
-  const { contacts, isLoading, deleteContact } = useContacts();
+  const { deleteContact } = useContacts();
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
+
+  // Debounce search input
+  const handleSearchChange = (value: string) => {
+    setSearch(value);
+    // Simple debounce
+    const timeout = setTimeout(() => {
+      setDebouncedSearch(value);
+      setCurrentPage(1);
+    }, 300);
+    return () => clearTimeout(timeout);
+  };
+
+  // Use server-side pagination
+  const { contacts, totalCount, totalPages, isLoading, isFetching } = usePaginatedContacts({
+    page: currentPage,
+    pageSize: ITEMS_PER_PAGE,
+    search: debouncedSearch,
+    statusFilter,
+    typeFilter,
+    filterByUser,
+  });
 
   // Fetch team members for displaying assigned names
   const { data: teamMembers = [] } = useQuery({
@@ -73,35 +96,11 @@ export function ContactsTable({ filterByUser }: ContactsTableProps) {
     navigate(`/contacts/${contactId}`);
   };
 
-  // Filter contacts
-  const filteredContacts = useMemo(() => {
-    return contacts.filter(contact => {
-      const matchesSearch = 
-        contact.email.toLowerCase().includes(search.toLowerCase()) ||
-        contact.first_name?.toLowerCase().includes(search.toLowerCase()) ||
-        contact.last_name?.toLowerCase().includes(search.toLowerCase()) ||
-        contact.phone?.includes(search);
-      
-      const matchesStatus = statusFilter === 'all' || contact.status === statusFilter;
-      const matchesType = typeFilter === 'all' || contact.contact_type === typeFilter;
-      const matchesUser = filterByUser === null || contact.assigned_asc === filterByUser || contact.assigned_ae === filterByUser;
-      
-      return matchesSearch && matchesStatus && matchesType && matchesUser;
-    });
-  }, [contacts, search, statusFilter, typeFilter, filterByUser]);
-
-  // Pagination
-  const totalPages = Math.ceil(filteredContacts.length / ITEMS_PER_PAGE);
-  const paginatedContacts = useMemo(() => {
-    const start = (currentPage - 1) * ITEMS_PER_PAGE;
-    return filteredContacts.slice(start, start + ITEMS_PER_PAGE);
-  }, [filteredContacts, currentPage]);
-
   const toggleSelectAll = () => {
-    if (selectedIds.size === paginatedContacts.length) {
+    if (selectedIds.size === contacts.length) {
       setSelectedIds(new Set());
     } else {
-      setSelectedIds(new Set(paginatedContacts.map(c => c.id)));
+      setSelectedIds(new Set(contacts.map(c => c.id)));
     }
   };
 
@@ -115,7 +114,7 @@ export function ContactsTable({ filterByUser }: ContactsTableProps) {
     setSelectedIds(newSelected);
   };
 
-  const handleDelete = async (contact: Contact) => {
+  const handleDelete = async (contact: Contact | { id: string; email: string }) => {
     if (confirm(`Delete ${contact.email}?`)) {
       await deleteContact.mutateAsync(contact.id);
     }
@@ -161,7 +160,14 @@ export function ContactsTable({ filterByUser }: ContactsTableProps) {
     return colors[index];
   };
 
-  if (isLoading) {
+  // Format large numbers with commas
+  const formatNumber = (num: number) => num.toLocaleString();
+
+  // Calculate showing range
+  const showingFrom = totalCount === 0 ? 0 : (currentPage - 1) * ITEMS_PER_PAGE + 1;
+  const showingTo = Math.min(currentPage * ITEMS_PER_PAGE, totalCount);
+
+  if (isLoading && !contacts.length) {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -174,7 +180,7 @@ export function ContactsTable({ filterByUser }: ContactsTableProps) {
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-4">
         <span className="text-sm text-muted-foreground">Filters:</span>
-        <Select value={typeFilter} onValueChange={setTypeFilter}>
+        <Select value={typeFilter} onValueChange={(v) => { setTypeFilter(v); setCurrentPage(1); }}>
           <SelectTrigger className="w-[100px] h-9">
             <SelectValue placeholder="Type" />
           </SelectTrigger>
@@ -185,7 +191,7 @@ export function ContactsTable({ filterByUser }: ContactsTableProps) {
             <SelectItem value="bad">Bad</SelectItem>
           </SelectContent>
         </Select>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
+        <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setCurrentPage(1); }}>
           <SelectTrigger className="w-[120px] h-9">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
@@ -197,6 +203,11 @@ export function ContactsTable({ filterByUser }: ContactsTableProps) {
             <SelectItem value="complained">Complained</SelectItem>
           </SelectContent>
         </Select>
+        
+        {/* Total count display */}
+        <div className="ml-auto text-sm text-muted-foreground">
+          {formatNumber(totalCount)} total contacts
+        </div>
       </div>
 
       {/* Search */}
@@ -205,28 +216,26 @@ export function ContactsTable({ filterByUser }: ContactsTableProps) {
         <Input
           placeholder="Search name, phone, email"
           value={search}
-          onChange={(e) => {
-            setSearch(e.target.value);
-            setCurrentPage(1);
-          }}
+          onChange={(e) => handleSearchChange(e.target.value)}
           className="pl-9 h-10"
         />
       </div>
 
-      {filteredContacts.length === 0 ? (
+      {totalCount === 0 ? (
         <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
           <p>No contacts found</p>
-          {search && <p className="text-sm">Try adjusting your search</p>}
+          {debouncedSearch && <p className="text-sm">Try adjusting your search</p>}
         </div>
       ) : (
         <>
-          <div className="border rounded-lg overflow-x-auto bg-card">
+          {/* Fixed height container to prevent pagination button movement */}
+          <div className="border rounded-lg overflow-x-auto bg-card min-h-[600px] flex flex-col">
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
                   <TableHead className="w-12">
                     <Checkbox
-                      checked={selectedIds.size === paginatedContacts.length && paginatedContacts.length > 0}
+                      checked={selectedIds.size === contacts.length && contacts.length > 0}
                       onCheckedChange={toggleSelectAll}
                     />
                   </TableHead>
@@ -272,7 +281,7 @@ export function ContactsTable({ filterByUser }: ContactsTableProps) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paginatedContacts.map((contact) => {
+                {contacts.map((contact) => {
                   const displayName = [contact.first_name, contact.last_name].filter(Boolean).join(' ') || '—';
                   const initials = getInitials(contact.first_name, contact.last_name);
                   const avatarColor = getAvatarColor(displayName);
@@ -337,34 +346,80 @@ export function ContactsTable({ filterByUser }: ContactsTableProps) {
                 })}
               </TableBody>
             </Table>
+            
+            {/* Loading overlay for pagination */}
+            {isFetching && (
+              <div className="flex-1 flex items-center justify-center">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            )}
           </div>
 
-          {/* Pagination */}
-          <div className="flex items-center justify-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-            >
-              <ChevronLeft className="h-4 w-4 mr-1" />
-              Prev
-            </Button>
-            <span className="text-sm text-muted-foreground px-3">
-              {currentPage}
-            </span>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages}
-            >
-              Next
-              <ChevronRight className="h-4 w-4 ml-1" />
-            </Button>
-            <span className="text-sm text-muted-foreground ml-4">
-              {ITEMS_PER_PAGE} per page
-            </span>
+          {/* Pagination - fixed position relative to container */}
+          <div className="flex items-center justify-between py-2">
+            <div className="text-sm text-muted-foreground">
+              Showing {formatNumber(showingFrom)} - {formatNumber(showingTo)} of {formatNumber(totalCount)}
+            </div>
+            
+            <div className="flex items-center gap-1">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(1)}
+                disabled={currentPage === 1 || isFetching}
+                className="h-8 w-8 p-0"
+              >
+                <ChevronsLeft className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1 || isFetching}
+                className="h-8 px-3"
+              >
+                <ChevronLeft className="h-4 w-4 mr-1" />
+                Prev
+              </Button>
+              
+              <div className="flex items-center gap-1 px-2">
+                <span className="text-sm">Page</span>
+                <Input
+                  type="number"
+                  min={1}
+                  max={totalPages}
+                  value={currentPage}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value);
+                    if (val >= 1 && val <= totalPages) {
+                      setCurrentPage(val);
+                    }
+                  }}
+                  className="w-16 h-8 text-center"
+                />
+                <span className="text-sm text-muted-foreground">of {formatNumber(totalPages)}</span>
+              </div>
+              
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages || isFetching}
+                className="h-8 px-3"
+              >
+                Next
+                <ChevronRight className="h-4 w-4 ml-1" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(totalPages)}
+                disabled={currentPage === totalPages || isFetching}
+                className="h-8 w-8 p-0"
+              >
+                <ChevronsRight className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </>
       )}
