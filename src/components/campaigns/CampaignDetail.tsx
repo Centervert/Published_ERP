@@ -3,6 +3,7 @@ import { Campaign, useCampaignStats, useCampaigns } from '@/hooks/useCampaigns';
 import { useLists } from '@/hooks/useContacts';
 import type { EmailBlock } from '@/types/email-blocks';
 import { useImprints } from '@/hooks/useImprints';
+import { useRecipientCounts } from '@/hooks/useRecipientCounts';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -63,6 +64,7 @@ export function CampaignDetail({ campaign, onBack }: CampaignDetailProps) {
   const { data: stats, isLoading: statsLoading } = useCampaignStats(campaign.id);
   const { lists } = useLists();
   const { imprints } = useImprints();
+  const { imprintCounts, listCounts, totalCount } = useRecipientCounts();
   const { sendCampaign, updateCampaign } = useCampaigns();
   
   // Collapsible section states
@@ -546,6 +548,7 @@ export function CampaignDetail({ campaign, onBack }: CampaignDetailProps) {
                         />
                         <label htmlFor="all-contacts" className="text-sm font-medium">
                           All Contacts
+                          <span className="ml-2 text-muted-foreground">({totalCount.toLocaleString()})</span>
                         </label>
                       </div>
 
@@ -568,6 +571,7 @@ export function CampaignDetail({ campaign, onBack }: CampaignDetailProps) {
                               />
                               <label htmlFor={`imprint-${imprint.id}`} className="text-sm">
                                 {imprint.name}
+                                <span className="ml-2 text-muted-foreground">({(imprintCounts[imprint.id] || 0).toLocaleString()})</span>
                               </label>
                             </div>
                           ))}
@@ -593,6 +597,7 @@ export function CampaignDetail({ campaign, onBack }: CampaignDetailProps) {
                               />
                               <label htmlFor={`list-${list.id}`} className="text-sm">
                                 {list.name}
+                                <span className="ml-2 text-muted-foreground">({(listCounts[list.id] || 0).toLocaleString()})</span>
                               </label>
                             </div>
                           ))}
