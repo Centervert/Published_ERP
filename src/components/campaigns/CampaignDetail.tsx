@@ -42,7 +42,9 @@ import {
   Clock,
   ExternalLink,
   Check,
-  ChevronDown
+  ChevronDown,
+  Plus,
+  X as XIcon
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { EmailBuilder } from './EmailBuilder';
@@ -89,6 +91,10 @@ export function CampaignDetail({ campaign, onBack }: CampaignDetailProps) {
   
   // Send time state (UI only)
   const [sendTimeOption, setSendTimeOption] = useState<'now' | 'scheduled'>('now');
+  
+  // Additional recipients state
+  const [additionalRecipients, setAdditionalRecipients] = useState<string[]>([]);
+  const [newRecipientEmail, setNewRecipientEmail] = useState('');
 
   // Handle imprint selection
   const handleImprintChange = (imprintId: string) => {
@@ -124,9 +130,22 @@ export function CampaignDetail({ campaign, onBack }: CampaignDetailProps) {
       campaignId: campaign.id,
       listIds: selectedListIds,
       imprintIds: selectedImprintIds.length > 0 ? selectedImprintIds : undefined,
+      additionalRecipients: additionalRecipients.length > 0 ? additionalRecipients : undefined,
     });
     setSendDialogOpen(false);
     onBack();
+  };
+
+  const handleAddRecipient = () => {
+    const email = newRecipientEmail.trim().toLowerCase();
+    if (email && email.includes('@') && !additionalRecipients.includes(email)) {
+      setAdditionalRecipients([...additionalRecipients, email]);
+      setNewRecipientEmail('');
+    }
+  };
+
+  const handleRemoveRecipient = (email: string) => {
+    setAdditionalRecipients(additionalRecipients.filter(e => e !== email));
   };
 
   const handleUpdateFrom = async () => {
@@ -859,8 +878,65 @@ export function CampaignDetail({ campaign, onBack }: CampaignDetailProps) {
                 {selectedListIds.length === 0 && selectedImprintIds.length === 0
                   ? 'Sending to all active contacts'
                   : `Sending to ${selectedImprintIds.length > 0 ? `${selectedImprintIds.length} imprint(s)` : ''}${selectedImprintIds.length > 0 && selectedListIds.length > 0 ? ' and ' : ''}${selectedListIds.length > 0 ? `${selectedListIds.length} list(s)` : ''}`}
+                {additionalRecipients.length > 0 && ` + ${additionalRecipients.length} additional recipient(s)`}
               </p>
             </div>
+            
+            {/* Additional Recipients */}
+            <Collapsible>
+              <CollapsibleTrigger className="flex items-center gap-2 text-sm font-medium hover:text-primary transition-colors">
+                <ChevronDown className="h-4 w-4" />
+                Additional Recipients
+                {additionalRecipients.length > 0 && (
+                  <Badge variant="secondary" className="ml-1">{additionalRecipients.length}</Badge>
+                )}
+              </CollapsibleTrigger>
+              <CollapsibleContent className="pt-3 space-y-3">
+                <p className="text-xs text-muted-foreground">
+                  Add test emails or additional recipients who will also receive this campaign.
+                </p>
+                <div className="flex gap-2">
+                  <Input
+                    type="email"
+                    placeholder="Enter email address"
+                    value={newRecipientEmail}
+                    onChange={(e) => setNewRecipientEmail(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddRecipient();
+                      }
+                    }}
+                    className="flex-1"
+                  />
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    size="icon"
+                    onClick={handleAddRecipient}
+                    disabled={!newRecipientEmail.includes('@')}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+                {additionalRecipients.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {additionalRecipients.map((email) => (
+                      <Badge key={email} variant="secondary" className="flex items-center gap-1 pr-1">
+                        {email}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveRecipient(email)}
+                          className="ml-1 rounded-full hover:bg-muted-foreground/20 p-0.5"
+                        >
+                          <XIcon className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+              </CollapsibleContent>
+            </Collapsible>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setSendDialogOpen(false)}>
