@@ -125,9 +125,9 @@ export function useCampaigns() {
   });
 
   const sendCampaign = useMutation({
-    mutationFn: async ({ campaignId, listIds }: { campaignId: string; listIds: string[] }) => {
+    mutationFn: async ({ campaignId, listIds, imprintIds }: { campaignId: string; listIds: string[]; imprintIds?: string[] }) => {
       const { data, error } = await supabase.functions.invoke('send-campaign', {
-        body: { campaignId, listIds },
+        body: { campaignId, listIds, imprintIds },
       });
       
       if (error) throw error;

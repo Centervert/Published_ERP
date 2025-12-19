@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useCampaigns, Campaign } from '@/hooks/useCampaigns';
 import { useLists } from '@/hooks/useContacts';
+import { useImprints } from '@/hooks/useImprints';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -45,10 +46,12 @@ const statusColors: Record<string, string> = {
 export default function Campaigns() {
   const { campaigns, isLoading, createCampaign, deleteCampaign, sendCampaign } = useCampaigns();
   const { lists } = useLists();
+  const { imprints } = useImprints();
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
   const [viewingCampaign, setViewingCampaign] = useState<Campaign | null>(null);
   const [selectedListIds, setSelectedListIds] = useState<string[]>([]);
+  const [selectedImprintIds, setSelectedImprintIds] = useState<string[]>([]);
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'name'>('newest');
@@ -72,10 +75,12 @@ export default function Campaigns() {
     await sendCampaign.mutateAsync({
       campaignId: selectedCampaign.id,
       listIds: selectedListIds,
+      imprintIds: selectedImprintIds.length > 0 ? selectedImprintIds : undefined,
     });
     setSendDialogOpen(false);
     setSelectedCampaign(null);
     setSelectedListIds([]);
+    setSelectedImprintIds([]);
   };
 
   const handleDelete = async (campaign: Campaign) => {
@@ -87,6 +92,7 @@ export default function Campaigns() {
   const openSendDialog = (campaign: Campaign) => {
     setSelectedCampaign(campaign);
     setSelectedListIds([]);
+    setSelectedImprintIds([]);
     setSendDialogOpen(true);
   };
 
@@ -340,14 +346,15 @@ export default function Campaigns() {
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label>Select Recipients</Label>
-              <div className="space-y-2 max-h-[250px] overflow-y-auto">
+              <div className="space-y-3 max-h-[250px] overflow-y-auto">
                 <div className="flex items-center space-x-2 pb-2 border-b">
                   <Checkbox
                     id="all-contacts"
-                    checked={selectedListIds.length === 0}
+                    checked={selectedListIds.length === 0 && selectedImprintIds.length === 0}
                     onCheckedChange={(checked) => {
                       if (checked) {
                         setSelectedListIds([]);
+                        setSelectedImprintIds([]);
                       }
                     }}
                   />
@@ -358,33 +365,68 @@ export default function Campaigns() {
                     All Contacts
                   </label>
                 </div>
-                {lists.map((list) => (
-                  <div key={list.id} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={list.id}
-                      checked={selectedListIds.includes(list.id)}
-                      onCheckedChange={(checked) => {
-                        if (checked) {
-                          setSelectedListIds([...selectedListIds, list.id]);
-                        } else {
-                          setSelectedListIds(selectedListIds.filter(id => id !== list.id));
-                        }
-                      }}
-                    />
-                    <label
-                      htmlFor={list.id}
-                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                    >
-                      {list.name}
-                    </label>
+
+                {/* By Imprint */}
+                {imprints.length > 0 && (
+                  <div className="space-y-2 pt-2">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">By Imprint</p>
+                    {imprints.map((imprint) => (
+                      <div key={imprint.id} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`send-imprint-${imprint.id}`}
+                          checked={selectedImprintIds.includes(imprint.id)}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setSelectedImprintIds([...selectedImprintIds, imprint.id]);
+                            } else {
+                              setSelectedImprintIds(selectedImprintIds.filter(id => id !== imprint.id));
+                            }
+                          }}
+                        />
+                        <label
+                          htmlFor={`send-imprint-${imprint.id}`}
+                          className="text-sm font-medium leading-none"
+                        >
+                          {imprint.name}
+                        </label>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                )}
+
+                {/* By List */}
+                {lists.length > 0 && (
+                  <div className="space-y-2 pt-2">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">By List</p>
+                    {lists.map((list) => (
+                      <div key={list.id} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={list.id}
+                          checked={selectedListIds.includes(list.id)}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setSelectedListIds([...selectedListIds, list.id]);
+                            } else {
+                              setSelectedListIds(selectedListIds.filter(id => id !== list.id));
+                            }
+                          }}
+                        />
+                        <label
+                          htmlFor={list.id}
+                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                        >
+                          {list.name}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
             <p className="text-xs text-muted-foreground">
-              {selectedListIds.length === 0
+              {selectedListIds.length === 0 && selectedImprintIds.length === 0
                 ? 'Sending to all active contacts'
-                : `Sending to ${selectedListIds.length} list(s)`}
+                : `Sending to ${selectedImprintIds.length > 0 ? `${selectedImprintIds.length} imprint(s)` : ''}${selectedImprintIds.length > 0 && selectedListIds.length > 0 ? ' and ' : ''}${selectedListIds.length > 0 ? `${selectedListIds.length} list(s)` : ''}`}
             </p>
           </div>
           <DialogFooter>
