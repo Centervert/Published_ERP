@@ -623,6 +623,60 @@ export type Database = {
           },
         ]
       }
+      import_jobs: {
+        Row: {
+          column_mapping: Json | null
+          completed_at: string | null
+          created_at: string | null
+          created_by: string | null
+          errors: Json | null
+          failed_rows: number | null
+          file_data: string
+          file_name: string
+          id: string
+          processed_rows: number | null
+          started_at: string | null
+          status: string
+          successful_rows: number | null
+          total_rows: number | null
+          warnings: Json | null
+        }
+        Insert: {
+          column_mapping?: Json | null
+          completed_at?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          errors?: Json | null
+          failed_rows?: number | null
+          file_data: string
+          file_name: string
+          id?: string
+          processed_rows?: number | null
+          started_at?: string | null
+          status?: string
+          successful_rows?: number | null
+          total_rows?: number | null
+          warnings?: Json | null
+        }
+        Update: {
+          column_mapping?: Json | null
+          completed_at?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          errors?: Json | null
+          failed_rows?: number | null
+          file_data?: string
+          file_name?: string
+          id?: string
+          processed_rows?: number | null
+          started_at?: string | null
+          status?: string
+          successful_rows?: number | null
+          total_rows?: number | null
+          warnings?: Json | null
+        }
+        Relationships: []
+      }
       imprints: {
         Row: {
           accent_color: string | null

@@ -52,3 +52,7 @@ verify_jwt = true
 # Sync inbox emails - can be called via cron or manually
 [functions.sync-inbox-emails]
 verify_jwt = false
+
+# Process CSV import - requires auth
+[functions.process-import]
+verify_jwt = true
