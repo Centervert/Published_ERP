@@ -24,6 +24,7 @@ import { Upload, FileText, Loader2, AlertCircle, AlertTriangle } from 'lucide-re
 import { z } from 'zod';
 
 const emailSchema = z.string().email();
+const NONE_VALUE = '__none__';
 
 interface ImportCSVDialogProps {
   open: boolean;
@@ -382,14 +383,14 @@ export function ImportCSVDialog({ open, onOpenChange }: ImportCSVDialogProps) {
                   <div className="space-y-2">
                     <Label>First Name Column</Label>
                     <Select
-                      value={columnMapping.first_name}
-                      onValueChange={(v) => setColumnMapping(prev => ({ ...prev, first_name: v }))}
+                      value={columnMapping.first_name || NONE_VALUE}
+                      onValueChange={(v) => setColumnMapping(prev => ({ ...prev, first_name: v === NONE_VALUE ? '' : v }))}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Optional" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">None</SelectItem>
+                        <SelectItem value={NONE_VALUE}>None</SelectItem>
                         {parsedData.headers.map((header) => (
                           <SelectItem key={header} value={header}>
                             {header}
@@ -401,14 +402,14 @@ export function ImportCSVDialog({ open, onOpenChange }: ImportCSVDialogProps) {
                   <div className="space-y-2">
                     <Label>Last Name Column</Label>
                     <Select
-                      value={columnMapping.last_name}
-                      onValueChange={(v) => setColumnMapping(prev => ({ ...prev, last_name: v }))}
+                      value={columnMapping.last_name || NONE_VALUE}
+                      onValueChange={(v) => setColumnMapping(prev => ({ ...prev, last_name: v === NONE_VALUE ? '' : v }))}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Optional" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">None</SelectItem>
+                        <SelectItem value={NONE_VALUE}>None</SelectItem>
                         {parsedData.headers.map((header) => (
                           <SelectItem key={header} value={header}>
                             {header}
@@ -422,14 +423,14 @@ export function ImportCSVDialog({ open, onOpenChange }: ImportCSVDialogProps) {
                 <div className="space-y-2">
                   <Label>Phone Column</Label>
                   <Select
-                    value={columnMapping.phone}
-                    onValueChange={(v) => setColumnMapping(prev => ({ ...prev, phone: v }))}
+                      value={columnMapping.phone || NONE_VALUE}
+                      onValueChange={(v) => setColumnMapping(prev => ({ ...prev, phone: v === NONE_VALUE ? '' : v }))}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Optional" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">None</SelectItem>
+                        <SelectItem value={NONE_VALUE}>None</SelectItem>
                       {parsedData.headers.map((header) => (
                         <SelectItem key={header} value={header}>
                           {header}
@@ -442,14 +443,14 @@ export function ImportCSVDialog({ open, onOpenChange }: ImportCSVDialogProps) {
                 <div className="space-y-2">
                   <Label>Imprint/Publisher Column</Label>
                   <Select
-                    value={columnMapping.imprint}
-                    onValueChange={(v) => setColumnMapping(prev => ({ ...prev, imprint: v }))}
+                      value={columnMapping.imprint || NONE_VALUE}
+                      onValueChange={(v) => setColumnMapping(prev => ({ ...prev, imprint: v === NONE_VALUE ? '' : v }))}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Optional - will match by name" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">None</SelectItem>
+                        <SelectItem value={NONE_VALUE}>None</SelectItem>
                       {parsedData.headers.map((header) => (
                         <SelectItem key={header} value={header}>
                           {header}
@@ -466,14 +467,14 @@ export function ImportCSVDialog({ open, onOpenChange }: ImportCSVDialogProps) {
                   <div className="space-y-2">
                     <Label>ASC Name Column</Label>
                     <Select
-                      value={columnMapping.asc_name}
-                      onValueChange={(v) => setColumnMapping(prev => ({ ...prev, asc_name: v }))}
+                      value={columnMapping.asc_name || NONE_VALUE}
+                      onValueChange={(v) => setColumnMapping(prev => ({ ...prev, asc_name: v === NONE_VALUE ? '' : v }))}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Optional" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">None</SelectItem>
+                        <SelectItem value={NONE_VALUE}>None</SelectItem>
                         {parsedData.headers.map((header) => (
                           <SelectItem key={header} value={header}>
                             {header}
@@ -485,14 +486,14 @@ export function ImportCSVDialog({ open, onOpenChange }: ImportCSVDialogProps) {
                   <div className="space-y-2">
                     <Label>ASC Email Column</Label>
                     <Select
-                      value={columnMapping.asc_email}
-                      onValueChange={(v) => setColumnMapping(prev => ({ ...prev, asc_email: v }))}
+                      value={columnMapping.asc_email || NONE_VALUE}
+                      onValueChange={(v) => setColumnMapping(prev => ({ ...prev, asc_email: v === NONE_VALUE ? '' : v }))}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Optional" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">None</SelectItem>
+                        <SelectItem value={NONE_VALUE}>None</SelectItem>
                         {parsedData.headers.map((header) => (
                           <SelectItem key={header} value={header}>
                             {header}
