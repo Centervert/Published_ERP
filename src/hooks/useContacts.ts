@@ -213,9 +213,10 @@ export function useContacts() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['contacts'] });
+      queryClient.invalidateQueries({ queryKey: ['paginated-contacts'] });
     },
     onError: (error: Error) => {
-      toast({ title: 'Error importing contacts', description: error.message, variant: 'destructive' });
+      console.error('Bulk import error:', error);
     },
   });
 

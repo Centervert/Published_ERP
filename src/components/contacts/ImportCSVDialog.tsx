@@ -121,6 +121,8 @@ export function ImportCSVDialog({ open, onOpenChange }: ImportCSVDialogProps) {
   const [warnings, setWarnings] = useState<string[]>([]);
   const [importComplete, setImportComplete] = useState(false);
   const [importedCount, setImportedCount] = useState(0);
+  const [skippedRows, setSkippedRows] = useState<{ row: string[]; rowIndex: number; error: string }[]>([]);
+  const [showForceImport, setShowForceImport] = useState(false);
   
   const { bulkCreateContacts } = useContacts();
   const { imprints } = useImprints();
@@ -184,15 +186,17 @@ export function ImportCSVDialog({ open, onOpenChange }: ImportCSVDialogProps) {
     reader.readAsText(selectedFile);
   }, []);
 
-  const handleImport = async () => {
+  const handleImport = async (forceImport = false) => {
     if (!parsedData || !columnMapping.email) return;
 
     setImporting(true);
-    setProgress(0);
+    setProgress(1);
     setErrors([]);
     setWarnings([]);
     setImportComplete(false);
     setImportedCount(0);
+    setSkippedRows([]);
+    setShowForceImport(false);
 
     const emailIndex = parsedData.headers.indexOf(columnMapping.email);
     const firstNameIndex = columnMapping.first_name ? parsedData.headers.indexOf(columnMapping.first_name) : -1;
@@ -202,11 +206,12 @@ export function ImportCSVDialog({ open, onOpenChange }: ImportCSVDialogProps) {
     const ascNameIndex = columnMapping.asc_name ? parsedData.headers.indexOf(columnMapping.asc_name) : -1;
     const ascEmailIndex = columnMapping.asc_email ? parsedData.headers.indexOf(columnMapping.asc_email) : -1;
 
-    const importErrors: string[] = [];
     const importWarnings: string[] = [];
     const unmatchedImprints = new Set<string>();
+    const skipped: { row: string[]; rowIndex: number; error: string }[] = [];
 
-    // First pass: collect unique ASC identifiers that need placeholder profiles
+    // Phase 1 (1-15%): Collect and create placeholder profiles
+    setProgress(5);
     const ascIdentifiersToCreate = new Map<string, { name?: string; email?: string }>();
     
     parsedData.rows.forEach((row) => {
@@ -221,12 +226,10 @@ export function ImportCSVDialog({ open, onOpenChange }: ImportCSVDialogProps) {
       }
       
       if (ascName || ascEmail) {
-        // Check if already exists in users
         const existingByName = ascName ? userNameLookup.get(ascName.toLowerCase().trim()) : undefined;
         const existingByEmail = ascEmail ? userEmailLookup.get(ascEmail) : undefined;
         
         if (!existingByName && !existingByEmail) {
-          // Use email as key if available, otherwise use name
           const key = ascEmail || ascName?.toLowerCase().trim();
           if (key && !ascIdentifiersToCreate.has(key)) {
             ascIdentifiersToCreate.set(key, { name: ascName, email: ascEmail });
@@ -235,8 +238,8 @@ export function ImportCSVDialog({ open, onOpenChange }: ImportCSVDialogProps) {
       }
     });
 
-    // Create placeholder profiles for unmatched ASCs
-    const placeholderLookup = new Map<string, string>(); // key -> profile id
+    setProgress(10);
+    const placeholderLookup = new Map<string, string>();
     
     if (ascIdentifiersToCreate.size > 0) {
       const placeholdersToInsert = Array.from(ascIdentifiersToCreate.entries()).map(([key, data]) => ({
@@ -246,11 +249,9 @@ export function ImportCSVDialog({ open, onOpenChange }: ImportCSVDialogProps) {
         active: false,
       }));
       
-      // Store mapping before insert
       placeholdersToInsert.forEach((p, idx) => {
         const key = Array.from(ascIdentifiersToCreate.keys())[idx];
         placeholderLookup.set(key, p.id);
-        // Also map by name if available
         const data = ascIdentifiersToCreate.get(key);
         if (data?.name) {
           placeholderLookup.set(data.name.toLowerCase().trim(), p.id);
@@ -267,13 +268,15 @@ export function ImportCSVDialog({ open, onOpenChange }: ImportCSVDialogProps) {
       if (insertError) {
         console.error('Error creating placeholder profiles:', insertError);
         importWarnings.push(`Could not create placeholder profiles: ${insertError.message}`);
-        placeholderLookup.clear(); // Clear on error so we don't use invalid IDs
+        placeholderLookup.clear();
       } else {
-        importWarnings.push(`Created ${placeholdersToInsert.length} placeholder team member(s) for history tracking`);
+        importWarnings.push(`Created ${placeholdersToInsert.length} placeholder team member(s)`);
       }
     }
 
-    // Second pass: process contacts with placeholder lookup available
+    setProgress(15);
+
+    // Phase 2 (15-50%): Process and validate rows
     const validContacts: { 
       email: string; 
       first_name?: string; 
@@ -283,18 +286,18 @@ export function ImportCSVDialog({ open, onOpenChange }: ImportCSVDialogProps) {
       assigned_asc?: string;
     }[] = [];
 
+    const totalRows = parsedData.rows.length;
     parsedData.rows.forEach((row, index) => {
       const email = row[emailIndex]?.trim();
       
       if (!email) {
-        importErrors.push(`Row ${index + 2}: Empty email`);
+        skipped.push({ row, rowIndex: index + 2, error: 'Empty email' });
         return;
       }
 
       try {
         emailSchema.parse(email);
         
-        // Process imprint
         let imprintId: string | undefined;
         if (imprintIndex >= 0) {
           const imprintName = row[imprintIndex]?.trim();
@@ -306,7 +309,6 @@ export function ImportCSVDialog({ open, onOpenChange }: ImportCSVDialogProps) {
           }
         }
 
-        // Process ASC assignment - check existing users first, then placeholders
         let ascId: string | undefined;
         if (ascNameIndex >= 0) {
           const ascName = row[ascNameIndex]?.trim();
@@ -315,7 +317,6 @@ export function ImportCSVDialog({ open, onOpenChange }: ImportCSVDialogProps) {
                  || placeholderLookup.get(ascName.toLowerCase().trim());
           }
         }
-        // Fallback to ASC email if name didn't match
         if (!ascId && ascEmailIndex >= 0) {
           const ascEmail = row[ascEmailIndex]?.trim()?.toLowerCase();
           if (ascEmail) {
@@ -325,7 +326,7 @@ export function ImportCSVDialog({ open, onOpenChange }: ImportCSVDialogProps) {
 
         const normalizedEmail = normalizeEmail(email);
         if (!normalizedEmail) {
-          importErrors.push(`Row ${index + 2}: Empty email after normalization`);
+          skipped.push({ row, rowIndex: index + 2, error: 'Empty email after normalization' });
           return;
         }
 
@@ -338,37 +339,90 @@ export function ImportCSVDialog({ open, onOpenChange }: ImportCSVDialogProps) {
           assigned_asc: ascId,
         });
       } catch {
-        importErrors.push(`Row ${index + 2}: Invalid email "${email}"`);
+        skipped.push({ row, rowIndex: index + 2, error: `Invalid email "${email}"` });
       }
 
-      setProgress(Math.round(((index + 1) / parsedData.rows.length) * 50));
+      // Update progress: 15% to 50%
+      setProgress(15 + Math.round(((index + 1) / totalRows) * 35));
     });
 
-    // Add warnings for unmatched values
     if (unmatchedImprints.size > 0) {
       importWarnings.push(`Unmatched imprints (${unmatchedImprints.size}): ${Array.from(unmatchedImprints).slice(0, 5).join(', ')}${unmatchedImprints.size > 5 ? '...' : ''}`);
     }
 
+    // Phase 3 (50-100%): Import valid contacts
     if (validContacts.length > 0) {
-      // Import in batches of 100
       const batchSize = 100;
+      const totalBatches = Math.ceil(validContacts.length / batchSize);
+      
       for (let i = 0; i < validContacts.length; i += batchSize) {
         const batch = validContacts.slice(i, i + batchSize);
         await bulkCreateContacts.mutateAsync(batch);
-        setProgress(50 + Math.round(((i + batchSize) / validContacts.length) * 50));
+        const batchNum = Math.floor(i / batchSize) + 1;
+        // Update progress: 50% to 100%
+        setProgress(50 + Math.round((batchNum / totalBatches) * 50));
       }
     }
 
-    setErrors(importErrors.slice(0, 10)); // Show first 10 errors
+    setProgress(100);
     setWarnings(importWarnings);
     setImporting(false);
     setImportComplete(true);
     setImportedCount(validContacts.length);
+    setSkippedRows(skipped);
     
-    // Auto-close only if no issues at all
-    if (importErrors.length === 0 && importWarnings.length === 0) {
+    // Show force import option if there were skipped rows
+    if (skipped.length > 0) {
+      setShowForceImport(true);
+      setErrors(skipped.slice(0, 10).map(s => `Row ${s.rowIndex}: ${s.error}`));
+    }
+    
+    // Auto-close only if no issues
+    if (skipped.length === 0 && importWarnings.length === 0) {
       handleClose();
     }
+  };
+
+  const handleForceImport = async () => {
+    if (skippedRows.length === 0) return;
+
+    setImporting(true);
+    setProgress(1);
+    
+    const emailIndex = parsedData?.headers.indexOf(columnMapping.email) ?? -1;
+    const firstNameIndex = columnMapping.first_name ? parsedData?.headers.indexOf(columnMapping.first_name) ?? -1 : -1;
+    const lastNameIndex = columnMapping.last_name ? parsedData?.headers.indexOf(columnMapping.last_name) ?? -1 : -1;
+    const phoneIndex = columnMapping.phone ? parsedData?.headers.indexOf(columnMapping.phone) ?? -1 : -1;
+
+    const contactsToForce = skippedRows
+      .map(({ row }) => {
+        const email = row[emailIndex]?.trim();
+        if (!email) return null;
+        
+        return {
+          email: email.toLowerCase(),
+          first_name: firstNameIndex >= 0 ? normalizeName(row[firstNameIndex]) || undefined : undefined,
+          last_name: lastNameIndex >= 0 ? normalizeName(row[lastNameIndex]) || undefined : undefined,
+          phone: phoneIndex >= 0 ? normalizePhone(row[phoneIndex]) || undefined : undefined,
+        };
+      })
+      .filter((c): c is NonNullable<typeof c> => c !== null);
+
+    if (contactsToForce.length > 0) {
+      const batchSize = 100;
+      for (let i = 0; i < contactsToForce.length; i += batchSize) {
+        const batch = contactsToForce.slice(i, i + batchSize);
+        await bulkCreateContacts.mutateAsync(batch);
+        setProgress(Math.round(((i + batchSize) / contactsToForce.length) * 100));
+      }
+    }
+
+    setProgress(100);
+    setImporting(false);
+    setImportedCount(prev => prev + contactsToForce.length);
+    setSkippedRows([]);
+    setShowForceImport(false);
+    setErrors([]);
   };
 
   const handleClose = () => {
@@ -380,6 +434,8 @@ export function ImportCSVDialog({ open, onOpenChange }: ImportCSVDialogProps) {
     setWarnings([]);
     setImportComplete(false);
     setImportedCount(0);
+    setSkippedRows([]);
+    setShowForceImport(false);
     onOpenChange(false);
   };
 
@@ -614,29 +670,45 @@ export function ImportCSVDialog({ open, onOpenChange }: ImportCSVDialogProps) {
                 <div className="p-3 bg-destructive/10 rounded-lg space-y-1">
                   <div className="flex items-center gap-2 text-destructive">
                     <AlertCircle className="h-4 w-4" />
-                    <span className="text-sm font-medium">{errors.length} row{errors.length !== 1 ? 's' : ''} skipped due to errors:</span>
+                    <span className="text-sm font-medium">{skippedRows.length} row{skippedRows.length !== 1 ? 's' : ''} skipped:</span>
                   </div>
                   {errors.map((error, i) => (
                     <p key={i} className="text-xs text-destructive">{error}</p>
                   ))}
+                  {skippedRows.length > 10 && (
+                    <p className="text-xs text-muted-foreground">...and {skippedRows.length - 10} more</p>
+                  )}
                 </div>
               )}
             </>
           )}
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="flex-col sm:flex-row gap-2">
           {importComplete ? (
-            <Button onClick={handleClose}>
-              Done
-            </Button>
+            <>
+              {showForceImport && skippedRows.length > 0 && (
+                <Button 
+                  variant="outline" 
+                  onClick={handleForceImport}
+                  disabled={importing}
+                  className="w-full sm:w-auto"
+                >
+                  {importing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Force Import {skippedRows.length} Skipped Row{skippedRows.length !== 1 ? 's' : ''}
+                </Button>
+              )}
+              <Button onClick={handleClose} className="w-full sm:w-auto">
+                Done
+              </Button>
+            </>
           ) : (
             <>
               <Button variant="outline" onClick={handleClose}>
                 Cancel
               </Button>
               <Button
-                onClick={handleImport}
+                onClick={() => handleImport()}
                 disabled={!parsedData || !columnMapping.email || importing}
               >
                 {importing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
