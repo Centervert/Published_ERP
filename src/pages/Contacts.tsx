@@ -7,6 +7,7 @@ import { CreateContactSheet } from '@/components/contacts/CreateContactSheet';
 import { ImportCSVDialog } from '@/components/contacts/ImportCSVDialog';
 import { ListsManager } from '@/components/contacts/ListsManager';
 import { TagsManager } from '@/components/contacts/TagsManager';
+import { ImportManager } from '@/components/contacts/ImportManager';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function Contacts() {
@@ -56,6 +57,12 @@ export default function Contacts() {
           >
             Tags
           </TabsTrigger>
+          <TabsTrigger 
+            value="imports"
+            className="px-0 pb-3 rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent data-[state=active]:shadow-none font-medium"
+          >
+            Imports
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="contacts" className="mt-6">
@@ -92,6 +99,10 @@ export default function Contacts() {
 
         <TabsContent value="tags">
           <TagsManager />
+        </TabsContent>
+
+        <TabsContent value="imports">
+          <ImportManager />
         </TabsContent>
       </Tabs>
 
