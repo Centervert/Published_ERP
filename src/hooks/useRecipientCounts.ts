@@ -2,25 +2,34 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
 export function useRecipientCounts() {
-  // Get contact counts per imprint
+  // Get contact counts per imprint using RPC or individual queries
   const imprintCountsQuery = useQuery({
     queryKey: ['imprint-contact-counts'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('contacts')
-        .select('imprint_id')
-        .eq('status', 'active')
-        .not('imprint_id', 'is', null);
+      // First get all imprints
+      const { data: imprints, error: imprintsError } = await supabase
+        .from('imprints')
+        .select('id');
       
-      if (error) throw error;
+      if (imprintsError) throw imprintsError;
       
-      // Count contacts per imprint
+      // Get counts for each imprint
       const counts: Record<string, number> = {};
-      data.forEach((contact) => {
-        if (contact.imprint_id) {
-          counts[contact.imprint_id] = (counts[contact.imprint_id] || 0) + 1;
-        }
-      });
+      
+      await Promise.all(
+        imprints.map(async (imprint) => {
+          const { count, error } = await supabase
+            .from('contacts')
+            .select('*', { count: 'exact', head: true })
+            .eq('status', 'active')
+            .eq('imprint_id', imprint.id);
+          
+          if (!error && count !== null) {
+            counts[imprint.id] = count;
+          }
+        })
+      );
+      
       return counts;
     },
   });
@@ -29,17 +38,29 @@ export function useRecipientCounts() {
   const listCountsQuery = useQuery({
     queryKey: ['list-contact-counts'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('contact_lists')
-        .select('list_id');
+      // First get all lists
+      const { data: lists, error: listsError } = await supabase
+        .from('lists')
+        .select('id');
       
-      if (error) throw error;
+      if (listsError) throw listsError;
       
-      // Count contacts per list
+      // Get counts for each list
       const counts: Record<string, number> = {};
-      data.forEach((entry) => {
-        counts[entry.list_id] = (counts[entry.list_id] || 0) + 1;
-      });
+      
+      await Promise.all(
+        lists.map(async (list) => {
+          const { count, error } = await supabase
+            .from('contact_lists')
+            .select('*', { count: 'exact', head: true })
+            .eq('list_id', list.id);
+          
+          if (!error && count !== null) {
+            counts[list.id] = count;
+          }
+        })
+      );
+      
       return counts;
     },
   });
