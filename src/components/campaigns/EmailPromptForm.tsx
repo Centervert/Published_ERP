@@ -280,40 +280,6 @@ export function EmailPromptForm({ onSubmit, isLoading }: EmailPromptFormProps) {
         </Select>
       </div>
 
-      {/* Subject Line */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <Label htmlFor="subject">Subject Line</Label>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={handleGenerateSubject}
-            disabled={isGeneratingSubject || !description.trim()}
-            className="h-7 text-xs"
-          >
-            {isGeneratingSubject ? (
-              <>
-                <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-                Generating...
-              </>
-            ) : (
-              <>
-                <Wand2 className="mr-1 h-3 w-3" />
-                Generate with AI
-              </>
-            )}
-          </Button>
-        </div>
-        <Input
-          id="subject"
-          placeholder="Enter or generate a subject line"
-          value={subject}
-          onChange={(e) => setSubject(e.target.value)}
-        />
-        <p className="text-xs text-muted-foreground">AI will auto-generate based on your content, or enter your own</p>
-      </div>
-
       {/* Hero Image Section */}
       <div className="space-y-4 pt-4 border-t">
         <div className="flex items-center gap-2">
@@ -492,7 +458,41 @@ export function EmailPromptForm({ onSubmit, isLoading }: EmailPromptFormProps) {
         )}
       </div>
 
-      <Button 
+      {/* Subject Line - After all content is defined */}
+      <div className="space-y-2 pt-4 border-t">
+        <div className="flex items-center justify-between">
+          <Label htmlFor="subject">Subject Line</Label>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={handleGenerateSubject}
+            disabled={isGeneratingSubject || !description.trim()}
+            className="h-7 text-xs"
+          >
+            {isGeneratingSubject ? (
+              <>
+                <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                Generating...
+              </>
+            ) : (
+              <>
+                <Wand2 className="mr-1 h-3 w-3" />
+                Generate with AI
+              </>
+            )}
+          </Button>
+        </div>
+        <Input
+          id="subject"
+          placeholder="Enter or generate a subject line"
+          value={subject}
+          onChange={(e) => setSubject(e.target.value)}
+        />
+        <p className="text-xs text-muted-foreground">AI will generate based on your content above, or enter your own</p>
+      </div>
+
+      <Button
         type="submit" 
         className="w-full" 
         size="lg"
