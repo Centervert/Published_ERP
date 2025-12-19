@@ -2,10 +2,12 @@ import { useState, useCallback } from 'react';
 import { useImprints } from '@/hooks/useImprints';
 import { useUsers } from '@/hooks/useUsers';
 import { useImportJobs } from '@/hooks/useImportJobs';
+import { useClientImport } from '@/hooks/useClientImport';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { Progress } from '@/components/ui/progress';
 import {
   Dialog,
   DialogContent,
@@ -21,10 +23,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Upload, FileText, Loader2 } from 'lucide-react';
+import { Upload, FileText, Loader2, Monitor, Cloud } from 'lucide-react';
 import { toast } from 'sonner';
 
 const NONE_VALUE = '__none__';
+const LARGE_FILE_THRESHOLD = 5000; // Switch to client-side for files > 5000 rows
 
 interface ImportCSVDialogProps {
   open: boolean;
@@ -61,10 +64,15 @@ export function ImportCSVDialog({ open, onOpenChange }: ImportCSVDialogProps) {
     asc_email: '',
   });
   const [submitting, setSubmitting] = useState(false);
+  const [importMode, setImportMode] = useState<'auto' | 'client' | 'server'>('auto');
   
   const { imprints } = useImprints();
   const { users, isLoading: usersLoading } = useUsers();
   const { createJob, startProcessing } = useImportJobs();
+  const { processImport, isProcessing, progress, reset: resetClientImport } = useClientImport();
+
+  const isLargeFile = parsedData && parsedData.rows.length > LARGE_FILE_THRESHOLD;
+  const useClientMode = importMode === 'client' || (importMode === 'auto' && isLargeFile);
 
   const parseCSV = (text: string): { headers: string[]; rows: string[][] } => {
     const lines = text.trim().split('\n');
@@ -121,32 +129,46 @@ export function ImportCSVDialog({ open, onOpenChange }: ImportCSVDialogProps) {
     setSubmitting(true);
     
     try {
-      // Upload CSV to storage first
-      const filePath = `${user.id}/${Date.now()}-${file.name}`;
-      const { error: uploadError } = await supabase.storage
-        .from('import-files')
-        .upload(filePath, file);
+      if (useClientMode) {
+        // Client-side processing for large files
+        const result = await processImport(
+          parsedData.rows,
+          parsedData.headers,
+          columnMapping,
+          file.name
+        );
 
-      if (uploadError) {
-        throw new Error(`Failed to upload file: ${uploadError.message}`);
+        toast.success('Import completed', {
+          description: `${result?.successful || 0} contacts imported, ${result?.failed || 0} failed`,
+        });
+
+        handleClose();
+      } else {
+        // Server-side processing for smaller files
+        const filePath = `${user.id}/${Date.now()}-${file.name}`;
+        const { error: uploadError } = await supabase.storage
+          .from('import-files')
+          .upload(filePath, file);
+
+        if (uploadError) {
+          throw new Error(`Failed to upload file: ${uploadError.message}`);
+        }
+
+        const job = await createJob.mutateAsync({
+          fileName: file.name,
+          filePath: filePath,
+          columnMapping: { ...columnMapping },
+          totalRows: parsedData.rows.length,
+        });
+
+        startProcessing.mutate(job.id);
+
+        toast.success('Import started', {
+          description: 'Check the Imports tab to track progress',
+        });
+
+        handleClose();
       }
-
-      // Create the import job with file path
-      const job = await createJob.mutateAsync({
-        fileName: file.name,
-        filePath: filePath,
-        columnMapping: { ...columnMapping },
-        totalRows: parsedData.rows.length,
-      });
-
-      // Trigger background processing (don't await - it runs in background)
-      startProcessing.mutate(job.id);
-
-      toast.success('Import started', {
-        description: 'Check the Imports tab to track progress',
-      });
-
-      handleClose();
     } catch (error: any) {
       console.error('Import error:', error);
       toast.error('Failed to start import', {
@@ -158,9 +180,12 @@ export function ImportCSVDialog({ open, onOpenChange }: ImportCSVDialogProps) {
   };
 
   const handleClose = () => {
+    if (isProcessing) return; // Don't close while processing
     setFile(null);
     setParsedData(null);
     setColumnMapping({ email: '', first_name: '', last_name: '', phone: '', imprint: '', asc_name: '', asc_email: '' });
+    setImportMode('auto');
+    resetClientImport();
     onOpenChange(false);
   };
 
@@ -170,12 +195,27 @@ export function ImportCSVDialog({ open, onOpenChange }: ImportCSVDialogProps) {
         <DialogHeader>
           <DialogTitle>Import Contacts from CSV</DialogTitle>
           <DialogDescription>
-            Upload a CSV file and map columns. Import runs in the background.
+            Upload a CSV file and map columns.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
-          {!parsedData ? (
+          {/* Progress display during client-side processing */}
+          {isProcessing && progress && (
+            <div className="space-y-3 p-4 bg-muted rounded-lg">
+              <div className="flex items-center justify-between text-sm">
+                <span>Processing...</span>
+                <span>{progress.processed} / {progress.total}</span>
+              </div>
+              <Progress value={(progress.processed / progress.total) * 100} />
+              <div className="flex gap-4 text-xs text-muted-foreground">
+                <span className="text-green-600">{progress.successful} successful</span>
+                <span className="text-red-600">{progress.failed} failed</span>
+              </div>
+            </div>
+          )}
+
+          {!parsedData && !isProcessing ? (
             <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer hover:bg-muted/50 transition-colors">
               <div className="flex flex-col items-center justify-center pt-5 pb-6">
                 <Upload className="h-8 w-8 text-muted-foreground mb-2" />
@@ -191,14 +231,15 @@ export function ImportCSVDialog({ open, onOpenChange }: ImportCSVDialogProps) {
                 onChange={handleFileChange}
               />
             </label>
-          ) : (
+          ) : parsedData && !isProcessing ? (
             <>
               <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
                 <FileText className="h-5 w-5 text-muted-foreground" />
                 <div className="flex-1">
                   <p className="text-sm font-medium">{file?.name}</p>
                   <p className="text-xs text-muted-foreground">
-                    {parsedData.rows.length} rows found
+                    {parsedData.rows.length.toLocaleString()} rows found
+                    {isLargeFile && <span className="text-amber-600 ml-1">(large file)</span>}
                   </p>
                 </div>
                 <Button variant="ghost" size="sm" onClick={() => {
@@ -208,6 +249,40 @@ export function ImportCSVDialog({ open, onOpenChange }: ImportCSVDialogProps) {
                   Change
                 </Button>
               </div>
+
+              {/* Import mode selector for large files */}
+              {isLargeFile && (
+                <div className="space-y-2">
+                  <Label>Processing Mode</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button
+                      type="button"
+                      variant={useClientMode ? 'default' : 'outline'}
+                      size="sm"
+                      className="justify-start"
+                      onClick={() => setImportMode('client')}
+                    >
+                      <Monitor className="h-4 w-4 mr-2" />
+                      Browser (recommended)
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={!useClientMode ? 'default' : 'outline'}
+                      size="sm"
+                      className="justify-start"
+                      onClick={() => setImportMode('server')}
+                    >
+                      <Cloud className="h-4 w-4 mr-2" />
+                      Server
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {useClientMode 
+                      ? 'Processes in your browser. Keep this tab open until complete.'
+                      : 'Processes on server. May fail for very large files.'}
+                  </p>
+                </div>
+              )}
 
               <div className="space-y-3">
                 <div className="space-y-2">
@@ -359,21 +434,23 @@ export function ImportCSVDialog({ open, onOpenChange }: ImportCSVDialogProps) {
                 </p>
               </div>
             </>
-          )}
+          ) : null}
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={handleClose}>
-            Cancel
+          <Button variant="outline" onClick={handleClose} disabled={isProcessing}>
+            {isProcessing ? 'Processing...' : 'Cancel'}
           </Button>
           <Button
             onClick={handleStartImport}
-            disabled={!parsedData || !columnMapping.email || submitting || ((columnMapping.asc_name || columnMapping.asc_email) && usersLoading)}
+            disabled={!parsedData || !columnMapping.email || submitting || isProcessing || ((columnMapping.asc_name || columnMapping.asc_email) && usersLoading)}
           >
-            {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {(submitting || isProcessing) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {(columnMapping.asc_name || columnMapping.asc_email) && usersLoading 
               ? 'Loading team...' 
-              : `Start Import (${parsedData?.rows.length || 0} rows)`}
+              : isProcessing 
+                ? `Processing ${progress?.processed || 0}/${progress?.total || 0}`
+                : `Start Import (${parsedData?.rows.length.toLocaleString() || 0} rows)`}
           </Button>
         </DialogFooter>
       </DialogContent>
