@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useCampaigns, Campaign } from '@/hooks/useCampaigns';
 import { useLists } from '@/hooks/useContacts';
 import { useImprints } from '@/hooks/useImprints';
+import { useRecipientCounts } from '@/hooks/useRecipientCounts';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -47,6 +48,7 @@ export default function Campaigns() {
   const { campaigns, isLoading, createCampaign, deleteCampaign, sendCampaign } = useCampaigns();
   const { lists } = useLists();
   const { imprints } = useImprints();
+  const { imprintCounts, listCounts, totalCount } = useRecipientCounts();
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
   const [viewingCampaign, setViewingCampaign] = useState<Campaign | null>(null);
@@ -363,6 +365,7 @@ export default function Campaigns() {
                     className="text-sm font-medium leading-none"
                   >
                     All Contacts
+                    <span className="ml-2 text-muted-foreground">({totalCount.toLocaleString()})</span>
                   </label>
                 </div>
 
@@ -388,6 +391,7 @@ export default function Campaigns() {
                           className="text-sm font-medium leading-none"
                         >
                           {imprint.name}
+                          <span className="ml-2 text-muted-foreground">({(imprintCounts[imprint.id] || 0).toLocaleString()})</span>
                         </label>
                       </div>
                     ))}
@@ -416,6 +420,7 @@ export default function Campaigns() {
                           className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                         >
                           {list.name}
+                          <span className="ml-2 text-muted-foreground">({(listCounts[list.id] || 0).toLocaleString()})</span>
                         </label>
                       </div>
                     ))}
