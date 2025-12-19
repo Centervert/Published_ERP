@@ -10,6 +10,7 @@ interface SendCampaignRequest {
   campaignId: string;
   listIds: string[];
   imprintIds?: string[];
+  additionalRecipients?: string[];
 }
 
 interface EmailBlock {
@@ -145,9 +146,9 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { campaignId, listIds, imprintIds }: SendCampaignRequest = await req.json();
+    const { campaignId, listIds, imprintIds, additionalRecipients }: SendCampaignRequest = await req.json();
     
-    console.log(`[send-campaign] Queueing campaign ${campaignId} to lists: ${listIds.join(", ")}, imprints: ${imprintIds?.join(", ") || "all"}`);
+    console.log(`[send-campaign] Queueing campaign ${campaignId} to lists: ${listIds.join(", ")}, imprints: ${imprintIds?.join(", ") || "all"}, additional: ${additionalRecipients?.length || 0}`);
 
     // Get campaign details
     const { data: campaign, error: campaignError } = await supabase
@@ -270,6 +271,54 @@ serve(async (req) => {
         contact_last_name: contact.last_name,
       };
     });
+
+    // Add additional recipients (test emails) to the queue
+    if (additionalRecipients && additionalRecipients.length > 0) {
+      for (const email of additionalRecipients) {
+        if (!email || !email.includes('@')) continue;
+        
+        let personalizedHtml = baseHtml
+          .replace(/\{\{FIRST_NAME\}\}/g, "Test")
+          .replace(/\{\{LAST_NAME\}\}/g, "User")
+          .replace(/\{\{EMAIL\}\}/g, email);
+
+        // Add tracking pixel for test recipients too
+        const trackingPixelUrl = `${supabaseUrl}/functions/v1/track-pixel?c=${campaignId}&t=test&e=${encodeURIComponent(email)}`;
+        personalizedHtml = personalizedHtml.replace(
+          "</body>",
+          `<img src="${trackingPixelUrl}" width="1" height="1" style="display:none;" alt="" /></body>`
+        );
+
+        // Wrap links for click tracking
+        const linkRegex = /<a\s+([^>]*href=["'])([^"']+)(["'][^>]*)>/gi;
+        personalizedHtml = personalizedHtml.replace(linkRegex, (match: string, pre: string, url: string, post: string) => {
+          if (url.includes("unsubscribe")) return match;
+          const trackedUrl = `${supabaseUrl}/functions/v1/track-click?c=${campaignId}&t=test&e=${encodeURIComponent(email)}&u=${encodeURIComponent(url)}`;
+          return `<a ${pre}${trackedUrl}${post}>`;
+        });
+
+        // Add unsubscribe link
+        const unsubscribeUrl = `${supabaseUrl}/functions/v1/unsubscribe?c=${campaignId}&t=test&e=${encodeURIComponent(email)}`;
+        personalizedHtml = personalizedHtml
+          .replace(/\{\{UNSUBSCRIBE_URL\}\}/gi, unsubscribeUrl)
+          .replace(/\{\{unsubscribe_url\}\}/g, unsubscribeUrl);
+
+        queueEntries.push({
+          campaign_id: campaignId,
+          contact_id: null,
+          email: email,
+          status: "pending",
+          subject: campaign.subject,
+          from_name: campaign.from_name,
+          from_email: campaign.from_email,
+          reply_to_email: campaign.reply_to_email || null,
+          html_content: personalizedHtml,
+          contact_first_name: "Test",
+          contact_last_name: "User",
+        });
+      }
+      console.log(`[send-campaign] Added ${additionalRecipients.length} additional recipients`);
+    }
 
     // Insert all emails into the queue
     const { error: insertError } = await supabase.from("email_queue").insert(queueEntries);
