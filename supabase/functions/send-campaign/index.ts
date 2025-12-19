@@ -9,6 +9,7 @@ const corsHeaders = {
 interface SendCampaignRequest {
   campaignId: string;
   listIds: string[];
+  imprintIds?: string[];
 }
 
 interface EmailBlock {
@@ -144,9 +145,9 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { campaignId, listIds }: SendCampaignRequest = await req.json();
+    const { campaignId, listIds, imprintIds }: SendCampaignRequest = await req.json();
     
-    console.log(`[send-campaign] Queueing campaign ${campaignId} to lists: ${listIds.join(", ")}`);
+    console.log(`[send-campaign] Queueing campaign ${campaignId} to lists: ${listIds.join(", ")}, imprints: ${imprintIds?.join(", ") || "all"}`);
 
     // Get campaign details
     const { data: campaign, error: campaignError } = await supabase
@@ -172,9 +173,10 @@ serve(async (req) => {
     // Get contacts from selected lists (active only, not unsubscribed/bounced)
     let contactsQuery = supabase
       .from("contacts")
-      .select("id, email, first_name, last_name")
+      .select("id, email, first_name, last_name, imprint_id")
       .eq("status", "active");
 
+    // Filter by lists if specified
     if (listIds.length > 0) {
       const { data: contactListEntries } = await supabase
         .from("contact_lists")
@@ -185,6 +187,11 @@ serve(async (req) => {
         const contactIds = contactListEntries.map(e => e.contact_id);
         contactsQuery = contactsQuery.in("id", contactIds);
       }
+    }
+
+    // Filter by imprints if specified
+    if (imprintIds && imprintIds.length > 0) {
+      contactsQuery = contactsQuery.in("imprint_id", imprintIds);
     }
 
     const { data: contacts, error: contactsError } = await contactsQuery;

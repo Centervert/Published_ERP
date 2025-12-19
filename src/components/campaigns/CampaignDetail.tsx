@@ -77,6 +77,7 @@ export function CampaignDetail({ campaign, onBack }: CampaignDetailProps) {
   
   // Form states
   const [selectedListIds, setSelectedListIds] = useState<string[]>([]);
+  const [selectedImprintIds, setSelectedImprintIds] = useState<string[]>([]);
   const [selectedImprintId, setSelectedImprintId] = useState<string>('');
   const [fromName, setFromName] = useState(campaign.from_name);
   const [fromEmail, setFromEmail] = useState(campaign.from_email);
@@ -120,6 +121,7 @@ export function CampaignDetail({ campaign, onBack }: CampaignDetailProps) {
     await sendCampaign.mutateAsync({
       campaignId: campaign.id,
       listIds: selectedListIds,
+      imprintIds: selectedImprintIds.length > 0 ? selectedImprintIds : undefined,
     });
     setSendDialogOpen(false);
     onBack();
@@ -529,37 +531,73 @@ export function CampaignDetail({ campaign, onBack }: CampaignDetailProps) {
                 </CollapsibleTrigger>
                 <CollapsibleContent>
                   <div className="px-5 pb-5 pt-0 border-t">
-                    <div className="space-y-3 py-4">
+                    <div className="space-y-4 py-4">
+                      {/* All Contacts */}
                       <div className="flex items-center space-x-2">
                         <Checkbox
                           id="all-contacts"
-                          checked={selectedListIds.length === 0}
+                          checked={selectedListIds.length === 0 && selectedImprintIds.length === 0}
                           onCheckedChange={(checked) => {
-                            if (checked) setSelectedListIds([]);
+                            if (checked) {
+                              setSelectedListIds([]);
+                              setSelectedImprintIds([]);
+                            }
                           }}
                         />
                         <label htmlFor="all-contacts" className="text-sm font-medium">
                           All Contacts
                         </label>
                       </div>
-                      {lists.map((list) => (
-                        <div key={list.id} className="flex items-center space-x-2">
-                          <Checkbox
-                            id={`list-${list.id}`}
-                            checked={selectedListIds.includes(list.id)}
-                            onCheckedChange={(checked) => {
-                              if (checked) {
-                                setSelectedListIds([...selectedListIds, list.id]);
-                              } else {
-                                setSelectedListIds(selectedListIds.filter(id => id !== list.id));
-                              }
-                            }}
-                          />
-                          <label htmlFor={`list-${list.id}`} className="text-sm">
-                            {list.name}
-                          </label>
+
+                      {/* By Imprint */}
+                      {imprints.length > 0 && (
+                        <div className="space-y-2">
+                          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">By Imprint</p>
+                          {imprints.map((imprint) => (
+                            <div key={imprint.id} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`imprint-${imprint.id}`}
+                                checked={selectedImprintIds.includes(imprint.id)}
+                                onCheckedChange={(checked) => {
+                                  if (checked) {
+                                    setSelectedImprintIds([...selectedImprintIds, imprint.id]);
+                                  } else {
+                                    setSelectedImprintIds(selectedImprintIds.filter(id => id !== imprint.id));
+                                  }
+                                }}
+                              />
+                              <label htmlFor={`imprint-${imprint.id}`} className="text-sm">
+                                {imprint.name}
+                              </label>
+                            </div>
+                          ))}
                         </div>
-                      ))}
+                      )}
+
+                      {/* By List */}
+                      {lists.length > 0 && (
+                        <div className="space-y-2">
+                          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">By List</p>
+                          {lists.map((list) => (
+                            <div key={list.id} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`list-${list.id}`}
+                                checked={selectedListIds.includes(list.id)}
+                                onCheckedChange={(checked) => {
+                                  if (checked) {
+                                    setSelectedListIds([...selectedListIds, list.id]);
+                                  } else {
+                                    setSelectedListIds(selectedListIds.filter(id => id !== list.id));
+                                  }
+                                }}
+                              />
+                              <label htmlFor={`list-${list.id}`} className="text-sm">
+                                {list.name}
+                              </label>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                     <Button size="sm" onClick={() => setToOpen(false)}>Done</Button>
                   </div>
@@ -745,42 +783,77 @@ export function CampaignDetail({ campaign, onBack }: CampaignDetailProps) {
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label>Confirm Recipients</Label>
-              <div className="space-y-2 max-h-[200px] overflow-y-auto">
+              <div className="space-y-3 max-h-[250px] overflow-y-auto">
                 <div className="flex items-center space-x-2 pb-2 border-b">
                   <Checkbox
                     id="send-all-contacts"
-                    checked={selectedListIds.length === 0}
+                    checked={selectedListIds.length === 0 && selectedImprintIds.length === 0}
                     onCheckedChange={(checked) => {
-                      if (checked) setSelectedListIds([]);
+                      if (checked) {
+                        setSelectedListIds([]);
+                        setSelectedImprintIds([]);
+                      }
                     }}
                   />
                   <label htmlFor="send-all-contacts" className="text-sm font-medium">
                     All Contacts
                   </label>
                 </div>
-                {lists.map((list) => (
-                  <div key={list.id} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`send-list-${list.id}`}
-                      checked={selectedListIds.includes(list.id)}
-                      onCheckedChange={(checked) => {
-                        if (checked) {
-                          setSelectedListIds([...selectedListIds, list.id]);
-                        } else {
-                          setSelectedListIds(selectedListIds.filter(id => id !== list.id));
-                        }
-                      }}
-                    />
-                    <label htmlFor={`send-list-${list.id}`} className="text-sm font-medium">
-                      {list.name}
-                    </label>
+
+                {/* By Imprint */}
+                {imprints.length > 0 && (
+                  <div className="space-y-2 pt-2">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">By Imprint</p>
+                    {imprints.map((imprint) => (
+                      <div key={imprint.id} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`send-imprint-${imprint.id}`}
+                          checked={selectedImprintIds.includes(imprint.id)}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setSelectedImprintIds([...selectedImprintIds, imprint.id]);
+                            } else {
+                              setSelectedImprintIds(selectedImprintIds.filter(id => id !== imprint.id));
+                            }
+                          }}
+                        />
+                        <label htmlFor={`send-imprint-${imprint.id}`} className="text-sm font-medium">
+                          {imprint.name}
+                        </label>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                )}
+
+                {/* By List */}
+                {lists.length > 0 && (
+                  <div className="space-y-2 pt-2">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">By List</p>
+                    {lists.map((list) => (
+                      <div key={list.id} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`send-list-${list.id}`}
+                          checked={selectedListIds.includes(list.id)}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setSelectedListIds([...selectedListIds, list.id]);
+                            } else {
+                              setSelectedListIds(selectedListIds.filter(id => id !== list.id));
+                            }
+                          }}
+                        />
+                        <label htmlFor={`send-list-${list.id}`} className="text-sm font-medium">
+                          {list.name}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-              <p className="text-xs text-muted-foreground">
-                {selectedListIds.length === 0
+              <p className="text-xs text-muted-foreground mt-2">
+                {selectedListIds.length === 0 && selectedImprintIds.length === 0
                   ? 'Sending to all active contacts'
-                  : `Sending to ${selectedListIds.length} list(s)`}
+                  : `Sending to ${selectedImprintIds.length > 0 ? `${selectedImprintIds.length} imprint(s)` : ''}${selectedImprintIds.length > 0 && selectedListIds.length > 0 ? ' and ' : ''}${selectedListIds.length > 0 ? `${selectedListIds.length} list(s)` : ''}`}
               </p>
             </div>
           </div>
