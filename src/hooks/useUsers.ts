@@ -31,6 +31,7 @@ export interface UserWithRole {
   avatar_url: string | null;
   created_at: string | null;
   role: AppRole;
+  active: boolean;
 }
 
 export function useUsers() {
@@ -70,6 +71,7 @@ export function useUsers() {
         avatar_url: profile.avatar_url,
         created_at: profile.created_at,
         role: roleMap.get(profile.id) || 'member',
+        active: profile.active ?? true,
       }));
     },
   });
