@@ -118,6 +118,8 @@ export function ImportCSVDialog({ open, onOpenChange }: ImportCSVDialogProps) {
   const [progress, setProgress] = useState(0);
   const [errors, setErrors] = useState<string[]>([]);
   const [warnings, setWarnings] = useState<string[]>([]);
+  const [importComplete, setImportComplete] = useState(false);
+  const [importedCount, setImportedCount] = useState(0);
   
   const { bulkCreateContacts } = useContacts();
   const { imprints } = useImprints();
@@ -189,6 +191,8 @@ export function ImportCSVDialog({ open, onOpenChange }: ImportCSVDialogProps) {
     setProgress(0);
     setErrors([]);
     setWarnings([]);
+    setImportComplete(false);
+    setImportedCount(0);
 
     const emailIndex = parsedData.headers.indexOf(columnMapping.email);
     const firstNameIndex = columnMapping.first_name ? parsedData.headers.indexOf(columnMapping.first_name) : -1;
@@ -298,7 +302,10 @@ export function ImportCSVDialog({ open, onOpenChange }: ImportCSVDialogProps) {
     setErrors(importErrors.slice(0, 10)); // Show first 10 errors
     setWarnings(importWarnings);
     setImporting(false);
+    setImportComplete(true);
+    setImportedCount(validContacts.length);
     
+    // Auto-close only if no issues at all
     if (importErrors.length === 0 && importWarnings.length === 0) {
       handleClose();
     }
@@ -311,6 +318,8 @@ export function ImportCSVDialog({ open, onOpenChange }: ImportCSVDialogProps) {
     setProgress(0);
     setErrors([]);
     setWarnings([]);
+    setImportComplete(false);
+    setImportedCount(0);
     onOpenChange(false);
   };
 
@@ -517,6 +526,14 @@ export function ImportCSVDialog({ open, onOpenChange }: ImportCSVDialogProps) {
                 </div>
               )}
 
+              {importComplete && importedCount > 0 && (
+                <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
+                  <p className="text-sm font-medium text-green-600">
+                    ✓ Successfully imported {importedCount} contact{importedCount !== 1 ? 's' : ''}
+                  </p>
+                </div>
+              )}
+
               {warnings.length > 0 && (
                 <div className="p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg space-y-1">
                   <div className="flex items-center gap-2 text-yellow-600">
@@ -536,7 +553,7 @@ export function ImportCSVDialog({ open, onOpenChange }: ImportCSVDialogProps) {
                 <div className="p-3 bg-destructive/10 rounded-lg space-y-1">
                   <div className="flex items-center gap-2 text-destructive">
                     <AlertCircle className="h-4 w-4" />
-                    <span className="text-sm font-medium">Some rows had errors:</span>
+                    <span className="text-sm font-medium">{errors.length} row{errors.length !== 1 ? 's' : ''} skipped due to errors:</span>
                   </div>
                   {errors.map((error, i) => (
                     <p key={i} className="text-xs text-destructive">{error}</p>
@@ -548,16 +565,24 @@ export function ImportCSVDialog({ open, onOpenChange }: ImportCSVDialogProps) {
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={handleClose}>
-            Cancel
-          </Button>
-          <Button
-            onClick={handleImport}
-            disabled={!parsedData || !columnMapping.email || importing}
-          >
-            {importing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Import {parsedData?.rows.length || 0} Contacts
-          </Button>
+          {importComplete ? (
+            <Button onClick={handleClose}>
+              Done
+            </Button>
+          ) : (
+            <>
+              <Button variant="outline" onClick={handleClose}>
+                Cancel
+              </Button>
+              <Button
+                onClick={handleImport}
+                disabled={!parsedData || !columnMapping.email || importing}
+              >
+                {importing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Import {parsedData?.rows.length || 0} Contacts
+              </Button>
+            </>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
