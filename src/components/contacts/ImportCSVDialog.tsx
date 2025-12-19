@@ -45,26 +45,41 @@ interface ColumnMapping {
   asc_email: string;
 }
 
-// Normalize phone numbers that might be in scientific notation (e.g., 1.26378E+12)
+// Normalize email to lowercase
+function normalizeEmail(value: string | undefined): string | null {
+  if (!value) return null;
+  const trimmed = value.trim().toLowerCase();
+  return trimmed || null;
+}
+
+// Normalize phone numbers - handle scientific notation and clean format
 function normalizePhone(value: string | undefined): string | null {
   if (!value) return null;
-  const trimmed = value.trim();
+  let trimmed = value.trim();
   if (!trimmed) return null;
   
-  // Check if it's in scientific notation
+  // Check if it's in scientific notation (e.g., 1.26378E+12)
   if (/[eE]/.test(trimmed)) {
     try {
       const num = parseFloat(trimmed);
       if (!isNaN(num)) {
-        return String(Math.round(num));
+        trimmed = String(Math.round(num));
       }
     } catch {
-      // Fall through to return original
+      // Fall through to continue processing
     }
   }
   
-  // Remove any non-digit characters except + at the start
-  return trimmed;
+  // Check if it starts with + and preserve it
+  const hasPlus = trimmed.startsWith('+');
+  
+  // Remove all non-digit characters
+  const digitsOnly = trimmed.replace(/\D/g, '');
+  
+  if (!digitsOnly) return null;
+  
+  // Return with + prefix if original had it
+  return hasPlus ? `+${digitsOnly}` : digitsOnly;
 }
 
 // Normalize names to Title Case (e.g., "JOHN DOE" → "John Doe", "jane smith" → "Jane Smith")
@@ -74,10 +89,15 @@ function normalizeName(value: string | undefined): string | null {
   if (!trimmed) return null;
   
   // Convert to title case: capitalize first letter of each word, lowercase the rest
+  // Also handle hyphenated names like "Mary-Jane" → "Mary-Jane"
   return trimmed
     .toLowerCase()
     .split(/\s+/)
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .map(word => 
+      word.split('-')
+        .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+        .join('-')
+    )
     .join(' ');
 }
 
@@ -235,8 +255,14 @@ export function ImportCSVDialog({ open, onOpenChange }: ImportCSVDialogProps) {
           }
         }
 
+        const normalizedEmail = normalizeEmail(email);
+        if (!normalizedEmail) {
+          importErrors.push(`Row ${index + 2}: Empty email after normalization`);
+          return;
+        }
+
         validContacts.push({
-          email,
+          email: normalizedEmail,
           first_name: firstNameIndex >= 0 ? normalizeName(row[firstNameIndex]) || undefined : undefined,
           last_name: lastNameIndex >= 0 ? normalizeName(row[lastNameIndex]) || undefined : undefined,
           phone: phoneIndex >= 0 ? normalizePhone(row[phoneIndex]) || undefined : undefined,
