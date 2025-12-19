@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useContacts } from '@/hooks/useContacts';
 import { useImprints } from '@/hooks/useImprints';
 import { useUsers } from '@/hooks/useUsers';
@@ -126,25 +126,31 @@ export function ImportCSVDialog({ open, onOpenChange }: ImportCSVDialogProps) {
   
   const { bulkCreateContacts } = useContacts();
   const { imprints } = useImprints();
-  const { users } = useUsers();
+  const { users, isLoading: usersLoading } = useUsers();
 
-  // Create lookup maps
-  const imprintLookup = new Map<string, string>();
-  imprints.forEach(imp => {
-    imprintLookup.set(imp.name.toLowerCase().trim(), imp.id);
-  });
+  // Create lookup maps - use useMemo to ensure they're updated when data loads
+  const imprintLookup = useMemo(() => {
+    const lookup = new Map<string, string>();
+    imprints.forEach(imp => {
+      lookup.set(imp.name.toLowerCase().trim(), imp.id);
+    });
+    return lookup;
+  }, [imprints]);
 
   // User lookup for ASC assignment - match any user by name or email
-  const userNameLookup = new Map<string, string>();
-  const userEmailLookup = new Map<string, string>();
-  users.forEach(u => {
-    if (u.full_name) {
-      userNameLookup.set(u.full_name.toLowerCase().trim(), u.id);
-    }
-    if (u.email) {
-      userEmailLookup.set(u.email.toLowerCase().trim(), u.id);
-    }
-  });
+  const { userNameLookup, userEmailLookup } = useMemo(() => {
+    const nameLookup = new Map<string, string>();
+    const emailLookup = new Map<string, string>();
+    users.forEach(u => {
+      if (u.full_name) {
+        nameLookup.set(u.full_name.toLowerCase().trim(), u.id);
+      }
+      if (u.email) {
+        emailLookup.set(u.email.toLowerCase().trim(), u.id);
+      }
+    });
+    return { userNameLookup: nameLookup, userEmailLookup: emailLookup };
+  }, [users]);
 
   const parseCSV = (text: string): ParsedData => {
     const lines = text.trim().split('\n');
@@ -173,14 +179,34 @@ export function ImportCSVDialog({ open, onOpenChange }: ImportCSVDialogProps) {
 
       // Auto-detect column mapping
       const lowerHeaders = parsed.headers.map(h => h.toLowerCase());
+      
+      // Helper to find ASC-related columns (owner name/email patterns)
+      const findAscNameIndex = lowerHeaders.findIndex(h => 
+        h.includes('owner_name') || h.includes('asc_name') || 
+        (h.includes('owner') && h.includes('name')) ||
+        h === 'owner name' || h === 'asc name'
+      );
+      const findAscEmailIndex = lowerHeaders.findIndex(h => 
+        h.includes('owner_email') || h.includes('asc_email') || 
+        (h.includes('owner') && h.includes('email')) ||
+        h === 'owner email' || h === 'asc email'
+      );
+      
+      console.log('CSV Column Detection:', {
+        headers: parsed.headers,
+        lowerHeaders,
+        ascNameIndex: findAscNameIndex,
+        ascEmailIndex: findAscEmailIndex,
+      });
+
       setColumnMapping({
         email: parsed.headers[lowerHeaders.findIndex(h => h.includes('email') && !h.includes('owner'))] || '',
         first_name: parsed.headers[lowerHeaders.findIndex(h => h.includes('first') || h === 'name')] || '',
         last_name: parsed.headers[lowerHeaders.findIndex(h => h.includes('last'))] || '',
         phone: parsed.headers[lowerHeaders.findIndex(h => h.includes('phone'))] || '',
         imprint: parsed.headers[lowerHeaders.findIndex(h => h.includes('publisher') || h.includes('imprint'))] || '',
-        asc_name: parsed.headers[lowerHeaders.findIndex(h => h.includes('owner_name') || h.includes('asc_name'))] || '',
-        asc_email: parsed.headers[lowerHeaders.findIndex(h => h.includes('owner_email') || h.includes('asc_email'))] || '',
+        asc_name: findAscNameIndex >= 0 ? parsed.headers[findAscNameIndex] : '',
+        asc_email: findAscEmailIndex >= 0 ? parsed.headers[findAscEmailIndex] : '',
       });
     };
     reader.readAsText(selectedFile);
@@ -205,6 +231,18 @@ export function ImportCSVDialog({ open, onOpenChange }: ImportCSVDialogProps) {
     const imprintIndex = columnMapping.imprint ? parsedData.headers.indexOf(columnMapping.imprint) : -1;
     const ascNameIndex = columnMapping.asc_name ? parsedData.headers.indexOf(columnMapping.asc_name) : -1;
     const ascEmailIndex = columnMapping.asc_email ? parsedData.headers.indexOf(columnMapping.asc_email) : -1;
+
+    // Debug: Log ASC column mapping and lookup status
+    console.log('ASC Import Debug:', {
+      ascNameColumn: columnMapping.asc_name,
+      ascEmailColumn: columnMapping.asc_email,
+      ascNameIndex,
+      ascEmailIndex,
+      usersCount: users.length,
+      userNameLookupSize: userNameLookup.size,
+      userEmailLookupSize: userEmailLookup.size,
+      sampleUsers: users.slice(0, 3).map(u => ({ name: u.full_name, email: u.email, id: u.id })),
+    });
 
     const importWarnings: string[] = [];
     const unmatchedImprints = new Set<string>();
@@ -315,12 +353,20 @@ export function ImportCSVDialog({ open, onOpenChange }: ImportCSVDialogProps) {
           if (ascName) {
             ascId = userNameLookup.get(ascName.toLowerCase().trim()) 
                  || placeholderLookup.get(ascName.toLowerCase().trim());
+            // Debug first few rows
+            if (index < 3) {
+              console.log(`Row ${index}: ASC name lookup for "${ascName}" -> ${ascId || 'NOT FOUND'}`);
+            }
           }
         }
         if (!ascId && ascEmailIndex >= 0) {
           const ascEmail = row[ascEmailIndex]?.trim()?.toLowerCase();
           if (ascEmail) {
             ascId = userEmailLookup.get(ascEmail) || placeholderLookup.get(ascEmail);
+            // Debug first few rows
+            if (index < 3) {
+              console.log(`Row ${index}: ASC email lookup for "${ascEmail}" -> ${ascId || 'NOT FOUND'}`);
+            }
           }
         }
 
@@ -709,10 +755,10 @@ export function ImportCSVDialog({ open, onOpenChange }: ImportCSVDialogProps) {
               </Button>
               <Button
                 onClick={() => handleImport()}
-                disabled={!parsedData || !columnMapping.email || importing}
+                disabled={!parsedData || !columnMapping.email || importing || ((columnMapping.asc_name || columnMapping.asc_email) && usersLoading)}
               >
                 {importing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Import {parsedData?.rows.length || 0} Contacts
+                {(columnMapping.asc_name || columnMapping.asc_email) && usersLoading ? 'Loading team...' : `Import ${parsedData?.rows.length || 0} Contacts`}
               </Button>
             </>
           )}
