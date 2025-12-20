@@ -296,8 +296,8 @@ export function EmailChat({
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Ask for changes or 'generate a hero image'..."
-            className="min-h-[44px] max-h-[120px] resize-none"
-            rows={1}
+            className="min-h-[80px] max-h-[160px] resize-none"
+            rows={3}
             disabled={isLoading || isStreaming || isGeneratingImage || isUploadingImage}
           />
           <Button 
