@@ -161,6 +161,7 @@ export function ContactActivityFeed({
   contactEmail = '',
   contactName = '',
   contactImprintId,
+  assignedAscId,
   selectedTab = 'contact',
   onTabChange,
 }: ContactActivityFeedProps) {
@@ -207,6 +208,7 @@ export function ContactActivityFeed({
             contactEmail={contactEmail}
             contactName={contactName}
             contactImprintId={contactImprintId}
+            assignedAscId={assignedAscId}
           />
         </TabsContent>
 

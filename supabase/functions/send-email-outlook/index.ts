@@ -11,6 +11,7 @@ interface SendEmailRequest {
   subject: string;
   body: string;
   contact_id: string;
+  reply_to?: string;
 }
 
 // Refresh the access token using the refresh token
@@ -82,13 +83,13 @@ serve(async (req) => {
     }
 
     // Parse request body
-    const { to, subject, body, contact_id }: SendEmailRequest = await req.json();
+    const { to, subject, body, contact_id, reply_to }: SendEmailRequest = await req.json();
 
     if (!to || !subject || !body || !contact_id) {
       throw new Error('Missing required fields: to, subject, body, contact_id');
     }
 
-    console.log(`Sending email to ${to} for contact ${contact_id}`);
+    console.log(`Sending email to ${to} for contact ${contact_id}${reply_to ? ` with reply-to: ${reply_to}` : ''}`);
 
     // Get user's email connection using service role
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
@@ -137,6 +138,33 @@ serve(async (req) => {
       console.log('Access token refreshed successfully');
     }
 
+    // Build the message object
+    const message: Record<string, unknown> = {
+      subject: subject,
+      body: {
+        contentType: 'HTML',
+        content: body,
+      },
+      toRecipients: [
+        {
+          emailAddress: {
+            address: to,
+          },
+        },
+      ],
+    };
+
+    // Add replyTo if specified
+    if (reply_to) {
+      message.replyTo = [
+        {
+          emailAddress: {
+            address: reply_to,
+          },
+        },
+      ];
+    }
+
     // Send email via Microsoft Graph API
     const graphResponse = await fetch('https://graph.microsoft.com/v1.0/me/sendMail', {
       method: 'POST',
@@ -145,20 +173,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        message: {
-          subject: subject,
-          body: {
-            contentType: 'HTML',
-            content: body,
-          },
-          toRecipients: [
-            {
-              emailAddress: {
-                address: to,
-              },
-            },
-          ],
-        },
+        message,
         saveToSentItems: true,
       }),
     });

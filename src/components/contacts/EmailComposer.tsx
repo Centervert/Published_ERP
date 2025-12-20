@@ -19,16 +19,20 @@ interface EmailComposerProps {
   contactEmail: string;
   contactName: string;
   contactImprintId?: string | null;
-  onSend: (data: { subject: string; body: string; from_email?: string }) => Promise<void>;
+  assignedAscId?: string | null;
+  onSend: (data: { subject: string; body: string; from_email?: string; reply_to?: string }) => Promise<void>;
   isSending?: boolean;
   expanded?: boolean;
   onToggleExpand?: () => void;
 }
 
+type ReplyToOption = 'sender' | 'asc';
+
 export function EmailComposer({ 
   contactEmail, 
   contactName,
   contactImprintId,
+  assignedAscId,
   onSend, 
   isSending,
   expanded,
@@ -38,6 +42,7 @@ export function EmailComposer({
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
   const [fromEmail, setFromEmail] = useState<string>('');
+  const [replyToOption, setReplyToOption] = useState<ReplyToOption>('sender');
   const [initialized, setInitialized] = useState(false);
 
   // Fetch user's connected email accounts
@@ -88,6 +93,23 @@ export function EmailComposer({
       return data;
     },
     enabled: !!contactImprintId,
+  });
+
+  // Fetch assigned ASC's profile for reply-to option
+  const { data: ascProfile } = useQuery({
+    queryKey: ['asc-profile', assignedAscId],
+    queryFn: async () => {
+      if (!assignedAscId) return null;
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, email, full_name')
+        .eq('id', assignedAscId)
+        .maybeSingle();
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!assignedAscId,
   });
 
   // Auto-select the first connected email or user's profile email
@@ -166,10 +188,19 @@ export function EmailComposer({
   const handleSend = async () => {
     if (!subject.trim() || !body.trim()) return;
 
+    // Determine the reply-to email
+    let replyTo: string | undefined;
+    if (replyToOption === 'asc' && ascProfile?.email) {
+      replyTo = ascProfile.email;
+    } else if (replyToOption === 'sender') {
+      replyTo = fromEmail || undefined;
+    }
+
     await onSend({
       subject: subject.trim(),
       body: body.trim(),
       from_email: fromEmail || undefined,
+      reply_to: replyTo,
     });
 
     // Reset form with new greeting and signature
@@ -249,6 +280,29 @@ export function EmailComposer({
             </div>
           </div>
         </div>
+
+        {/* Reply-To Row - only show if ASC is assigned */}
+        {ascProfile?.email && (
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground">Reply-To</Label>
+            <Select value={replyToOption} onValueChange={(v) => setReplyToOption(v as ReplyToOption)}>
+              <SelectTrigger className="h-8 text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="sender">
+                  Sender ({fromEmail || displayFromEmail})
+                </SelectItem>
+                <SelectItem value="asc">
+                  Assigned ASC ({ascProfile.full_name || ascProfile.email})
+                </SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              When the contact replies, the email will go to: {replyToOption === 'asc' ? ascProfile.email : (fromEmail || displayFromEmail)}
+            </p>
+          </div>
+        )}
 
         {/* Subject */}
         <div className="space-y-1">
