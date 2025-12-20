@@ -306,16 +306,21 @@ serve(async (req) => {
       }
 
       if (validContacts.length > 0) {
+        // Dedupe within the batch to avoid "ON CONFLICT DO UPDATE command cannot affect row a second time"
+        const byEmail = new Map<string, any>();
+        for (const c of validContacts) byEmail.set(String(c.email), c);
+        const dedupedContacts = Array.from(byEmail.values());
+
         const { error: insertError, data: inserted } = await supabase
           .from('contacts')
-          .upsert(validContacts, { onConflict: 'email', ignoreDuplicates: false })
+          .upsert(dedupedContacts, { onConflict: 'email', ignoreDuplicates: false })
           .select('id');
 
         if (insertError) {
           console.error('Insert error:', insertError);
-          failedRows += validContacts.length;
+          failedRows += dedupedContacts.length;
         } else {
-          successfulRows += inserted?.length || validContacts.length;
+          successfulRows += inserted?.length || dedupedContacts.length;
         }
       }
 
