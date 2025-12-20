@@ -11,6 +11,7 @@ interface ColumnMapping {
   imprint: string;
   asc_name: string;
   asc_email: string;
+  created_at: string;
 }
 
 interface ImportProgress {
@@ -78,6 +79,45 @@ export function useClientImport() {
     const imprintIdx = getColIndex(columnMapping.imprint);
     const ascNameIdx = getColIndex(columnMapping.asc_name);
     const ascEmailIdx = getColIndex(columnMapping.asc_email);
+    const createdAtIdx = getColIndex(columnMapping.created_at);
+
+    const parseCreatedAt = (raw: string | undefined): string | undefined => {
+      const v = raw?.trim();
+      if (!v) return undefined;
+
+      if (/^\d+$/.test(v)) {
+        const num = Number(v);
+        if (!Number.isNaN(num)) {
+          // epoch ms (13+) or epoch seconds (10)
+          if (v.length >= 13) return new Date(num).toISOString();
+          if (v.length === 10) return new Date(num * 1000).toISOString();
+        }
+      }
+
+      const mdy = v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+      if (mdy) {
+        const mm = Number(mdy[1]);
+        const dd = Number(mdy[2]);
+        const yyyy = Number(mdy[3].length === 2 ? `20${mdy[3]}` : mdy[3]);
+        if (mm >= 1 && mm <= 12 && dd >= 1 && dd <= 31 && yyyy >= 1900) {
+          return new Date(Date.UTC(yyyy, mm - 1, dd, 0, 0, 0)).toISOString();
+        }
+      }
+
+      const ymd = v.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (ymd) {
+        const yyyy = Number(ymd[1]);
+        const mm = Number(ymd[2]);
+        const dd = Number(ymd[3]);
+        if (mm >= 1 && mm <= 12 && dd >= 1 && dd <= 31) {
+          return new Date(Date.UTC(yyyy, mm - 1, dd, 0, 0, 0)).toISOString();
+        }
+      }
+
+      const parsed = Date.parse(v);
+      if (!Number.isNaN(parsed)) return new Date(parsed).toISOString();
+      return undefined;
+    };
 
     // Fetch imprints for matching
     const { data: imprints } = await supabase.from('imprints').select('id, name');
@@ -94,8 +134,8 @@ export function useClientImport() {
       for (const row of rows) {
         const ascName = ascNameIdx >= 0 ? row[ascNameIdx]?.trim() : '';
         const ascEmail = ascEmailIdx >= 0 ? row[ascEmailIdx]?.trim().toLowerCase() : '';
-        if (ascEmail) ascIdentifiers.add(`email:${ascEmail}`);
-        else if (ascName) ascIdentifiers.add(`name:${ascName}`);
+        if (ascEmail && ascEmail !== 'no owner_email') ascIdentifiers.add(`email:${ascEmail}`);
+        else if (ascName && ascName.toLowerCase() !== 'unassigned') ascIdentifiers.add(`name:${ascName}`);
       }
     }
 
@@ -161,35 +201,48 @@ export function useClientImport() {
           }
 
           // Match imprint
-          let imprintId = null;
-          if (imprintIdx >= 0 && row[imprintIdx]) {
-            const imprintName = row[imprintIdx].trim().toLowerCase();
+          let imprintId: string | null = null;
+          const imprintRaw = imprintIdx >= 0 ? row[imprintIdx]?.trim() : '';
+          if (imprintIdx >= 0 && imprintRaw) {
+            const imprintName = imprintRaw.toLowerCase();
             imprintId = imprintMap.get(imprintName) || null;
-            if (!imprintId && row[imprintIdx].trim()) {
-              warnings.push(`Row ${rowNum}: Imprint "${row[imprintIdx]}" not found`);
+            if (!imprintId) {
+              warnings.push(`Row ${rowNum}: Imprint "${imprintRaw}" not found`);
             }
           }
 
           // Match ASC
-          let ascId = null;
+          let ascId: string | null = null;
           const ascEmail = ascEmailIdx >= 0 ? row[ascEmailIdx]?.trim().toLowerCase() : '';
           const ascName = ascNameIdx >= 0 ? row[ascNameIdx]?.trim() : '';
-          
-          if (ascEmail) {
+
+          if (ascEmail && ascEmail !== 'no owner_email') {
             ascId = userEmailMap.get(ascEmail) || placeholderMap.get(`email:${ascEmail}`) || null;
-          } else if (ascName) {
+          } else if (ascName && ascName.toLowerCase() !== 'unassigned') {
             ascId = userNameMap.get(ascName.toLowerCase()) || placeholderMap.get(`name:${ascName}`) || null;
           }
 
-          contacts.push({
+          const createdAt = createdAtIdx >= 0 ? parseCreatedAt(row[createdAtIdx]) : undefined;
+
+          const contact: any = {
             email,
-            first_name: firstNameIdx >= 0 ? row[firstNameIdx]?.trim() || null : null,
-            last_name: lastNameIdx >= 0 ? row[lastNameIdx]?.trim() || null : null,
-            phone: phoneIdx >= 0 ? row[phoneIdx]?.trim() || null : null,
-            imprint_id: imprintId,
-            assigned_asc: ascId,
             created_by: user.id,
-          });
+          };
+
+          if (firstNameIdx >= 0) contact.first_name = row[firstNameIdx]?.trim() || null;
+          if (lastNameIdx >= 0) contact.last_name = row[lastNameIdx]?.trim() || null;
+          if (phoneIdx >= 0) contact.phone = row[phoneIdx]?.trim() || null;
+
+          if (imprintIdx >= 0 && imprintId) contact.imprint_id = imprintId;
+
+          // Only set ASC if provided in CSV (avoid clearing existing values)
+          if ((ascEmailIdx >= 0 && ascEmail) || (ascNameIdx >= 0 && ascName)) {
+            contact.assigned_asc = ascId;
+          }
+
+          if (createdAt) contact.created_at = createdAt;
+
+          contacts.push(contact);
         } catch (err: any) {
           errors.push({ row: rowNum, error: err.message });
           failed++;

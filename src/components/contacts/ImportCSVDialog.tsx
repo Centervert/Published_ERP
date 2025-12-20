@@ -48,6 +48,7 @@ interface ColumnMapping {
   imprint: string;
   asc_name: string;
   asc_email: string;
+  created_at: string;
 }
 
 export function ImportCSVDialog({ open, onOpenChange }: ImportCSVDialogProps) {
@@ -62,6 +63,7 @@ export function ImportCSVDialog({ open, onOpenChange }: ImportCSVDialogProps) {
     imprint: '',
     asc_name: '',
     asc_email: '',
+    created_at: '',
   });
   const [submitting, setSubmitting] = useState(false);
   const [importMode, setImportMode] = useState<'auto' | 'client' | 'server'>('auto');
@@ -97,18 +99,42 @@ export function ImportCSVDialog({ open, onOpenChange }: ImportCSVDialogProps) {
       setParsedData({ ...parsed, rawContent: text });
 
       // Auto-detect column mapping
-      const lowerHeaders = parsed.headers.map(h => h.toLowerCase());
-      
+      const lowerHeaders = parsed.headers.map(h => h.toLowerCase().trim());
+
       const findAscNameIndex = lowerHeaders.findIndex(h => 
-        h.includes('owner_name') || h.includes('asc_name') || 
+        h.includes('owner_name') || h.includes('asc_name') ||
         (h.includes('owner') && h.includes('name')) ||
         h === 'owner name' || h === 'asc name'
       );
       const findAscEmailIndex = lowerHeaders.findIndex(h => 
-        h.includes('owner_email') || h.includes('asc_email') || 
+        h.includes('owner_email') || h.includes('asc_email') ||
         (h.includes('owner') && h.includes('email')) ||
         h === 'owner email' || h === 'asc email'
       );
+      const findAscGenericIndex = lowerHeaders.findIndex(h =>
+        h === 'asc' || h === 'author success coach' || h === 'owner' ||
+        (h.includes('asc') && !h.includes('email') && !h.includes('name'))
+      );
+
+      const findCreatedAtIndex = lowerHeaders.findIndex(h =>
+        h === 'created_at' || h === 'created at' || h === 'date created' ||
+        h === 'creation date' || (h.includes('created') && h.includes('date'))
+      );
+
+      let ascNameHeader = findAscNameIndex >= 0 ? parsed.headers[findAscNameIndex] : '';
+      let ascEmailHeader = findAscEmailIndex >= 0 ? parsed.headers[findAscEmailIndex] : '';
+
+      // If there's a single ASC column, guess whether it's name or email by sampling values
+      if (!ascNameHeader && !ascEmailHeader && findAscGenericIndex >= 0) {
+        const colHeader = parsed.headers[findAscGenericIndex];
+        const sample = parsed.rows.slice(0, 20).map(r => (r[findAscGenericIndex] || '').trim());
+        const emailHits = sample.filter(v => v.includes('@')).length;
+        if (emailHits >= Math.max(1, Math.floor(sample.length / 2))) {
+          ascEmailHeader = colHeader;
+        } else {
+          ascNameHeader = colHeader;
+        }
+      }
 
       setColumnMapping({
         email: parsed.headers[lowerHeaders.findIndex(h => h.includes('email') && !h.includes('owner'))] || '',
@@ -116,8 +142,9 @@ export function ImportCSVDialog({ open, onOpenChange }: ImportCSVDialogProps) {
         last_name: parsed.headers[lowerHeaders.findIndex(h => h.includes('last'))] || '',
         phone: parsed.headers[lowerHeaders.findIndex(h => h.includes('phone'))] || '',
         imprint: parsed.headers[lowerHeaders.findIndex(h => h.includes('publisher') || h.includes('imprint'))] || '',
-        asc_name: findAscNameIndex >= 0 ? parsed.headers[findAscNameIndex] : '',
-        asc_email: findAscEmailIndex >= 0 ? parsed.headers[findAscEmailIndex] : '',
+        asc_name: ascNameHeader,
+        asc_email: ascEmailHeader,
+        created_at: findCreatedAtIndex >= 0 ? parsed.headers[findCreatedAtIndex] : '',
       });
     };
     reader.readAsText(selectedFile);
@@ -183,7 +210,7 @@ export function ImportCSVDialog({ open, onOpenChange }: ImportCSVDialogProps) {
     if (isProcessing) return; // Don't close while processing
     setFile(null);
     setParsedData(null);
-    setColumnMapping({ email: '', first_name: '', last_name: '', phone: '', imprint: '', asc_name: '', asc_email: '' });
+    setColumnMapping({ email: '', first_name: '', last_name: '', phone: '', imprint: '', asc_name: '', asc_email: '', created_at: '' });
     setImportMode('auto');
     resetClientImport();
     onOpenChange(false);
@@ -388,6 +415,28 @@ export function ImportCSVDialog({ open, onOpenChange }: ImportCSVDialogProps) {
                   </p>
                 </div>
 
+                <div className="space-y-2">
+                  <Label>Date Created Column</Label>
+                  <Select
+                    value={columnMapping.created_at || NONE_VALUE}
+                    onValueChange={(v) => setColumnMapping(prev => ({ ...prev, created_at: v === NONE_VALUE ? '' : v }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Optional" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={NONE_VALUE}>None</SelectItem>
+                      {parsedData.headers.map((header) => (
+                        <SelectItem key={header} value={header}>
+                          {header}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    If provided, contacts will use this date instead of today.
+                  </p>
+                </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-2">
                     <Label>ASC Name Column</Label>

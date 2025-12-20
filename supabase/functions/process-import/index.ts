@@ -14,6 +14,7 @@ interface ColumnMapping {
   imprint: string;
   asc_name: string;
   asc_email: string;
+  created_at: string;
 }
 
 function normalizeEmail(value: string | undefined): string | null {
@@ -55,6 +56,43 @@ function normalizeName(value: string | undefined): string | null {
 function parseCSVLine(line: string): string[] {
   const matches = line.match(/("([^"]*)")|([^,]+)/g) || [];
   return matches.map(m => m.trim().replace(/^["']|["']$/g, ''));
+}
+
+function parseCreatedAt(raw: string | undefined): string | undefined {
+  const v = raw?.trim();
+  if (!v) return undefined;
+
+  if (/^\d+$/.test(v)) {
+    const num = Number(v);
+    if (!Number.isNaN(num)) {
+      if (v.length >= 13) return new Date(num).toISOString();
+      if (v.length === 10) return new Date(num * 1000).toISOString();
+    }
+  }
+
+  const mdy = v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+  if (mdy) {
+    const mm = Number(mdy[1]);
+    const dd = Number(mdy[2]);
+    const yyyy = Number(mdy[3].length === 2 ? `20${mdy[3]}` : mdy[3]);
+    if (mm >= 1 && mm <= 12 && dd >= 1 && dd <= 31 && yyyy >= 1900) {
+      return new Date(Date.UTC(yyyy, mm - 1, dd, 0, 0, 0)).toISOString();
+    }
+  }
+
+  const ymd = v.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (ymd) {
+    const yyyy = Number(ymd[1]);
+    const mm = Number(ymd[2]);
+    const dd = Number(ymd[3]);
+    if (mm >= 1 && mm <= 12 && dd >= 1 && dd <= 31) {
+      return new Date(Date.UTC(yyyy, mm - 1, dd, 0, 0, 0)).toISOString();
+    }
+  }
+
+  const parsed = Date.parse(v);
+  if (!Number.isNaN(parsed)) return new Date(parsed).toISOString();
+  return undefined;
 }
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -129,6 +167,7 @@ serve(async (req) => {
     const imprintIndex = columnMapping.imprint ? headers.indexOf(columnMapping.imprint) : -1;
     const ascNameIndex = columnMapping.asc_name ? headers.indexOf(columnMapping.asc_name) : -1;
     const ascEmailIndex = columnMapping.asc_email ? headers.indexOf(columnMapping.asc_email) : -1;
+    const createdAtIndex = columnMapping.created_at ? headers.indexOf(columnMapping.created_at) : -1;
 
     // Load lookups (small data)
     const { data: imprints } = await supabase.from("imprints").select("id, name");
@@ -219,22 +258,22 @@ serve(async (req) => {
           const imprintName = row[imprintIndex]?.trim();
           if (imprintName) {
             imprintId = imprintLookup.get(imprintName.toLowerCase().trim());
-            if (!imprintId) unmatchedImprints.add(imprintName);
+            if (!imprintId) {
+              unmatchedImprints.add(imprintName);
+              imprintId = undefined; // don't clear existing on upsert
+            }
           }
         }
 
         let ascId: string | undefined;
-        if (ascNameIndex >= 0) {
-          const ascName = row[ascNameIndex]?.trim();
-          if (ascName && ascName.toLowerCase() !== 'unassigned') {
-            ascId = userNameLookup.get(ascName.toLowerCase().trim()) || placeholderLookup.get(ascName.toLowerCase().trim());
-          }
+        const ascNameRaw = ascNameIndex >= 0 ? row[ascNameIndex]?.trim() : '';
+        const ascEmailRaw = ascEmailIndex >= 0 ? row[ascEmailIndex]?.trim()?.toLowerCase() : '';
+
+        if (ascNameIndex >= 0 && ascNameRaw && ascNameRaw.toLowerCase() !== 'unassigned') {
+          ascId = userNameLookup.get(ascNameRaw.toLowerCase().trim()) || placeholderLookup.get(ascNameRaw.toLowerCase().trim());
         }
-        if (!ascId && ascEmailIndex >= 0) {
-          const ascEmail = row[ascEmailIndex]?.trim()?.toLowerCase();
-          if (ascEmail && ascEmail !== 'no owner_email') {
-            ascId = userEmailLookup.get(ascEmail) || placeholderLookup.get(ascEmail);
-          }
+        if (!ascId && ascEmailIndex >= 0 && ascEmailRaw && ascEmailRaw !== 'no owner_email') {
+          ascId = userEmailLookup.get(ascEmailRaw) || placeholderLookup.get(ascEmailRaw);
         }
 
         const normalizedEmail = normalizeEmail(email);
@@ -244,21 +283,32 @@ serve(async (req) => {
           continue;
         }
 
-        validContacts.push({
+        const createdAt = createdAtIndex >= 0 ? parseCreatedAt(row[createdAtIndex]) : undefined;
+
+        const contact: Record<string, unknown> = {
           email: normalizedEmail,
-          first_name: firstNameIndex >= 0 ? normalizeName(row[firstNameIndex]) || null : null,
-          last_name: lastNameIndex >= 0 ? normalizeName(row[lastNameIndex]) || null : null,
-          phone: phoneIndex >= 0 ? normalizePhone(row[phoneIndex]) || null : null,
-          imprint_id: imprintId || null,
-          assigned_asc: ascId || null,
           created_by: job.created_by,
-        });
+        };
+
+        if (firstNameIndex >= 0) contact.first_name = normalizeName(row[firstNameIndex]) || null;
+        if (lastNameIndex >= 0) contact.last_name = normalizeName(row[lastNameIndex]) || null;
+        if (phoneIndex >= 0) contact.phone = normalizePhone(row[phoneIndex]) || null;
+        if (imprintIndex >= 0 && imprintId) contact.imprint_id = imprintId;
+
+        // Only set ASC if provided in CSV (avoid clearing existing values)
+        if ((ascNameIndex >= 0 && ascNameRaw) || (ascEmailIndex >= 0 && ascEmailRaw)) {
+          contact.assigned_asc = ascId || null;
+        }
+
+        if (createdAt) contact.created_at = createdAt;
+
+        validContacts.push(contact);
       }
 
       if (validContacts.length > 0) {
         const { error: insertError, data: inserted } = await supabase
           .from('contacts')
-          .upsert(validContacts, { onConflict: 'email', ignoreDuplicates: true })
+          .upsert(validContacts, { onConflict: 'email', ignoreDuplicates: false })
           .select('id');
 
         if (insertError) {
