@@ -25,6 +25,8 @@ export interface Contact {
   status: string;
   assigned_asc: string | null;
   assigned_ae: string | null;
+  assigned_asc_text: string | null;
+  assigned_ae_text: string | null;
   created_at: string;
   updated_at: string;
   imprint?: {

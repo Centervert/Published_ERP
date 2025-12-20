@@ -148,54 +148,15 @@ export function useClientImport() {
     const userEmailMap = new Map((existingUsers || []).map(u => [u.email.toLowerCase(), u.id]));
     const userNameMap = new Map((existingUsers || []).map(u => [u.full_name?.toLowerCase() || '', u.id]));
 
-    // Collect unique ASC identifiers first
-    const ascIdentifiers = new Set<string>();
-    if (ascNameIdx >= 0 || ascEmailIdx >= 0) {
-      for (const row of rows) {
-        const ascName = ascNameIdx >= 0 ? row[ascNameIdx]?.trim() : '';
-        const ascEmail = ascEmailIdx >= 0 ? row[ascEmailIdx]?.trim().toLowerCase() : '';
-        if (ascEmail && ascEmail !== 'no owner_email') ascIdentifiers.add(`email:${ascEmail}`);
-        else if (ascName && ascName.toLowerCase() !== 'unassigned') ascIdentifiers.add(`name:${ascName}`);
-      }
-    }
-
-    // Create placeholder profiles for unknown ASCs
-    const placeholderMap = new Map<string, string>();
-    for (const identifier of ascIdentifiers) {
-      const [type, value] = identifier.split(':');
-      if (type === 'email' && !userEmailMap.has(value)) {
-        const { data: newProfile } = await supabase
-          .from('profiles')
-          .insert({
-            id: crypto.randomUUID(),
-            email: value,
-            full_name: `Placeholder (${value})`,
-            active: false,
-          })
-          .select()
-          .single();
-        if (newProfile) {
-          placeholderMap.set(identifier, newProfile.id);
-          userEmailMap.set(value, newProfile.id);
-        }
-      } else if (type === 'name' && !userNameMap.has(value.toLowerCase())) {
-        const placeholderEmail = `placeholder-${Date.now()}-${Math.random().toString(36).slice(2)}@placeholder.local`;
-        const { data: newProfile } = await supabase
-          .from('profiles')
-          .insert({
-            id: crypto.randomUUID(),
-            email: placeholderEmail,
-            full_name: value,
-            active: false,
-          })
-          .select()
-          .single();
-        if (newProfile) {
-          placeholderMap.set(identifier, newProfile.id);
-          userNameMap.set(value.toLowerCase(), newProfile.id);
-        }
-      }
-    }
+    // Helper to build fallback text from name + email
+    const buildFallbackText = (name?: string, email?: string): string | null => {
+      const n = name?.trim() || '';
+      const e = email?.trim().toLowerCase() || '';
+      if (n && e && e !== 'no owner_email') return `${n} <${e}>`;
+      if (n && n.toLowerCase() !== 'unassigned') return n;
+      if (e && e !== 'no owner_email') return e;
+      return null;
+    };
 
     let processed = 0;
     let successful = 0;
@@ -232,17 +193,22 @@ export function useClientImport() {
             }
           }
 
-          // Match ASC
+          // Match ASC (hybrid: try profile match, fallback to text)
           let ascId: string | null = null;
+          let ascText: string | null = null;
           const ascEmail = ascEmailIdx >= 0 ? row[ascEmailIdx]?.trim().toLowerCase() : '';
           const ascName = ascNameIdx >= 0 ? row[ascNameIdx]?.trim() : '';
 
           if (ascEmail && ascEmail !== 'no owner_email') {
-            ascId = userEmailMap.get(ascEmail) || placeholderMap.get(`email:${ascEmail}`) || null;
-            if (!ascId && !unmatchedAsc.includes(ascEmail)) unmatchedAsc.push(ascEmail);
-          } else if (ascName && ascName.toLowerCase() !== 'unassigned') {
-            ascId = userNameMap.get(ascName.toLowerCase()) || placeholderMap.get(`name:${ascName}`) || null;
-            if (!ascId && !unmatchedAsc.includes(ascName)) unmatchedAsc.push(ascName);
+            ascId = userEmailMap.get(ascEmail) || null;
+          }
+          if (!ascId && ascName && ascName.toLowerCase() !== 'unassigned') {
+            ascId = userNameMap.get(ascName.toLowerCase()) || null;
+          }
+          // If no profile match, build fallback text
+          if (!ascId && (ascEmail || ascName)) {
+            ascText = buildFallbackText(ascName, ascEmail);
+            if (ascText && !unmatchedAsc.includes(ascText)) unmatchedAsc.push(ascText);
           }
 
           const createdAt = (options.overwriteCreatedAt && createdAtIdx >= 0) ? parseCreatedAt(row[createdAtIdx]) : undefined;
@@ -258,9 +224,10 @@ export function useClientImport() {
 
           if (imprintIdx >= 0 && imprintId) contact.imprint_id = imprintId;
 
-          // Only set ASC if provided in CSV (avoid clearing existing values)
+          // Hybrid ASC: store profile id if matched, otherwise store fallback text
           if ((ascEmailIdx >= 0 && ascEmail) || (ascNameIdx >= 0 && ascName)) {
             contact.assigned_asc = ascId;
+            contact.assigned_asc_text = ascId ? null : ascText;
           }
 
           if (createdAt) contact.created_at = createdAt;
