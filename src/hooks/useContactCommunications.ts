@@ -72,6 +72,7 @@ export function useContactCommunications(contactId: string) {
       to: string;
       subject: string;
       body: string;
+      reply_to?: string;
     }) => {
       // Send email via Outlook edge function
       const { data, error } = await supabase.functions.invoke('send-email-outlook', {
@@ -80,6 +81,7 @@ export function useContactCommunications(contactId: string) {
           subject: emailData.subject,
           body: emailData.body,
           contact_id: contactId,
+          reply_to: emailData.reply_to,
         },
       });
 

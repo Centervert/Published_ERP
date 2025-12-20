@@ -19,9 +19,10 @@ interface CommunicationHubProps {
   contactEmail: string;
   contactName: string;
   contactImprintId?: string | null;
+  assignedAscId?: string | null;
 }
 
-export function CommunicationHub({ contactId, contactEmail, contactName, contactImprintId }: CommunicationHubProps) {
+export function CommunicationHub({ contactId, contactEmail, contactName, contactImprintId, assignedAscId }: CommunicationHubProps) {
   const { communications, isLoading, logCall, sendEmail } = useContactCommunications(contactId);
   const [showLogCallDialog, setShowLogCallDialog] = useState(false);
   const [composerExpanded, setComposerExpanded] = useState(false);
@@ -37,12 +38,13 @@ export function CommunicationHub({ contactId, contactEmail, contactName, contact
     }
   };
 
-  const handleSendEmail = async (data: { subject: string; body: string; from_email?: string }) => {
+  const handleSendEmail = async (data: { subject: string; body: string; from_email?: string; reply_to?: string }) => {
     try {
       await sendEmail.mutateAsync({
         to: contactEmail,
         subject: data.subject,
         body: data.body,
+        reply_to: data.reply_to,
       });
       toast.success('Email sent successfully');
     } catch (error) {
@@ -160,6 +162,7 @@ export function CommunicationHub({ contactId, contactEmail, contactName, contact
               contactEmail={contactEmail}
               contactName={contactName}
               contactImprintId={contactImprintId}
+              assignedAscId={assignedAscId}
               onSend={handleSendEmail}
               isSending={sendEmail.isPending}
               expanded={composerExpanded}

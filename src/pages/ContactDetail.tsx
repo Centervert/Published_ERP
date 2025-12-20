@@ -87,6 +87,7 @@ export default function ContactDetail() {
           contactEmail={contact.email}
           contactName={`${contact.first_name || ''} ${contact.last_name || ''}`.trim() || contact.email}
           contactImprintId={contact.imprint_id}
+          assignedAscId={contact.assigned_asc}
           selectedTab={selectedTab}
           onTabChange={setSelectedTab}
         />
