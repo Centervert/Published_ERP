@@ -190,6 +190,15 @@ function renderPropertiesForBlock(
           <PropertyField label="Alignment">
             <AlignSelect value={block.align || 'center'} onChange={(v) => onUpdate({ align: v })} />
           </PropertyField>
+          <PropertyField label="Full Bleed">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-muted-foreground">Edge-to-edge image</span>
+              <Switch
+                checked={block.fullBleed || false}
+                onCheckedChange={(v) => onUpdate({ fullBleed: v })}
+              />
+            </div>
+          </PropertyField>
         </>
       );
 

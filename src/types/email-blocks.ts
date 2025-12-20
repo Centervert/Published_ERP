@@ -37,6 +37,7 @@ export interface ImageBlock extends BaseBlock {
   width?: number | 'full';
   align?: 'left' | 'center' | 'right';
   link?: string;
+  fullBleed?: boolean;
 }
 
 export interface ButtonBlock extends BaseBlock {

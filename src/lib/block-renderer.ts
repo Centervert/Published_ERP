@@ -94,13 +94,14 @@ function renderImage(block: ImageBlock, options: RenderOptions): string {
   const width = block.width === 'full' ? '100%' : `${block.width}px`;
   const align = block.align || 'center';
   const alt = block.alt || '';
+  const padding = block.fullBleed ? '0' : '10px 20px';
 
   const imgHtml = `<img src="${escapeHtml(block.src)}" alt="${escapeHtml(alt)}" style="max-width: 100%; width: ${width}; height: auto; display: block;" />`;
   const linkedImg = block.link ? `<a href="${escapeHtml(block.link)}" target="_blank">${imgHtml}</a>` : imgHtml;
 
   return `
     <tr>
-      <td style="padding: 10px 20px; text-align: ${align};">
+      <td style="padding: ${padding}; text-align: ${align};">
         ${linkedImg}
       </td>
     </tr>
