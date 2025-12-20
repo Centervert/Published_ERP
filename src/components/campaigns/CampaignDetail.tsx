@@ -247,6 +247,55 @@ export function CampaignDetail({ campaign, onBack }: CampaignDetailProps) {
       html_content: html,
       blocks_json: blocks.length > 0 ? blocks : undefined,
     });
+    
+    // Auto-generate subject if empty after first content creation
+    if (!subject.trim() && !campaign.subject) {
+      // Extract content description from blocks
+      let contentDescription = '';
+      if (blocks.length > 0) {
+        contentDescription = blocks
+          .filter((block): block is EmailBlock & { content?: string } => 
+            'content' in block && typeof block.content === 'string'
+          )
+          .map(block => block.content)
+          .join(' ')
+          .slice(0, 500);
+      }
+      
+      if (!contentDescription && html) {
+        contentDescription = html
+          .replace(/<[^>]*>/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim()
+          .slice(0, 500);
+      }
+      
+      if (contentDescription) {
+        setIsGeneratingSubject(true);
+        try {
+          const { data, error } = await supabase.functions.invoke('generate-subject', {
+            body: { 
+              emailType: 'general',
+              description: contentDescription, 
+              tone: 'professional' 
+            }
+          });
+          
+          if (!error && data?.subject) {
+            setSubject(data.subject);
+            await updateCampaign.mutateAsync({
+              id: campaign.id,
+              subject: data.subject,
+            });
+            toast.success('Subject line auto-generated!');
+          }
+        } catch (error) {
+          console.error('Error auto-generating subject:', error);
+        } finally {
+          setIsGeneratingSubject(false);
+        }
+      }
+    }
   };
 
   // For sent campaigns, show analytics view
