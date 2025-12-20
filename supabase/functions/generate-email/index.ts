@@ -81,11 +81,15 @@ BLOCK TYPES AVAILABLE:
 - header: { type: "header", logoUrl?: string, backgroundColor?: string }
 - heading: { type: "heading", content: string, level: 1|2|3, color?: string, align?: "left"|"center"|"right" }
 - text: { type: "text", content: string, fontSize?: number, color?: string, align?: "left"|"center"|"right" }
-- image: { type: "image", src: string, alt?: string, width?: number|"full", align?: "left"|"center"|"right" }
 - button: { type: "button", text: string, url: string, backgroundColor?: string, textColor?: string }
 - divider: { type: "divider", color?: string }
 - spacer: { type: "spacer", height: number }
 - footer: { type: "footer", content: string, showUnsubscribe: true }
+
+IMPORTANT - IMAGE BLOCKS:
+- DO NOT generate image blocks with placeholder or made-up URLs
+- Only include an image block if you are given a REAL, valid image URL in the request
+- Images are handled separately by the user - never invent image URLs
 
 EXAMPLE OUTPUT:
 {"blocks":[{"type":"header","logoUrl":"${imprint.logo_url || ''}","backgroundColor":"#ffffff"},{"type":"heading","content":"Welcome!","level":1,"color":"${imprint.primary_color || '#2563eb'}","align":"center"},{"type":"text","content":"Your message here...","fontSize":16,"color":"${imprint.text_color || '#333333'}"},{"type":"button","text":"Learn More","url":"#","backgroundColor":"${imprint.primary_color || '#2563eb'}"},{"type":"footer","content":"© ${imprint.name}","showUnsubscribe":true}]}
