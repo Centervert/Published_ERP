@@ -14,6 +14,10 @@ interface ColumnMapping {
   created_at: string;
 }
 
+interface ImportOptions {
+  overwriteCreatedAt: boolean;
+}
+
 interface ImportProgress {
   processed: number;
   successful: number;
@@ -21,6 +25,16 @@ interface ImportProgress {
   total: number;
   errors: { row: number; error: string }[];
   warnings: string[];
+}
+
+interface ImportResult {
+  successful: number;
+  failed: number;
+  errors: { row: number; error: string }[];
+  warnings: string[];
+  duplicates: string[];
+  invalidEmails: string[];
+  unmatchedAsc: string[];
 }
 
 const BATCH_SIZE = 50;
@@ -35,8 +49,9 @@ export function useClientImport() {
     rows: string[][],
     headers: string[],
     columnMapping: ColumnMapping,
-    fileName: string
-  ) => {
+    fileName: string,
+    options: ImportOptions = { overwriteCreatedAt: true }
+  ): Promise<ImportResult | undefined> => {
     if (!user) return;
 
     setIsProcessing(true);
@@ -48,6 +63,11 @@ export function useClientImport() {
       errors: [],
       warnings: [],
     });
+
+    // Tracking arrays for results report
+    const duplicates: string[] = [];
+    const invalidEmails: string[] = [];
+    const unmatchedAsc: string[] = [];
 
     // Create job record for tracking
     const { data: job, error: jobError } = await supabase
@@ -196,6 +216,7 @@ export function useClientImport() {
           const email = emailIdx >= 0 ? row[emailIdx]?.trim().toLowerCase() : '';
           if (!email || !email.includes('@')) {
             errors.push({ row: rowNum, error: 'Invalid or missing email' });
+            invalidEmails.push(email || `(row ${rowNum})`);
             failed++;
             continue;
           }
@@ -218,11 +239,13 @@ export function useClientImport() {
 
           if (ascEmail && ascEmail !== 'no owner_email') {
             ascId = userEmailMap.get(ascEmail) || placeholderMap.get(`email:${ascEmail}`) || null;
+            if (!ascId && !unmatchedAsc.includes(ascEmail)) unmatchedAsc.push(ascEmail);
           } else if (ascName && ascName.toLowerCase() !== 'unassigned') {
             ascId = userNameMap.get(ascName.toLowerCase()) || placeholderMap.get(`name:${ascName}`) || null;
+            if (!ascId && !unmatchedAsc.includes(ascName)) unmatchedAsc.push(ascName);
           }
 
-          const createdAt = createdAtIdx >= 0 ? parseCreatedAt(row[createdAtIdx]) : undefined;
+          const createdAt = (options.overwriteCreatedAt && createdAtIdx >= 0) ? parseCreatedAt(row[createdAtIdx]) : undefined;
 
           const contact: any = {
             email,
@@ -252,7 +275,12 @@ export function useClientImport() {
       // Upsert contacts (dedupe within the batch to avoid ON CONFLICT errors)
       if (contacts.length > 0) {
         const byEmail = new Map<string, any>();
-        for (const c of contacts) byEmail.set(String(c.email), c);
+        for (const c of contacts) {
+          if (byEmail.has(String(c.email))) {
+            if (!duplicates.includes(c.email)) duplicates.push(c.email);
+          }
+          byEmail.set(String(c.email), c);
+        }
         const dedupedContacts = Array.from(byEmail.values());
 
         const { error: upsertError, data: upserted } = await supabase
@@ -316,7 +344,7 @@ export function useClientImport() {
 
     setIsProcessing(false);
 
-    return { successful, failed, errors, warnings };
+    return { successful, failed, errors, warnings, duplicates, invalidEmails, unmatchedAsc };
   }, [user, queryClient]);
 
   const reset = useCallback(() => {

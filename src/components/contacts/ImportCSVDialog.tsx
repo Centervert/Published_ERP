@@ -23,7 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Upload, FileText, Loader2, Monitor, Cloud } from 'lucide-react';
+import { Upload, FileText, Loader2, Monitor, Cloud, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 const NONE_VALUE = '__none__';
@@ -51,6 +51,10 @@ interface ColumnMapping {
   created_at: string;
 }
 
+interface ImportOptions {
+  overwriteCreatedAt: boolean;
+}
+
 export function ImportCSVDialog({ open, onOpenChange }: ImportCSVDialogProps) {
   const { user } = useAuth();
   const [file, setFile] = useState<File | null>(null);
@@ -67,6 +71,8 @@ export function ImportCSVDialog({ open, onOpenChange }: ImportCSVDialogProps) {
   });
   const [submitting, setSubmitting] = useState(false);
   const [importMode, setImportMode] = useState<'auto' | 'client' | 'server'>('auto');
+  const [importOptions, setImportOptions] = useState<ImportOptions>({ overwriteCreatedAt: true });
+  const [importResults, setImportResults] = useState<{ duplicates: string[]; invalidEmails: string[]; unmatchedAsc: string[]; warnings: string[] } | null>(null);
   
   const { imprints } = useImprints();
   const { users, isLoading: usersLoading } = useUsers();
@@ -160,6 +166,7 @@ export function ImportCSVDialog({ open, onOpenChange }: ImportCSVDialogProps) {
     if (!parsedData || !columnMapping.email || !file || !user) return;
 
     setSubmitting(true);
+    setImportResults(null);
     
     try {
       if (useClientMode) {
@@ -168,16 +175,23 @@ export function ImportCSVDialog({ open, onOpenChange }: ImportCSVDialogProps) {
           parsedData.rows,
           parsedData.headers,
           columnMapping,
-          file.name
+          file.name,
+          importOptions
         );
+
+        // Set import results for display
+        setImportResults({
+          duplicates: result?.duplicates || [],
+          invalidEmails: result?.invalidEmails || [],
+          unmatchedAsc: result?.unmatchedAsc || [],
+          warnings: result?.warnings || [],
+        });
 
         toast.success('Import completed', {
           description: `${result?.successful || 0} contacts imported, ${result?.failed || 0} failed`,
         });
-
-        handleClose();
       } else {
-        // Server-side processing for smaller files
+        // Server-side processing for smaller files (options not yet supported)
         const filePath = `${user.id}/${Date.now()}-${file.name}`;
         const { error: uploadError } = await supabase.storage
           .from('import-files')
@@ -218,6 +232,8 @@ export function ImportCSVDialog({ open, onOpenChange }: ImportCSVDialogProps) {
     setParsedData(null);
     setColumnMapping({ email: '', first_name: '', last_name: '', phone: '', imprint: '', asc_name: '', asc_email: '', created_at: '' });
     setImportMode('auto');
+    setImportOptions({ overwriteCreatedAt: true });
+    setImportResults(null);
     resetClientImport();
     onOpenChange(false);
   };
@@ -442,6 +458,18 @@ export function ImportCSVDialog({ open, onOpenChange }: ImportCSVDialogProps) {
                   <p className="text-xs text-muted-foreground">
                     If provided, contacts will use this date instead of today.
                   </p>
+                  <div className="flex items-center space-x-2 pt-1">
+                    <input
+                      type="checkbox"
+                      id="overwriteCreatedAt"
+                      checked={importOptions.overwriteCreatedAt}
+                      onChange={(e) => setImportOptions(prev => ({ ...prev, overwriteCreatedAt: e.target.checked }))}
+                      className="h-4 w-4 rounded border-input"
+                    />
+                    <Label htmlFor="overwriteCreatedAt" className="text-xs font-normal text-muted-foreground cursor-pointer">
+                      Overwrite existing contact's created date
+                    </Label>
+                  </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-2">
@@ -490,6 +518,72 @@ export function ImportCSVDialog({ open, onOpenChange }: ImportCSVDialogProps) {
               </div>
             </>
           ) : null}
+
+          {/* Import Results Report */}
+          {importResults && (
+            <div className="space-y-3 p-4 bg-muted rounded-lg border">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-5 w-5 text-green-600" />
+                <span className="font-medium">Import Complete</span>
+              </div>
+              
+              {importResults.duplicates.length > 0 && (
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 text-sm text-amber-600">
+                    <AlertTriangle className="h-4 w-4" />
+                    <span>{importResults.duplicates.length} duplicate email(s) in file (last occurrence used)</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground pl-6">
+                    {importResults.duplicates.slice(0, 5).join(', ')}
+                    {importResults.duplicates.length > 5 && ` +${importResults.duplicates.length - 5} more`}
+                  </p>
+                </div>
+              )}
+
+              {importResults.invalidEmails.length > 0 && (
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 text-sm text-red-600">
+                    <AlertTriangle className="h-4 w-4" />
+                    <span>{importResults.invalidEmails.length} invalid email(s) skipped</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground pl-6">
+                    {importResults.invalidEmails.slice(0, 5).join(', ')}
+                    {importResults.invalidEmails.length > 5 && ` +${importResults.invalidEmails.length - 5} more`}
+                  </p>
+                </div>
+              )}
+
+              {importResults.unmatchedAsc.length > 0 && (
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 text-sm text-amber-600">
+                    <AlertTriangle className="h-4 w-4" />
+                    <span>{importResults.unmatchedAsc.length} unmatched ASC(s) - placeholders created</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground pl-6">
+                    {importResults.unmatchedAsc.slice(0, 5).join(', ')}
+                    {importResults.unmatchedAsc.length > 5 && ` +${importResults.unmatchedAsc.length - 5} more`}
+                  </p>
+                </div>
+              )}
+
+              {importResults.warnings.length > 0 && (
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <AlertTriangle className="h-4 w-4" />
+                    <span>{importResults.warnings.length} warning(s)</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground pl-6">
+                    {importResults.warnings.slice(0, 3).join('; ')}
+                    {importResults.warnings.length > 3 && ` +${importResults.warnings.length - 3} more`}
+                  </p>
+                </div>
+              )}
+
+              <Button variant="outline" size="sm" onClick={handleClose} className="mt-2">
+                Close
+              </Button>
+            </div>
+          )}
         </div>
 
         <DialogFooter>
