@@ -296,26 +296,49 @@ export function ContactSidebar({ contact, onBack, onSelectTab }: ContactSidebarP
           <div className="flex items-center min-h-[28px]">
             <span className="text-xs text-muted-foreground w-16 flex-shrink-0">A.S.C.</span>
             <div className="flex-1 flex justify-end">
-              <Select 
-                value={formData.assigned_asc || 'none'} 
-                onValueChange={(v) => handleChange('assigned_asc', v === 'none' ? null : v)}
-              >
-                <SelectTrigger className="h-6 w-auto border-0 bg-transparent p-0 text-sm focus:ring-0 [&>svg]:h-3 [&>svg]:w-3">
-                  <span className="text-sm">
-                    {formData.assigned_asc && formData.assigned_asc !== 'none'
-                      ? teamMembers.find(m => m.id === formData.assigned_asc)?.full_name || teamMembers.find(m => m.id === formData.assigned_asc)?.email || '--'
-                      : '--'}
-                  </span>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Unassigned</SelectItem>
-                  {teamMembers.map(member => (
-                    <SelectItem key={member.id} value={member.id}>
-                      {member.full_name || member.email}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {contact.assigned_asc ? (
+                <Select 
+                  value={formData.assigned_asc || 'none'} 
+                  onValueChange={(v) => handleChange('assigned_asc', v === 'none' ? null : v)}
+                >
+                  <SelectTrigger className="h-6 w-auto border-0 bg-transparent p-0 text-sm focus:ring-0 [&>svg]:h-3 [&>svg]:w-3">
+                    <span className="text-sm">
+                      {formData.assigned_asc && formData.assigned_asc !== 'none'
+                        ? teamMembers.find(m => m.id === formData.assigned_asc)?.full_name || teamMembers.find(m => m.id === formData.assigned_asc)?.email || '--'
+                        : '--'}
+                    </span>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Unassigned</SelectItem>
+                    {teamMembers.map(member => (
+                      <SelectItem key={member.id} value={member.id}>
+                        {member.full_name || member.email}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : contact.assigned_asc_text ? (
+                <span className="text-sm text-muted-foreground italic" title="Imported - no matching team member">
+                  {contact.assigned_asc_text}
+                </span>
+              ) : (
+                <Select 
+                  value="none" 
+                  onValueChange={(v) => handleChange('assigned_asc', v === 'none' ? null : v)}
+                >
+                  <SelectTrigger className="h-6 w-auto border-0 bg-transparent p-0 text-sm focus:ring-0 [&>svg]:h-3 [&>svg]:w-3">
+                    <span className="text-sm">--</span>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Unassigned</SelectItem>
+                    {teamMembers.map(member => (
+                      <SelectItem key={member.id} value={member.id}>
+                        {member.full_name || member.email}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
           </div>
 
@@ -323,26 +346,49 @@ export function ContactSidebar({ contact, onBack, onSelectTab }: ContactSidebarP
           <div className="flex items-center min-h-[28px]">
             <span className="text-xs text-muted-foreground w-16 flex-shrink-0">A.E.</span>
             <div className="flex-1 flex justify-end">
-              <Select 
-                value={formData.assigned_ae || 'none'} 
-                onValueChange={(v) => handleChange('assigned_ae', v === 'none' ? null : v)}
-              >
-                <SelectTrigger className="h-6 w-auto border-0 bg-transparent p-0 text-sm focus:ring-0 [&>svg]:h-3 [&>svg]:w-3">
-                  <span className="text-sm">
-                    {formData.assigned_ae && formData.assigned_ae !== 'none'
-                      ? teamMembers.find(m => m.id === formData.assigned_ae)?.full_name || teamMembers.find(m => m.id === formData.assigned_ae)?.email || '--'
-                      : '--'}
-                  </span>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Unassigned</SelectItem>
-                  {teamMembers.map(member => (
-                    <SelectItem key={member.id} value={member.id}>
-                      {member.full_name || member.email}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {contact.assigned_ae ? (
+                <Select 
+                  value={formData.assigned_ae || 'none'} 
+                  onValueChange={(v) => handleChange('assigned_ae', v === 'none' ? null : v)}
+                >
+                  <SelectTrigger className="h-6 w-auto border-0 bg-transparent p-0 text-sm focus:ring-0 [&>svg]:h-3 [&>svg]:w-3">
+                    <span className="text-sm">
+                      {formData.assigned_ae && formData.assigned_ae !== 'none'
+                        ? teamMembers.find(m => m.id === formData.assigned_ae)?.full_name || teamMembers.find(m => m.id === formData.assigned_ae)?.email || '--'
+                        : '--'}
+                    </span>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Unassigned</SelectItem>
+                    {teamMembers.map(member => (
+                      <SelectItem key={member.id} value={member.id}>
+                        {member.full_name || member.email}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : contact.assigned_ae_text ? (
+                <span className="text-sm text-muted-foreground italic" title="Imported - no matching team member">
+                  {contact.assigned_ae_text}
+                </span>
+              ) : (
+                <Select 
+                  value="none" 
+                  onValueChange={(v) => handleChange('assigned_ae', v === 'none' ? null : v)}
+                >
+                  <SelectTrigger className="h-6 w-auto border-0 bg-transparent p-0 text-sm focus:ring-0 [&>svg]:h-3 [&>svg]:w-3">
+                    <span className="text-sm">--</span>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Unassigned</SelectItem>
+                    {teamMembers.map(member => (
+                      <SelectItem key={member.id} value={member.id}>
+                        {member.full_name || member.email}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
           </div>
 

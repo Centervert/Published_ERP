@@ -315,10 +315,14 @@ export function ContactsTable({ filterByUser }: ContactsTableProps) {
                         {getStatusLabel(contact.status)}
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {contact.assigned_asc ? teamMemberMap.get(contact.assigned_asc) || '--' : '--'}
+                        {contact.assigned_asc 
+                          ? teamMemberMap.get(contact.assigned_asc) || '--' 
+                          : contact.assigned_asc_text || '--'}
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {contact.assigned_ae ? teamMemberMap.get(contact.assigned_ae) || '--' : '--'}
+                        {contact.assigned_ae 
+                          ? teamMemberMap.get(contact.assigned_ae) || '--' 
+                          : contact.assigned_ae_text || '--'}
                       </TableCell>
                       <TableCell className="text-muted-foreground">
                         {format(new Date(contact.created_at), 'MM/dd/yyyy')}
