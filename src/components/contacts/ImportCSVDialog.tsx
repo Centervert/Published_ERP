@@ -513,7 +513,7 @@ export function ImportCSVDialog({ open, onOpenChange }: ImportCSVDialogProps) {
                 </div>
                 <p className="text-xs text-muted-foreground">
                   Active team members: {users.filter(u => u.active).map(u => u.full_name || u.email).join(', ') || 'None'}. 
-                  Unmatched names will create placeholder profiles.
+                  Unmatched ASC info will be stored as text.
                 </p>
               </div>
             </>
