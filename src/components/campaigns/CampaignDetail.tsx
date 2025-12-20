@@ -50,8 +50,11 @@ import {
   Check,
   ChevronDown,
   Plus,
-  X as XIcon
+  X as XIcon,
+  Wand2
 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { EmailBuilder } from './EmailBuilder';
 
@@ -98,6 +101,8 @@ export function CampaignDetail({ campaign, onBack }: CampaignDetailProps) {
   // Send time state (UI only)
   const [sendTimeOption, setSendTimeOption] = useState<'now' | 'scheduled'>('now');
   
+  // AI subject generation state
+  const [isGeneratingSubject, setIsGeneratingSubject] = useState(false);
   // Additional recipients state
   const [additionalRecipients, setAdditionalRecipients] = useState<string[]>([]);
   const [newRecipientEmail, setNewRecipientEmail] = useState('');
@@ -169,6 +174,62 @@ export function CampaignDetail({ campaign, onBack }: CampaignDetailProps) {
       id: campaign.id,
       subject,
     });
+  };
+
+  const handleGenerateSubject = async () => {
+    // Get description from existing content (blocks or HTML)
+    let contentDescription = '';
+    if (campaign.blocks_json && Array.isArray(campaign.blocks_json)) {
+      contentDescription = (campaign.blocks_json as EmailBlock[])
+        .filter((block): block is EmailBlock & { content?: string } => 
+          'content' in block && typeof block.content === 'string'
+        )
+        .map(block => block.content)
+        .join(' ')
+        .slice(0, 500);
+    }
+    
+    if (!contentDescription && campaign.html_content) {
+      // Extract text from HTML
+      contentDescription = campaign.html_content
+        .replace(/<[^>]*>/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, 500);
+    }
+    
+    if (!contentDescription) {
+      toast.error('Generate email content first to create a subject line');
+      return;
+    }
+    
+    setIsGeneratingSubject(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-subject', {
+        body: { 
+          emailType: 'general',
+          description: contentDescription, 
+          tone: 'professional' 
+        }
+      });
+      
+      if (error) throw error;
+      
+      if (data?.subject) {
+        setSubject(data.subject);
+        // Auto-save the subject
+        await updateCampaign.mutateAsync({
+          id: campaign.id,
+          subject: data.subject,
+        });
+        toast.success('Subject generated!');
+      }
+    } catch (error) {
+      console.error('Error generating subject:', error);
+      toast.error('Failed to generate subject. Please try again.');
+    } finally {
+      setIsGeneratingSubject(false);
+    }
   };
 
   const handleUpdateName = async () => {
@@ -813,7 +874,29 @@ export function CampaignDetail({ campaign, onBack }: CampaignDetailProps) {
                   )}
                 </div>
                 <div className="flex-1">
-                  <h3 className="font-semibold text-base mb-2">Subject</h3>
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="font-semibold text-base">Subject</h3>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleGenerateSubject}
+                      disabled={isGeneratingSubject || !hasContent}
+                      className="h-7 text-xs"
+                    >
+                      {isGeneratingSubject ? (
+                        <>
+                          <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                          Generating...
+                        </>
+                      ) : (
+                        <>
+                          <Wand2 className="mr-1 h-3 w-3" />
+                          Generate with AI
+                        </>
+                      )}
+                    </Button>
+                  </div>
                   <Input
                     value={subject}
                     onChange={(e) => setSubject(e.target.value)}
