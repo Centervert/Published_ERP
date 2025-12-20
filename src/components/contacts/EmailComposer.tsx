@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Send, Loader2, Maximize2, Minimize2 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -26,9 +27,7 @@ interface EmailComposerProps {
   onToggleExpand?: () => void;
 }
 
-type ReplyToOption = 'sender' | 'asc';
-
-export function EmailComposer({ 
+export function EmailComposer({
   contactEmail, 
   contactName,
   contactImprintId,
@@ -42,7 +41,7 @@ export function EmailComposer({
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
   const [fromEmail, setFromEmail] = useState<string>('');
-  const [replyToOption, setReplyToOption] = useState<ReplyToOption>('sender');
+  const [routeRepliesToAsc, setRouteRepliesToAsc] = useState(false);
   const [initialized, setInitialized] = useState(false);
 
   // Fetch user's connected email accounts
@@ -190,11 +189,10 @@ export function EmailComposer({
 
     // Determine the reply-to email
     let replyTo: string | undefined;
-    if (replyToOption === 'asc' && ascProfile?.email) {
+    if (routeRepliesToAsc && ascProfile?.email) {
       replyTo = ascProfile.email;
-    } else if (replyToOption === 'sender') {
-      replyTo = fromEmail || undefined;
     }
+    // If not routing to ASC, don't set reply-to (sender is default)
 
     await onSend({
       subject: subject.trim(),
@@ -281,26 +279,20 @@ export function EmailComposer({
           </div>
         </div>
 
-        {/* Reply-To Row - only show if ASC is assigned */}
+        {/* Route replies to ASC checkbox - only show if ASC is assigned */}
         {ascProfile?.email && (
-          <div className="space-y-1">
-            <Label className="text-xs text-muted-foreground">Reply-To</Label>
-            <Select value={replyToOption} onValueChange={(v) => setReplyToOption(v as ReplyToOption)}>
-              <SelectTrigger className="h-8 text-sm">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="sender">
-                  Sender ({fromEmail || displayFromEmail})
-                </SelectItem>
-                <SelectItem value="asc">
-                  Assigned ASC ({ascProfile.full_name || ascProfile.email})
-                </SelectItem>
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground">
-              When the contact replies, the email will go to: {replyToOption === 'asc' ? ascProfile.email : (fromEmail || displayFromEmail)}
-            </p>
+          <div className="flex items-center space-x-2">
+            <Checkbox 
+              id="route-to-asc" 
+              checked={routeRepliesToAsc}
+              onCheckedChange={(checked) => setRouteRepliesToAsc(checked === true)}
+            />
+            <label 
+              htmlFor="route-to-asc" 
+              className="text-sm text-muted-foreground cursor-pointer"
+            >
+              Route replies to assigned ASC ({ascProfile.full_name || ascProfile.email})
+            </label>
           </div>
         )}
 
