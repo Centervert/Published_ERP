@@ -433,6 +433,20 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "contacts_assigned_ae_fkey"
+            columns: ["assigned_ae"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contacts_assigned_asc_fkey"
+            columns: ["assigned_asc"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "contacts_imprint_id_fkey"
             columns: ["imprint_id"]
             isOneToOne: false
