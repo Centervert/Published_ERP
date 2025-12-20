@@ -579,28 +579,43 @@ export function ImportCSVDialog({ open, onOpenChange }: ImportCSVDialogProps) {
                 </div>
               )}
 
-              <Button variant="outline" size="sm" onClick={handleClose} className="mt-2">
-                Close
-              </Button>
             </div>
           )}
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={handleClose} disabled={isProcessing}>
-            {isProcessing ? 'Processing...' : 'Cancel'}
-          </Button>
-          <Button
-            onClick={handleStartImport}
-            disabled={!parsedData || !columnMapping.email || submitting || isProcessing || ((columnMapping.asc_name || columnMapping.asc_email) && usersLoading)}
-          >
-            {(submitting || isProcessing) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {(columnMapping.asc_name || columnMapping.asc_email) && usersLoading 
-              ? 'Loading team...' 
-              : isProcessing 
-                ? `Processing ${progress?.processed || 0}/${progress?.total || 0}`
-                : `Start Import (${parsedData?.rows.length.toLocaleString() || 0} rows)`}
-          </Button>
+          {importResults ? (
+            <>
+              <Button variant="outline" onClick={() => {
+                setImportResults(null);
+                setFile(null);
+                setParsedData(null);
+                setColumnMapping({ email: '', first_name: '', last_name: '', phone: '', imprint: '', asc_name: '', asc_email: '', created_at: '' });
+              }}>
+                Import Another File
+              </Button>
+              <Button onClick={handleClose}>
+                Done
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button variant="outline" onClick={handleClose} disabled={isProcessing}>
+                {isProcessing ? 'Processing...' : 'Cancel'}
+              </Button>
+              <Button
+                onClick={handleStartImport}
+                disabled={!parsedData || !columnMapping.email || submitting || isProcessing || ((columnMapping.asc_name || columnMapping.asc_email) && usersLoading)}
+              >
+                {(submitting || isProcessing) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {(columnMapping.asc_name || columnMapping.asc_email) && usersLoading 
+                  ? 'Loading team...' 
+                  : isProcessing 
+                    ? `Processing ${progress?.processed || 0}/${progress?.total || 0}`
+                    : `Start Import (${parsedData?.rows.length.toLocaleString() || 0} rows)`}
+              </Button>
+            </>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
