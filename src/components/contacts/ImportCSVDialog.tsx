@@ -116,9 +116,15 @@ export function ImportCSVDialog({ open, onOpenChange }: ImportCSVDialogProps) {
         (h.includes('asc') && !h.includes('email') && !h.includes('name'))
       );
 
-      const findCreatedAtIndex = lowerHeaders.findIndex(h =>
-        h === 'created_at' || h === 'created at' || h === 'date created' ||
-        h === 'creation date' || (h.includes('created') && h.includes('date'))
+      const findCreatedAtIndex = lowerHeaders.findIndex((h) =>
+        h === 'created_at' ||
+        h === 'created at' ||
+        h === 'create_date' ||
+        h === 'create date' ||
+        h === 'date created' ||
+        h === 'creation date' ||
+        (h.includes('create') && h.includes('date')) ||
+        (h.includes('created') && h.includes('date'))
       );
 
       let ascNameHeader = findAscNameIndex >= 0 ? parsed.headers[findAscNameIndex] : '';

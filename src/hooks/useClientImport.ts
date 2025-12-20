@@ -249,20 +249,24 @@ export function useClientImport() {
         }
       }
 
-      // Upsert contacts
+      // Upsert contacts (dedupe within the batch to avoid ON CONFLICT errors)
       if (contacts.length > 0) {
+        const byEmail = new Map<string, any>();
+        for (const c of contacts) byEmail.set(String(c.email), c);
+        const dedupedContacts = Array.from(byEmail.values());
+
         const { error: upsertError, data: upserted } = await supabase
           .from('contacts')
-          .upsert(contacts, { onConflict: 'email', ignoreDuplicates: false })
+          .upsert(dedupedContacts, { onConflict: 'email', ignoreDuplicates: false })
           .select('id');
 
         if (upsertError) {
-          for (let k = 0; k < contacts.length; k++) {
+          for (let k = 0; k < dedupedContacts.length; k++) {
             errors.push({ row: i + k + 2, error: upsertError.message });
             failed++;
           }
         } else {
-          successful += upserted?.length || contacts.length;
+          successful += upserted?.length || dedupedContacts.length;
         }
       }
 
