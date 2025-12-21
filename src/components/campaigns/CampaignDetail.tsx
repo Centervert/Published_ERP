@@ -76,7 +76,7 @@ export function CampaignDetail({ campaign, onBack }: CampaignDetailProps) {
   const { lists } = useLists();
   const { imprints } = useImprints();
   const { imprintCounts, listCounts, totalCount } = useRecipientCounts();
-  const { sendCampaign, updateCampaign } = useCampaigns();
+  const { sendCampaign, updateCampaign, scheduleCampaign } = useCampaigns();
   
   // Collapsible section states
   const [toOpen, setToOpen] = useState(false);
@@ -99,8 +99,10 @@ export function CampaignDetail({ campaign, onBack }: CampaignDetailProps) {
   const [subject, setSubject] = useState(campaign.subject);
   const [campaignName, setCampaignName] = useState(campaign.name);
   
-  // Send time state (UI only)
+  // Send time state
   const [sendTimeOption, setSendTimeOption] = useState<'now' | 'scheduled'>('now');
+  const [scheduledDate, setScheduledDate] = useState('');
+  const [scheduledTime, setScheduledTime] = useState('09:00');
   
   // AI subject generation state
   const [isGeneratingSubject, setIsGeneratingSubject] = useState(false);
@@ -124,7 +126,8 @@ export function CampaignDetail({ campaign, onBack }: CampaignDetailProps) {
   const hasFrom = !!fromName && !!fromEmail;
   const hasSubject = !!campaign.subject || !!subject;
   const hasContent = !!campaign.html_content || (campaign.blocks_json && campaign.blocks_json.length > 0);
-  const isReadyToSend = hasRecipients && hasFrom && hasSubject && hasContent;
+  const hasScheduleTime = sendTimeOption === 'now' || (scheduledDate && scheduledTime);
+  const isReadyToSend = hasRecipients && hasFrom && hasSubject && hasContent && hasScheduleTime;
 
   // Use human opens for accurate rate calculation
   const openRate = stats && stats.sent > 0 
@@ -138,13 +141,26 @@ export function CampaignDetail({ campaign, onBack }: CampaignDetailProps) {
     : '0';
 
   const handleSend = async () => {
-    await sendCampaign.mutateAsync({
-      campaignId: campaign.id,
-      listIds: selectedListIds,
-      imprintIds: selectedImprintIds.length > 0 ? selectedImprintIds : undefined,
-      additionalRecipients: additionalRecipients.length > 0 ? additionalRecipients : undefined,
-      routeRepliesToAsc: routeRepliesToAsc,
-    });
+    if (sendTimeOption === 'scheduled' && scheduledDate && scheduledTime) {
+      // Schedule for later
+      const scheduledAt = new Date(`${scheduledDate}T${scheduledTime}`);
+      await scheduleCampaign.mutateAsync({
+        campaignId: campaign.id,
+        listIds: selectedListIds,
+        imprintIds: selectedImprintIds.length > 0 ? selectedImprintIds : undefined,
+        additionalRecipients: additionalRecipients.length > 0 ? additionalRecipients : undefined,
+        scheduledAt,
+      });
+    } else {
+      // Send now
+      await sendCampaign.mutateAsync({
+        campaignId: campaign.id,
+        listIds: selectedListIds,
+        imprintIds: selectedImprintIds.length > 0 ? selectedImprintIds : undefined,
+        additionalRecipients: additionalRecipients.length > 0 ? additionalRecipients : undefined,
+        routeRepliesToAsc: routeRepliesToAsc,
+      });
+    }
     setSendDialogOpen(false);
     onBack();
   };
@@ -862,7 +878,11 @@ export function CampaignDetail({ campaign, onBack }: CampaignDetailProps) {
                       <div>
                         <h3 className="font-semibold text-base">Send time</h3>
                         <p className="text-sm text-muted-foreground mt-1">
-                          {sendTimeOption === 'now' ? 'Send immediately' : 'Scheduled for later'}
+                          {sendTimeOption === 'now' 
+                            ? 'Send immediately' 
+                            : scheduledDate && scheduledTime
+                              ? `Scheduled for ${format(new Date(`${scheduledDate}T${scheduledTime}`), 'MMM d, yyyy')} at ${format(new Date(`${scheduledDate}T${scheduledTime}`), 'h:mm a')}`
+                              : 'Select a date and time'}
                         </p>
                       </div>
                     </div>
@@ -883,14 +903,47 @@ export function CampaignDetail({ campaign, onBack }: CampaignDetailProps) {
                             <div className="text-sm text-muted-foreground">Send immediately when you click Schedule</div>
                           </Label>
                         </div>
-                        <div className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-muted/50 cursor-pointer opacity-50 mt-2">
-                          <RadioGroupItem value="scheduled" id="send-later" disabled />
+                        <div className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-muted/50 cursor-pointer mt-2">
+                          <RadioGroupItem value="scheduled" id="send-later" />
                           <Label htmlFor="send-later" className="flex-1 cursor-pointer">
                             <div className="font-medium">Schedule for later</div>
-                            <div className="text-sm text-muted-foreground">Coming soon</div>
+                            <div className="text-sm text-muted-foreground">Choose a date and time to send</div>
                           </Label>
                         </div>
                       </RadioGroup>
+                      
+                      {sendTimeOption === 'scheduled' && (
+                        <div className="mt-4 p-4 rounded-lg border bg-muted/30 space-y-4">
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <Label htmlFor="schedule-date" className="text-sm font-medium">Date</Label>
+                              <Input
+                                id="schedule-date"
+                                type="date"
+                                value={scheduledDate}
+                                onChange={(e) => setScheduledDate(e.target.value)}
+                                min={new Date().toISOString().split('T')[0]}
+                                className="mt-1"
+                              />
+                            </div>
+                            <div>
+                              <Label htmlFor="schedule-time" className="text-sm font-medium">Time</Label>
+                              <Input
+                                id="schedule-time"
+                                type="time"
+                                value={scheduledTime}
+                                onChange={(e) => setScheduledTime(e.target.value)}
+                                className="mt-1"
+                              />
+                            </div>
+                          </div>
+                          {scheduledDate && scheduledTime && (
+                            <p className="text-sm text-muted-foreground">
+                              Will send on {format(new Date(`${scheduledDate}T${scheduledTime}`), 'MMMM d, yyyy')} at {format(new Date(`${scheduledDate}T${scheduledTime}`), 'h:mm a')}
+                            </p>
+                          )}
+                        </div>
+                      )}
                     </div>
                     <Button size="sm" onClick={() => setSendTimeOpen(false)}>Done</Button>
                   </div>
