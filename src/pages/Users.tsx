@@ -29,7 +29,7 @@ import { Search, X, Loader2 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { useUsers, ROLE_DISPLAY_NAMES, AppRole, useHasRole } from '@/hooks/useUsers';
 
-const ROLE_OPTIONS: AppRole[] = ['super_admin', 'admin', 'asc', 'ae', 'member'];
+const ROLE_OPTIONS: AppRole[] = ['super_admin', 'admin', 'asc', 'ae', 'marketing', 'member'];
 
 const getRoleBadgeVariant = (role: AppRole): 'default' | 'secondary' | 'outline' => {
   switch (role) {

@@ -117,9 +117,15 @@ export function AppSidebar() {
       case 'admin': return 'Admin';
       case 'asc': return 'Author Success Coach';
       case 'ae': return 'Account Executive';
+      case 'marketing': return 'Marketing';
       default: return 'Member';
     }
   };
+
+  // Marketing role only sees marketing section
+  const isMarketingOnly = userRole === 'marketing';
+  const showCRM = !isMarketingOnly;
+  const showBackoffice = !isMarketingOnly;
 
   const isGroupActive = (items: typeof marketingItems) => 
     items.some(item => location.pathname === item.url);
@@ -215,11 +221,11 @@ export function AppSidebar() {
         {/* Marketing Group */}
         {renderCollapsibleGroup('Marketing', Megaphone, marketingItems)}
 
-        {/* CRM Group */}
-        {renderCollapsibleGroup('CRM', UserCog, crmItems)}
+        {/* CRM Group - hidden for marketing role */}
+        {showCRM && renderCollapsibleGroup('CRM', UserCog, crmItems)}
 
-        {/* Backoffice Group */}
-        {renderCollapsibleGroup('Backoffice', Settings, backofficeItems)}
+        {/* Backoffice Group - hidden for marketing role */}
+        {showBackoffice && renderCollapsibleGroup('Backoffice', Settings, backofficeItems)}
       </SidebarContent>
 
       <SidebarFooter className="p-3 border-t border-sidebar-border">
