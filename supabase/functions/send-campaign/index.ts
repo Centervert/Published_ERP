@@ -11,6 +11,7 @@ interface SendCampaignRequest {
   listIds: string[];
   imprintIds?: string[];
   additionalRecipients?: string[];
+  routeRepliesToAsc?: boolean;
 }
 
 interface EmailBlock {
@@ -146,9 +147,9 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { campaignId, listIds, imprintIds, additionalRecipients }: SendCampaignRequest = await req.json();
+    const { campaignId, listIds, imprintIds, additionalRecipients, routeRepliesToAsc }: SendCampaignRequest = await req.json();
     
-    console.log(`[send-campaign] Queueing campaign ${campaignId} to lists: ${listIds.join(", ")}, imprints: ${imprintIds?.join(", ") || "all"}, additional: ${additionalRecipients?.length || 0}`);
+    console.log(`[send-campaign] Queueing campaign ${campaignId} to lists: ${listIds.join(", ")}, imprints: ${imprintIds?.join(", ") || "all"}, additional: ${additionalRecipients?.length || 0}, routeRepliesToAsc: ${routeRepliesToAsc}`);
 
     // Get campaign details
     const { data: campaign, error: campaignError } = await supabase
@@ -172,9 +173,10 @@ serve(async (req) => {
       .eq("id", campaignId);
 
     // Get contacts from selected lists (active only, not unsubscribed/bounced)
+    // Include assigned_asc for reply-to routing
     let contactsQuery = supabase
       .from("contacts")
-      .select("id, email, first_name, last_name, imprint_id")
+      .select("id, email, first_name, last_name, imprint_id, assigned_asc")
       .eq("status", "active");
 
     // Filter by lists if specified
@@ -210,6 +212,23 @@ serve(async (req) => {
     }
 
     console.log(`[send-campaign] Found ${contacts.length} contacts to queue`);
+
+    // If routing replies to ASC, fetch ASC profiles
+    let ascProfiles: Record<string, string> = {};
+    if (routeRepliesToAsc) {
+      const ascIds = [...new Set(contacts.filter(c => c.assigned_asc).map(c => c.assigned_asc as string))];
+      if (ascIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("id, email")
+          .in("id", ascIds);
+        
+        if (profiles) {
+          ascProfiles = Object.fromEntries(profiles.map(p => [p.id, p.email]));
+          console.log(`[send-campaign] Loaded ${profiles.length} ASC profiles for reply-to routing`);
+        }
+      }
+    }
 
     // Update total recipients
     await supabase
@@ -257,6 +276,13 @@ serve(async (req) => {
         .replace(/\{\{UNSUBSCRIBE_URL\}\}/gi, unsubscribeUrl)
         .replace(/\{\{unsubscribe_url\}\}/g, unsubscribeUrl);
 
+      // Determine reply-to email
+      // If routeRepliesToAsc is enabled and contact has an ASC with email, use that
+      let replyToEmail = campaign.reply_to_email || null;
+      if (routeRepliesToAsc && contact.assigned_asc && ascProfiles[contact.assigned_asc]) {
+        replyToEmail = ascProfiles[contact.assigned_asc];
+      }
+
       return {
         campaign_id: campaignId,
         contact_id: contact.id,
@@ -265,7 +291,7 @@ serve(async (req) => {
         subject: campaign.subject,
         from_name: campaign.from_name,
         from_email: campaign.from_email,
-        reply_to_email: campaign.reply_to_email || null,
+        reply_to_email: replyToEmail,
         html_content: personalizedHtml,
         contact_first_name: contact.first_name,
         contact_last_name: contact.last_name,
