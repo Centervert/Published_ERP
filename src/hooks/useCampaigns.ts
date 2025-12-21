@@ -152,12 +152,14 @@ export function useCampaigns() {
     mutationFn: async ({ 
       campaignId, 
       listIds, 
-      imprintIds, 
+      imprintIds,
+      additionalRecipients,
       scheduledAt 
     }: { 
       campaignId: string; 
       listIds: string[]; 
       imprintIds?: string[];
+      additionalRecipients?: string[];
       scheduledAt: Date;
     }) => {
       // First, save the selected lists to campaign_lists junction table
