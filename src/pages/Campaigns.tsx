@@ -33,16 +33,19 @@ import {
   ChevronDown,
   BarChart3,
   Clock,
-  CalendarIcon
+  CalendarIcon,
+  XCircle
 } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { format } from 'date-fns';
 import { CampaignDetail } from '@/components/campaigns/CampaignDetail';
+import { CampaignAnalytics } from '@/components/campaigns/CampaignAnalytics';
 import { cn } from '@/lib/utils';
 
 const statusColors: Record<string, string> = {
@@ -54,13 +57,14 @@ const statusColors: Record<string, string> = {
 };
 
 export default function Campaigns() {
-  const { campaigns, isLoading, createCampaign, deleteCampaign, sendCampaign, scheduleCampaign } = useCampaigns();
+  const { campaigns, isLoading, createCampaign, deleteCampaign, sendCampaign, scheduleCampaign, cancelScheduledCampaign } = useCampaigns();
   const { lists } = useLists();
   const { imprints } = useImprints();
   const { imprintCounts, listCounts, totalCount } = useRecipientCounts();
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
   const [viewingCampaign, setViewingCampaign] = useState<Campaign | null>(null);
+  const [viewingAnalytics, setViewingAnalytics] = useState(false);
   const [selectedListIds, setSelectedListIds] = useState<string[]>([]);
   const [selectedImprintIds, setSelectedImprintIds] = useState<string[]>([]);
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -71,6 +75,12 @@ export default function Campaigns() {
   const [sendMode, setSendMode] = useState<'now' | 'schedule'>('now');
   const [scheduleDate, setScheduleDate] = useState<Date | undefined>(undefined);
   const [scheduleTime, setScheduleTime] = useState('09:00');
+
+  const handleCancelScheduled = async (campaign: Campaign) => {
+    if (confirm(`Cancel scheduled campaign "${campaign.name}"? It will be returned to draft status.`)) {
+      await cancelScheduledCampaign.mutateAsync(campaign.id);
+    }
+  };
 
   const handleQuickCreate = async () => {
     // Create a draft campaign with defaults and immediately open builder
@@ -146,6 +156,13 @@ export default function Campaigns() {
       return a.name.localeCompare(b.name);
     });
 
+  // Show analytics view
+  if (viewingAnalytics) {
+    return (
+      <CampaignAnalytics onBack={() => setViewingAnalytics(false)} />
+    );
+  }
+
   // Get the latest campaign data from the query for the viewing campaign
   const currentCampaign = viewingCampaign 
     ? campaigns.find(c => c.id === viewingCampaign.id) || viewingCampaign
@@ -156,6 +173,7 @@ export default function Campaigns() {
       <CampaignDetail
         campaign={currentCampaign}
         onBack={() => setViewingCampaign(null)}
+        onCancelScheduled={handleCancelScheduled}
       />
     );
   }
@@ -166,7 +184,7 @@ export default function Campaigns() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold tracking-tight">All campaigns</h1>
         <div className="flex items-center gap-3">
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={() => setViewingAnalytics(true)}>
             <BarChart3 className="mr-2 h-4 w-4" />
             View analytics
           </Button>
@@ -362,6 +380,19 @@ export default function Campaigns() {
                           Send Campaign
                         </DropdownMenuItem>
                       )}
+                      {campaign.status === 'scheduled' && (
+                        <>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem 
+                            className="text-amber-600"
+                            onClick={() => handleCancelScheduled(campaign)}
+                          >
+                            <XCircle className="mr-2 h-4 w-4" />
+                            Cancel Schedule
+                          </DropdownMenuItem>
+                        </>
+                      )}
+                      <DropdownMenuSeparator />
                       <DropdownMenuItem
                         className="text-destructive"
                         onClick={() => handleDelete(campaign)}

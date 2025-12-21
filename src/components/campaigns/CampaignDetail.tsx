@@ -61,6 +61,7 @@ import { EmailBuilder } from './EmailBuilder';
 interface CampaignDetailProps {
   campaign: Campaign;
   onBack: () => void;
+  onCancelScheduled?: (campaign: Campaign) => Promise<void>;
 }
 
 const statusColors: Record<string, string> = {
@@ -71,7 +72,7 @@ const statusColors: Record<string, string> = {
   failed: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
 };
 
-export function CampaignDetail({ campaign, onBack }: CampaignDetailProps) {
+export function CampaignDetail({ campaign, onBack, onCancelScheduled }: CampaignDetailProps) {
   const { data: stats, isLoading: statsLoading } = useCampaignStats(campaign.id);
   const { lists } = useLists();
   const { imprints } = useImprints();
@@ -331,6 +332,141 @@ export function CampaignDetail({ campaign, onBack }: CampaignDetailProps) {
       }
     }
   };
+
+  // For scheduled campaigns, show countdown view with cancel option
+  if (campaign.status === 'scheduled' && campaign.scheduled_at) {
+    const scheduledTime = new Date(campaign.scheduled_at);
+    const now = new Date();
+    const timeUntilSend = scheduledTime.getTime() - now.getTime();
+    const hoursUntil = Math.floor(timeUntilSend / (1000 * 60 * 60));
+    const minutesUntil = Math.floor((timeUntilSend % (1000 * 60 * 60)) / (1000 * 60));
+    const isPast = timeUntilSend <= 0;
+
+    return (
+      <div className="space-y-6 max-w-6xl">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={onBack}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div className="flex-1">
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-semibold tracking-tight">{campaign.name}</h1>
+              <Badge variant="secondary" className={statusColors[campaign.status]}>
+                Scheduled
+              </Badge>
+            </div>
+            <p className="text-muted-foreground">{campaign.subject}</p>
+          </div>
+          {onCancelScheduled && (
+            <Button 
+              variant="destructive" 
+              onClick={() => onCancelScheduled(campaign)}
+            >
+              <XIcon className="mr-2 h-4 w-4" />
+              Cancel Schedule
+            </Button>
+          )}
+        </div>
+
+        {/* Countdown Card */}
+        <Card className="border-blue-200 bg-blue-50 dark:bg-blue-950/30 dark:border-blue-800">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="h-16 w-16 rounded-full bg-blue-500/20 flex items-center justify-center">
+                  <Clock className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+                </div>
+                <div>
+                  <p className="text-lg font-semibold text-blue-800 dark:text-blue-300">
+                    {isPast ? 'Sending soon...' : `Sending in ${hoursUntil}h ${minutesUntil}m`}
+                  </p>
+                  <p className="text-blue-600 dark:text-blue-400">
+                    Scheduled for {format(scheduledTime, 'EEEE, MMMM d, yyyy')} at {format(scheduledTime, 'h:mm a')}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Campaign Details */}
+        <div className="grid gap-4 md:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Campaign Details</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">From</span>
+                <span>{campaign.from_name} &lt;{campaign.from_email}&gt;</span>
+              </div>
+              {campaign.reply_to_email && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Reply-To</span>
+                  <span>{campaign.reply_to_email}</span>
+                </div>
+              )}
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Subject</span>
+                <span className="text-right max-w-[250px] truncate">{campaign.subject}</span>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Delivery</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Status</span>
+                <Badge variant="secondary" className={statusColors['scheduled']}>
+                  Waiting to send
+                </Badge>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Scheduled</span>
+                <span>{format(scheduledTime, 'MMM d, yyyy h:mm a')}</span>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Email Preview */}
+        {campaign.html_content && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Email Preview</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="border rounded-lg overflow-hidden bg-white">
+                <iframe
+                  srcDoc={campaign.html_content}
+                  className="w-full h-[500px] border-0"
+                  title="Email Preview"
+                />
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Cancel Info */}
+        <Card className="border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800">
+          <CardContent className="pt-6">
+            <div className="flex items-start gap-3">
+              <Clock className="h-5 w-5 text-amber-600 mt-0.5" />
+              <div>
+                <p className="font-medium text-amber-800 dark:text-amber-300">Need to make changes?</p>
+                <p className="text-sm text-amber-700 dark:text-amber-400 mt-1">
+                  Click "Cancel Schedule" above to return this campaign to draft status. You can then edit and reschedule it.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   // For sent campaigns, show analytics view
   if (campaign.status === 'sent') {

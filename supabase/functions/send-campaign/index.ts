@@ -267,6 +267,7 @@ serve(async (req) => {
     }
 
     // Prepare queue entries with all data needed for sending
+    // Generate List-Unsubscribe headers for deliverability
     const queueEntries = contacts.map(contact => {
       let personalizedHtml = baseHtml
         .replace(/\{\{FIRST_NAME\}\}/g, contact.first_name || "there")
@@ -294,12 +295,22 @@ serve(async (req) => {
         .replace(/\{\{UNSUBSCRIBE_URL\}\}/gi, unsubscribeUrl)
         .replace(/\{\{unsubscribe_url\}\}/g, unsubscribeUrl);
 
+      // Ensure footer has physical address for CAN-SPAM compliance
+      if (!personalizedHtml.includes('Author Services') && !personalizedHtml.includes('physical address')) {
+        personalizedHtml = personalizedHtml.replace(
+          '</body>',
+          '<p style="font-size:11px;color:#999;text-align:center;margin-top:20px;">Author Services, 2727 Paces Ferry Road SE, Building Two, Suite 250, Atlanta, GA 30339</p></body>'
+        );
+      }
+
       // Determine reply-to email
-      // If routeRepliesToAsc is enabled and contact has an ASC with email, use that
       let replyToEmail = campaign.reply_to_email || null;
       if (routeRepliesToAsc && contact.assigned_asc && ascProfiles[contact.assigned_asc]) {
         replyToEmail = ascProfiles[contact.assigned_asc];
       }
+
+      // Generate List-Unsubscribe header value for the VPS worker to use
+      const listUnsubscribeHeader = `<${unsubscribeUrl}>, <mailto:unsubscribe@news.authorservices.com?subject=Unsubscribe&body=${encodeURIComponent(contact.email)}>`;
 
       return {
         campaign_id: campaignId,

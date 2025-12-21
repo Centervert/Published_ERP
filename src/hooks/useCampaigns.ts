@@ -206,6 +206,34 @@ export function useCampaigns() {
     },
   });
 
+  const cancelScheduledCampaign = useMutation({
+    mutationFn: async (campaignId: string) => {
+      // Reset campaign status to draft and clear scheduled time
+      const { data, error } = await supabase
+        .from('campaigns')
+        .update({ 
+          status: 'draft',
+          scheduled_at: null,
+          scheduled_imprint_ids: null,
+          scheduled_additional_recipients: null,
+        })
+        .eq('id', campaignId)
+        .eq('status', 'scheduled') // Only cancel if still scheduled
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['campaigns'] });
+      toast({ title: 'Campaign unscheduled', description: 'Campaign has been returned to draft status.' });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error canceling campaign', description: error.message, variant: 'destructive' });
+    },
+  });
+
   return {
     campaigns: campaignsQuery.data || [],
     isLoading: campaignsQuery.isLoading,
@@ -214,6 +242,7 @@ export function useCampaigns() {
     deleteCampaign,
     sendCampaign,
     scheduleCampaign,
+    cancelScheduledCampaign,
     refetch: campaignsQuery.refetch,
   };
 }
@@ -267,5 +296,125 @@ export function useCampaignStats(campaignId: string | null) {
       return stats;
     },
     enabled: !!campaignId,
+  });
+}
+
+export interface AggregateStats {
+  totalSent: number;
+  totalOpened: number;
+  totalClicked: number;
+  totalBounced: number;
+  totalUnsubscribed: number;
+  avgOpenRate: number;
+  avgClickRate: number;
+  campaignCount: number;
+  recentCampaigns: Array<{
+    id: string;
+    name: string;
+    sent_at: string;
+    total_recipients: number;
+    openRate: number;
+    clickRate: number;
+  }>;
+}
+
+export function useAggregateStats() {
+  return useQuery({
+    queryKey: ['aggregate-campaign-stats'],
+    queryFn: async () => {
+      // Get all sent campaigns
+      const { data: campaigns, error: campaignsError } = await supabase
+        .from('campaigns')
+        .select('id, name, sent_at, total_recipients')
+        .eq('status', 'sent')
+        .order('sent_at', { ascending: false })
+        .limit(20);
+
+      if (campaignsError) throw campaignsError;
+
+      // Get all events for these campaigns
+      const campaignIds = campaigns?.map(c => c.id) || [];
+      
+      if (campaignIds.length === 0) {
+        return {
+          totalSent: 0,
+          totalOpened: 0,
+          totalClicked: 0,
+          totalBounced: 0,
+          totalUnsubscribed: 0,
+          avgOpenRate: 0,
+          avgClickRate: 0,
+          campaignCount: 0,
+          recentCampaigns: [],
+        } as AggregateStats;
+      }
+
+      const { data: events, error: eventsError } = await supabase
+        .from('email_events')
+        .select('campaign_id, event_type, email, is_bot')
+        .in('campaign_id', campaignIds);
+
+      if (eventsError) throw eventsError;
+
+      // Calculate stats per campaign
+      const campaignStats = new Map<string, { sent: number; opened: Set<string>; clicked: Set<string>; bounced: number; unsubscribed: number }>();
+      
+      campaignIds.forEach(id => {
+        campaignStats.set(id, { sent: 0, opened: new Set(), clicked: new Set(), bounced: 0, unsubscribed: 0 });
+      });
+
+      events?.forEach(event => {
+        const stats = campaignStats.get(event.campaign_id);
+        if (!stats) return;
+        
+        switch (event.event_type) {
+          case 'sent': stats.sent++; break;
+          case 'opened': if (!event.is_bot) stats.opened.add(event.email); break;
+          case 'clicked': stats.clicked.add(event.email); break;
+          case 'bounced': stats.bounced++; break;
+          case 'unsubscribed': stats.unsubscribed++; break;
+        }
+      });
+
+      // Calculate aggregates
+      let totalSent = 0, totalOpened = 0, totalClicked = 0, totalBounced = 0, totalUnsubscribed = 0;
+      const recentCampaigns: AggregateStats['recentCampaigns'] = [];
+
+      campaigns?.forEach(campaign => {
+        const stats = campaignStats.get(campaign.id);
+        if (!stats) return;
+        
+        const sent = stats.sent || campaign.total_recipients;
+        const opened = stats.opened.size;
+        const clicked = stats.clicked.size;
+        
+        totalSent += sent;
+        totalOpened += opened;
+        totalClicked += clicked;
+        totalBounced += stats.bounced;
+        totalUnsubscribed += stats.unsubscribed;
+
+        recentCampaigns.push({
+          id: campaign.id,
+          name: campaign.name,
+          sent_at: campaign.sent_at,
+          total_recipients: campaign.total_recipients,
+          openRate: sent > 0 ? (opened / sent) * 100 : 0,
+          clickRate: opened > 0 ? (clicked / opened) * 100 : 0,
+        });
+      });
+
+      return {
+        totalSent,
+        totalOpened,
+        totalClicked,
+        totalBounced,
+        totalUnsubscribed,
+        avgOpenRate: totalSent > 0 ? (totalOpened / totalSent) * 100 : 0,
+        avgClickRate: totalOpened > 0 ? (totalClicked / totalOpened) * 100 : 0,
+        campaignCount: campaigns?.length || 0,
+        recentCampaigns,
+      } as AggregateStats;
+    },
   });
 }
