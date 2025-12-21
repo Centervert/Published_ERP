@@ -162,8 +162,9 @@ serve(async (req) => {
       throw new Error("Campaign not found");
     }
 
-    if (campaign.status !== "draft") {
-      throw new Error("Campaign has already been sent or is in progress");
+    // Allow draft or sending (scheduled campaigns are set to sending before calling this)
+    if (campaign.status !== "draft" && campaign.status !== "sending") {
+      throw new Error("Campaign has already been sent or cannot be modified");
     }
 
     // Update campaign status to sending
