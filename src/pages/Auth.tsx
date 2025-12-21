@@ -1,22 +1,25 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ArrowLeft } from 'lucide-react';
 import { z } from 'zod';
 import authorServicesLogo from '@/assets/author-services-logo.png';
 
 const emailSchema = z.string().email('Please enter a valid email address');
 const passwordSchema = z.string().min(6, 'Password must be at least 6 characters');
 
+type AuthView = 'signin' | 'forgot-password' | 'reset-sent';
+
 export default function Auth() {
   const [isLoading, setIsLoading] = useState(false);
-  const { signIn, signUp, user } = useAuth();
+  const [view, setView] = useState<AuthView>('signin');
+  const { signIn, user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -66,18 +69,15 @@ export default function Auth() {
     setIsLoading(false);
   };
 
-  const handleSignUp = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleForgotPassword = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
 
     const formData = new FormData(e.currentTarget);
     const email = formData.get('email') as string;
-    const password = formData.get('password') as string;
-    const fullName = formData.get('fullName') as string;
 
     try {
       emailSchema.parse(email);
-      passwordSchema.parse(password);
     } catch (err) {
       if (err instanceof z.ZodError) {
         toast({
@@ -90,28 +90,18 @@ export default function Auth() {
       }
     }
 
-    const { error } = await signUp(email, password, fullName);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth/reset-password`,
+    });
 
     if (error) {
-      if (error.message.includes('already registered')) {
-        toast({
-          title: 'Account exists',
-          description: 'This email is already registered. Please sign in instead.',
-          variant: 'destructive',
-        });
-      } else {
-        toast({
-          title: 'Sign up failed',
-          description: error.message,
-          variant: 'destructive',
-        });
-      }
-    } else {
       toast({
-        title: 'Account created!',
-        description: 'You have been signed in automatically.',
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
       });
-      navigate('/', { replace: true });
+    } else {
+      setView('reset-sent');
     }
 
     setIsLoading(false);
@@ -129,100 +119,109 @@ export default function Auth() {
             />
           </div>
           <CardDescription>
-            Sign in to manage your campaigns
+            {view === 'signin' && 'Sign in to manage your campaigns'}
+            {view === 'forgot-password' && 'Enter your email to reset your password'}
+            {view === 'reset-sent' && 'Check your email for a password reset link'}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="signin" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="signin">Sign In</TabsTrigger>
-              <TabsTrigger value="signup">Sign Up</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="signin">
-              <form onSubmit={handleSignIn} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="signin-email">Email</Label>
-                  <Input
-                    id="signin-email"
-                    name="email"
-                    type="email"
-                    placeholder="you@example.com"
-                    required
-                    disabled={isLoading}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signin-password">Password</Label>
-                  <Input
-                    id="signin-password"
-                    name="password"
-                    type="password"
-                    placeholder="••••••••"
-                    required
-                    disabled={isLoading}
-                  />
-                </div>
-                <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Signing in...
-                    </>
-                  ) : (
-                    'Sign In'
-                  )}
-                </Button>
-              </form>
-            </TabsContent>
-            
-            <TabsContent value="signup">
-              <form onSubmit={handleSignUp} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="signup-name">Full Name</Label>
-                  <Input
-                    id="signup-name"
-                    name="fullName"
-                    type="text"
-                    placeholder="John Doe"
-                    disabled={isLoading}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-email">Email</Label>
-                  <Input
-                    id="signup-email"
-                    name="email"
-                    type="email"
-                    placeholder="you@example.com"
-                    required
-                    disabled={isLoading}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-password">Password</Label>
-                  <Input
-                    id="signup-password"
-                    name="password"
-                    type="password"
-                    placeholder="••••••••"
-                    required
-                    disabled={isLoading}
-                  />
-                </div>
-                <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Creating account...
-                    </>
-                  ) : (
-                    'Create Account'
-                  )}
-                </Button>
-              </form>
-            </TabsContent>
-          </Tabs>
+          {view === 'signin' && (
+            <form onSubmit={handleSignIn} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="signin-email">Email</Label>
+                <Input
+                  id="signin-email"
+                  name="email"
+                  type="email"
+                  placeholder="you@example.com"
+                  required
+                  disabled={isLoading}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="signin-password">Password</Label>
+                <Input
+                  id="signin-password"
+                  name="password"
+                  type="password"
+                  placeholder="••••••••"
+                  required
+                  disabled={isLoading}
+                />
+              </div>
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Signing in...
+                  </>
+                ) : (
+                  'Sign In'
+                )}
+              </Button>
+              <div className="text-center">
+                <button
+                  type="button"
+                  onClick={() => setView('forgot-password')}
+                  className="text-sm text-muted-foreground hover:text-primary underline"
+                >
+                  Forgot your password?
+                </button>
+              </div>
+            </form>
+          )}
+
+          {view === 'forgot-password' && (
+            <form onSubmit={handleForgotPassword} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="reset-email">Email</Label>
+                <Input
+                  id="reset-email"
+                  name="email"
+                  type="email"
+                  placeholder="you@example.com"
+                  required
+                  disabled={isLoading}
+                />
+              </div>
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  'Send Reset Link'
+                )}
+              </Button>
+              <div className="text-center">
+                <button
+                  type="button"
+                  onClick={() => setView('signin')}
+                  className="text-sm text-muted-foreground hover:text-primary inline-flex items-center gap-1"
+                >
+                  <ArrowLeft className="h-3 w-3" />
+                  Back to sign in
+                </button>
+              </div>
+            </form>
+          )}
+
+          {view === 'reset-sent' && (
+            <div className="space-y-4 text-center">
+              <p className="text-sm text-muted-foreground">
+                If an account exists with that email, you'll receive a password reset link shortly.
+              </p>
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => setView('signin')}
+              >
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back to sign in
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

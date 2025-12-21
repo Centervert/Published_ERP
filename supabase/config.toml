@@ -68,3 +68,7 @@ verify_jwt = true
 # AI Subject generation - requires auth
 [functions.generate-subject]
 verify_jwt = true
+
+# User invitation - requires auth (admin only)
+[functions.invite-user]
+verify_jwt = true
