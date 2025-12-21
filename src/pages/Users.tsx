@@ -24,12 +24,25 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Search, X, Loader2 } from 'lucide-react';
+import { Search, X, Loader2, UserPlus, Mail } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { useUsers, ROLE_DISPLAY_NAMES, AppRole, useHasRole } from '@/hooks/useUsers';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+import { z } from 'zod';
 
 const ROLE_OPTIONS: AppRole[] = ['super_admin', 'admin', 'asc', 'ae', 'marketing', 'member'];
+
+const emailSchema = z.string().email('Please enter a valid email address');
 
 const getRoleBadgeVariant = (role: AppRole): 'default' | 'secondary' | 'outline' => {
   switch (role) {
@@ -45,12 +58,19 @@ const getRoleBadgeVariant = (role: AppRole): 'default' | 'secondary' | 'outline'
 export default function Users() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
+  const [isInviting, setIsInviting] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     full_name: '',
     phone: '',
     title: '',
     role: '' as AppRole | '',
+  });
+  const [inviteData, setInviteData] = useState({
+    email: '',
+    fullName: '',
+    role: 'member' as AppRole,
   });
 
   const { users, isLoading, updateUserRole, updateUserProfile } = useUsers();
@@ -126,6 +146,46 @@ export default function Users() {
     handleCloseSheet();
   };
 
+  const handleInviteUser = async () => {
+    try {
+      emailSchema.parse(inviteData.email);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        toast.error(err.errors[0].message);
+        return;
+      }
+    }
+
+    setIsInviting(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('invite-user', {
+        body: {
+          email: inviteData.email,
+          fullName: inviteData.fullName,
+          role: inviteData.role,
+        },
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      if (data?.error) {
+        throw new Error(data.error);
+      }
+
+      toast.success(`Invitation sent to ${inviteData.email}`);
+      setIsInviteDialogOpen(false);
+      setInviteData({ email: '', fullName: '', role: 'member' });
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to send invitation';
+      toast.error(errorMessage);
+    } finally {
+      setIsInviting(false);
+    }
+  };
+
   const getInitials = (fullName: string | null) => {
     if (!fullName) return '??';
     const parts = fullName.trim().split(' ');
@@ -158,6 +218,12 @@ export default function Users() {
               Manage internal team members and their roles
             </p>
           </div>
+          {canManageRoles && (
+            <Button onClick={() => setIsInviteDialogOpen(true)}>
+              <UserPlus className="h-4 w-4 mr-2" />
+              Invite User
+            </Button>
+          )}
         </div>
 
         <div className="flex items-center gap-4">
@@ -236,6 +302,7 @@ export default function Users() {
         </div>
       </div>
 
+      {/* Edit User Sheet */}
       <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
         <SheetContent className="w-[400px] sm:w-[500px]">
           <SheetHeader className="flex flex-row items-center justify-between">
@@ -337,6 +404,89 @@ export default function Users() {
           </div>
         </SheetContent>
       </Sheet>
+
+      {/* Invite User Dialog */}
+      <Dialog open={isInviteDialogOpen} onOpenChange={setIsInviteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Invite New User</DialogTitle>
+            <DialogDescription>
+              Send an email invitation to add a new team member. They'll receive a link to set up their account.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="invite-email">Email Address *</Label>
+              <Input
+                id="invite-email"
+                type="email"
+                value={inviteData.email}
+                onChange={(e) =>
+                  setInviteData({ ...inviteData, email: e.target.value })
+                }
+                placeholder="newuser@company.com"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="invite-name">Full Name</Label>
+              <Input
+                id="invite-name"
+                value={inviteData.fullName}
+                onChange={(e) =>
+                  setInviteData({ ...inviteData, fullName: e.target.value })
+                }
+                placeholder="Jane Doe"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="invite-role">Role</Label>
+              <Select
+                value={inviteData.role}
+                onValueChange={(value: AppRole) =>
+                  setInviteData({ ...inviteData, role: value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a role" />
+                </SelectTrigger>
+                <SelectContent>
+                  {assignableRoles.map((role) => (
+                    <SelectItem key={role} value={role}>
+                      {ROLE_DISPLAY_NAMES[role]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsInviteDialogOpen(false)}
+              disabled={isInviting}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleInviteUser} disabled={isInviting || !inviteData.email}>
+              {isInviting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Sending...
+                </>
+              ) : (
+                <>
+                  <Mail className="h-4 w-4 mr-2" />
+                  Send Invitation
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }
