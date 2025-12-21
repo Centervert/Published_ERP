@@ -8,6 +8,7 @@ export const ROLE_DISPLAY_NAMES: Record<string, string> = {
   admin: 'Admin',
   asc: 'Author Success Coach',
   ae: 'Account Executive',
+  marketing: 'Marketing',
   member: 'Member',
 };
 
@@ -17,10 +18,11 @@ export const DISPLAY_NAME_TO_ROLE: Record<string, string> = {
   'Admin': 'admin',
   'Author Success Coach': 'asc',
   'Account Executive': 'ae',
+  'Marketing': 'marketing',
   'Member': 'member',
 };
 
-export type AppRole = 'super_admin' | 'admin' | 'asc' | 'ae' | 'member';
+export type AppRole = 'super_admin' | 'admin' | 'asc' | 'ae' | 'marketing' | 'member';
 
 export interface UserWithRole {
   id: string;
