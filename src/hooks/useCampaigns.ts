@@ -148,6 +148,60 @@ export function useCampaigns() {
     },
   });
 
+  const scheduleCampaign = useMutation({
+    mutationFn: async ({ 
+      campaignId, 
+      listIds, 
+      imprintIds, 
+      scheduledAt 
+    }: { 
+      campaignId: string; 
+      listIds: string[]; 
+      imprintIds?: string[];
+      scheduledAt: Date;
+    }) => {
+      // First, save the selected lists to campaign_lists junction table
+      // Delete existing entries first
+      await supabase
+        .from('campaign_lists')
+        .delete()
+        .eq('campaign_id', campaignId);
+
+      // Insert new list associations
+      if (listIds.length > 0) {
+        const listEntries = listIds.map(listId => ({
+          campaign_id: campaignId,
+          list_id: listId,
+        }));
+        const { error: listError } = await supabase
+          .from('campaign_lists')
+          .insert(listEntries);
+        if (listError) throw listError;
+      }
+
+      // Update campaign status to scheduled with the scheduled_at time
+      const { data, error } = await supabase
+        .from('campaigns')
+        .update({ 
+          status: 'scheduled',
+          scheduled_at: scheduledAt.toISOString(),
+        })
+        .eq('id', campaignId)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['campaigns'] });
+      toast({ title: 'Campaign scheduled!' });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error scheduling campaign', description: error.message, variant: 'destructive' });
+    },
+  });
+
   return {
     campaigns: campaignsQuery.data || [],
     isLoading: campaignsQuery.isLoading,
@@ -155,6 +209,7 @@ export function useCampaigns() {
     updateCampaign,
     deleteCampaign,
     sendCampaign,
+    scheduleCampaign,
     refetch: campaignsQuery.refetch,
   };
 }
