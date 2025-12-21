@@ -104,12 +104,13 @@ serve(async (req) => {
     }
 
     // Use inviteUserByEmail to send an invitation
+    // Redirect to reset-password so the invited user can set their password
     const { data: inviteData, error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
       data: {
         full_name: fullName || "",
         invited_role: requestedRole,
       },
-      redirectTo: `${req.headers.get("origin") || supabaseUrl}/auth`,
+      redirectTo: `${req.headers.get("origin") || supabaseUrl}/reset-password`,
     });
 
     if (inviteError) {
