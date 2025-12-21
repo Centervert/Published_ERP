@@ -17,6 +17,12 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Calendar } from '@/components/ui/calendar';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import { 
   Plus, 
   Send, 
@@ -25,7 +31,9 @@ import {
   Search, 
   Mail, 
   ChevronDown,
-  BarChart3
+  BarChart3,
+  Clock,
+  CalendarIcon
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -35,6 +43,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { format } from 'date-fns';
 import { CampaignDetail } from '@/components/campaigns/CampaignDetail';
+import { cn } from '@/lib/utils';
 
 const statusColors: Record<string, string> = {
   draft: 'bg-muted text-muted-foreground',
@@ -45,7 +54,7 @@ const statusColors: Record<string, string> = {
 };
 
 export default function Campaigns() {
-  const { campaigns, isLoading, createCampaign, deleteCampaign, sendCampaign } = useCampaigns();
+  const { campaigns, isLoading, createCampaign, deleteCampaign, sendCampaign, scheduleCampaign } = useCampaigns();
   const { lists } = useLists();
   const { imprints } = useImprints();
   const { imprintCounts, listCounts, totalCount } = useRecipientCounts();
@@ -57,6 +66,11 @@ export default function Campaigns() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'name'>('newest');
+  
+  // Scheduling state
+  const [sendMode, setSendMode] = useState<'now' | 'schedule'>('now');
+  const [scheduleDate, setScheduleDate] = useState<Date | undefined>(undefined);
+  const [scheduleTime, setScheduleTime] = useState('09:00');
 
   const handleQuickCreate = async () => {
     // Create a draft campaign with defaults and immediately open builder
@@ -74,15 +88,34 @@ export default function Campaigns() {
 
   const handleSend = async () => {
     if (!selectedCampaign) return;
-    await sendCampaign.mutateAsync({
-      campaignId: selectedCampaign.id,
-      listIds: selectedListIds,
-      imprintIds: selectedImprintIds.length > 0 ? selectedImprintIds : undefined,
-    });
+    
+    if (sendMode === 'schedule' && scheduleDate) {
+      // Combine date and time
+      const [hours, minutes] = scheduleTime.split(':').map(Number);
+      const scheduledAt = new Date(scheduleDate);
+      scheduledAt.setHours(hours, minutes, 0, 0);
+      
+      await scheduleCampaign.mutateAsync({
+        campaignId: selectedCampaign.id,
+        listIds: selectedListIds,
+        imprintIds: selectedImprintIds.length > 0 ? selectedImprintIds : undefined,
+        scheduledAt,
+      });
+    } else {
+      await sendCampaign.mutateAsync({
+        campaignId: selectedCampaign.id,
+        listIds: selectedListIds,
+        imprintIds: selectedImprintIds.length > 0 ? selectedImprintIds : undefined,
+      });
+    }
+    
     setSendDialogOpen(false);
     setSelectedCampaign(null);
     setSelectedListIds([]);
     setSelectedImprintIds([]);
+    setSendMode('now');
+    setScheduleDate(undefined);
+    setScheduleTime('09:00');
   };
 
   const handleDelete = async (campaign: Campaign) => {
@@ -95,6 +128,9 @@ export default function Campaigns() {
     setSelectedCampaign(campaign);
     setSelectedListIds([]);
     setSelectedImprintIds([]);
+    setSendMode('now');
+    setScheduleDate(undefined);
+    setScheduleTime('09:00');
     setSendDialogOpen(true);
   };
 
@@ -275,7 +311,13 @@ export default function Campaigns() {
                   <Badge variant="secondary" className={statusColors[campaign.status]}>
                     {campaign.status === 'sent' ? 'Published' : campaign.status}
                   </Badge>
-                  {campaign.sent_at && (
+                  {campaign.scheduled_at && campaign.status === 'scheduled' && (
+                    <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                      <Clock className="h-3 w-3" />
+                      {format(new Date(campaign.scheduled_at), 'MMM d, h:mm a')}
+                    </p>
+                  )}
+                  {campaign.sent_at && campaign.status === 'sent' && (
                     <p className="text-xs text-muted-foreground mt-1">
                       {format(new Date(campaign.sent_at), 'MMM d, h:mm a')}
                     </p>
@@ -433,15 +475,101 @@ export default function Campaigns() {
                 ? 'Sending to all active contacts'
                 : `Sending to ${selectedImprintIds.length > 0 ? `${selectedImprintIds.length} imprint(s)` : ''}${selectedImprintIds.length > 0 && selectedListIds.length > 0 ? ' and ' : ''}${selectedListIds.length > 0 ? `${selectedListIds.length} list(s)` : ''}`}
             </p>
+
+            {/* Send Mode Selection */}
+            <div className="space-y-3 pt-2 border-t">
+              <Label>When to send</Label>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant={sendMode === 'now' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setSendMode('now')}
+                  className="flex-1"
+                >
+                  <Send className="mr-2 h-4 w-4" />
+                  Send Now
+                </Button>
+                <Button
+                  type="button"
+                  variant={sendMode === 'schedule' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setSendMode('schedule')}
+                  className="flex-1"
+                >
+                  <Clock className="mr-2 h-4 w-4" />
+                  Schedule
+                </Button>
+              </div>
+
+              {sendMode === 'schedule' && (
+                <div className="space-y-3 pt-2">
+                  <div className="flex gap-3">
+                    <div className="flex-1">
+                      <Label className="text-xs">Date</Label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              "w-full justify-start text-left font-normal mt-1",
+                              !scheduleDate && "text-muted-foreground"
+                            )}
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {scheduleDate ? format(scheduleDate, "PPP") : "Pick a date"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={scheduleDate}
+                            onSelect={setScheduleDate}
+                            disabled={(date) => date < new Date()}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                    <div className="w-32">
+                      <Label className="text-xs">Time</Label>
+                      <Input
+                        type="time"
+                        value={scheduleTime}
+                        onChange={(e) => setScheduleTime(e.target.value)}
+                        className="mt-1"
+                      />
+                    </div>
+                  </div>
+                  {scheduleDate && (
+                    <p className="text-xs text-muted-foreground">
+                      Campaign will be sent on {format(scheduleDate, 'MMMM d, yyyy')} at {scheduleTime}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setSendDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleSend} disabled={sendCampaign.isPending}>
-              {sendCampaign.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              <Send className="mr-2 h-4 w-4" />
-              Send Now
+            <Button 
+              onClick={handleSend} 
+              disabled={sendCampaign.isPending || scheduleCampaign.isPending || (sendMode === 'schedule' && !scheduleDate)}
+            >
+              {(sendCampaign.isPending || scheduleCampaign.isPending) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {sendMode === 'schedule' ? (
+                <>
+                  <Clock className="mr-2 h-4 w-4" />
+                  Schedule Campaign
+                </>
+              ) : (
+                <>
+                  <Send className="mr-2 h-4 w-4" />
+                  Send Now
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
