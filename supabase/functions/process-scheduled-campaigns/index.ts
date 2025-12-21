@@ -72,12 +72,12 @@ serve(async (req) => {
           .update({ status: "sending" })
           .eq("id", campaign.id);
 
-        // Call the send-campaign function internally with stored settings
+        // Call the send-campaign function internally with worker API key
         const sendResponse = await fetch(`${supabaseUrl}/functions/v1/send-campaign`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${supabaseKey}`,
+            "x-worker-key": expectedKey,
           },
           body: JSON.stringify({
             campaignId: campaign.id,
