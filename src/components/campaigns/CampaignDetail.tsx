@@ -126,7 +126,16 @@ export function CampaignDetail({ campaign, onBack }: CampaignDetailProps) {
   const hasFrom = !!fromName && !!fromEmail;
   const hasSubject = !!campaign.subject || !!subject;
   const hasContent = !!campaign.html_content || (campaign.blocks_json && campaign.blocks_json.length > 0);
-  const hasScheduleTime = sendTimeOption === 'now' || (scheduledDate && scheduledTime);
+  
+  // Validate scheduled time is in the future
+  const isScheduledTimeValid = () => {
+    if (sendTimeOption === 'now') return true;
+    if (!scheduledDate || !scheduledTime) return false;
+    const scheduledAt = new Date(`${scheduledDate}T${scheduledTime}`);
+    return scheduledAt > new Date();
+  };
+  
+  const hasScheduleTime = sendTimeOption === 'now' || (scheduledDate && scheduledTime && isScheduledTimeValid());
   const isReadyToSend = hasRecipients && hasFrom && hasSubject && hasContent && hasScheduleTime;
 
   // Use human opens for accurate rate calculation
@@ -142,8 +151,15 @@ export function CampaignDetail({ campaign, onBack }: CampaignDetailProps) {
 
   const handleSend = async () => {
     if (sendTimeOption === 'scheduled' && scheduledDate && scheduledTime) {
-      // Schedule for later
+      // Schedule for later - validate the time is in the future
       const scheduledAt = new Date(`${scheduledDate}T${scheduledTime}`);
+      const now = new Date();
+      
+      if (scheduledAt <= now) {
+        toast.error('Scheduled time must be in the future');
+        return;
+      }
+      
       await scheduleCampaign.mutateAsync({
         campaignId: campaign.id,
         listIds: selectedListIds,
@@ -938,9 +954,17 @@ export function CampaignDetail({ campaign, onBack }: CampaignDetailProps) {
                             </div>
                           </div>
                           {scheduledDate && scheduledTime && (
-                            <p className="text-sm text-muted-foreground">
-                              Will send on {format(new Date(`${scheduledDate}T${scheduledTime}`), 'MMMM d, yyyy')} at {format(new Date(`${scheduledDate}T${scheduledTime}`), 'h:mm a')}
-                            </p>
+                            <>
+                              {new Date(`${scheduledDate}T${scheduledTime}`) <= new Date() ? (
+                                <p className="text-sm text-destructive font-medium">
+                                  ⚠️ Scheduled time must be in the future
+                                </p>
+                              ) : (
+                                <p className="text-sm text-muted-foreground">
+                                  Will send on {format(new Date(`${scheduledDate}T${scheduledTime}`), 'MMMM d, yyyy')} at {format(new Date(`${scheduledDate}T${scheduledTime}`), 'h:mm a')}
+                                </p>
+                              )}
+                            </>
                           )}
                         </div>
                       )}

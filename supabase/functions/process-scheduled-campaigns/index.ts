@@ -34,7 +34,7 @@ serve(async (req) => {
     const now = new Date().toISOString();
     const { data: dueCampaigns, error: fetchError } = await supabase
       .from("campaigns")
-      .select("id, name, scheduled_at")
+      .select("id, name, scheduled_at, scheduled_imprint_ids, scheduled_additional_recipients, route_replies_to_asc")
       .eq("status", "scheduled")
       .lte("scheduled_at", now);
 
@@ -72,8 +72,7 @@ serve(async (req) => {
           .update({ status: "sending" })
           .eq("id", campaign.id);
 
-        // Call the send-campaign function internally
-        // We need to trigger the same flow as manual sending
+        // Call the send-campaign function internally with stored settings
         const sendResponse = await fetch(`${supabaseUrl}/functions/v1/send-campaign`, {
           method: "POST",
           headers: {
@@ -83,7 +82,9 @@ serve(async (req) => {
           body: JSON.stringify({
             campaignId: campaign.id,
             listIds: listIds,
-            // Note: scheduled campaigns use the lists saved at schedule time
+            imprintIds: campaign.scheduled_imprint_ids || undefined,
+            additionalRecipients: campaign.scheduled_additional_recipients || undefined,
+            routeRepliesToAsc: campaign.route_replies_to_asc || false,
           }),
         });
 

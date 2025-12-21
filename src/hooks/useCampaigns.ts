@@ -181,12 +181,14 @@ export function useCampaigns() {
         if (listError) throw listError;
       }
 
-      // Update campaign status to scheduled with the scheduled_at time
+      // Update campaign status to scheduled with all settings
       const { data, error } = await supabase
         .from('campaigns')
         .update({ 
           status: 'scheduled',
           scheduled_at: scheduledAt.toISOString(),
+          scheduled_imprint_ids: imprintIds || null,
+          scheduled_additional_recipients: additionalRecipients || null,
         })
         .eq('id', campaignId)
         .select()

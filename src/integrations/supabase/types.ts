@@ -93,7 +93,10 @@ export type Database = {
           id: string
           name: string
           reply_to_email: string | null
+          route_replies_to_asc: boolean | null
+          scheduled_additional_recipients: string[] | null
           scheduled_at: string | null
+          scheduled_imprint_ids: string[] | null
           sent_at: string | null
           status: Database["public"]["Enums"]["campaign_status"] | null
           subject: string
@@ -111,7 +114,10 @@ export type Database = {
           id?: string
           name: string
           reply_to_email?: string | null
+          route_replies_to_asc?: boolean | null
+          scheduled_additional_recipients?: string[] | null
           scheduled_at?: string | null
+          scheduled_imprint_ids?: string[] | null
           sent_at?: string | null
           status?: Database["public"]["Enums"]["campaign_status"] | null
           subject: string
@@ -129,7 +135,10 @@ export type Database = {
           id?: string
           name?: string
           reply_to_email?: string | null
+          route_replies_to_asc?: boolean | null
+          scheduled_additional_recipients?: string[] | null
           scheduled_at?: string | null
+          scheduled_imprint_ids?: string[] | null
           sent_at?: string | null
           status?: Database["public"]["Enums"]["campaign_status"] | null
           subject?: string
