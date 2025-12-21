@@ -138,6 +138,7 @@ export function useContacts() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['contacts'] });
+      queryClient.invalidateQueries({ queryKey: ['contacts-paginated'] });
       toast({ title: 'Contact added successfully' });
     },
     onError: (error: Error) => {
@@ -166,6 +167,7 @@ export function useContacts() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['contacts'] });
+      queryClient.invalidateQueries({ queryKey: ['contacts-paginated'] });
     },
     onError: (error: Error) => {
       toast({ title: 'Error updating contact', description: error.message, variant: 'destructive' });
@@ -179,6 +181,7 @@ export function useContacts() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['contacts'] });
+      queryClient.invalidateQueries({ queryKey: ['contacts-paginated'] });
       toast({ title: 'Contact deleted' });
     },
     onError: (error: Error) => {
@@ -383,6 +386,7 @@ export function useUpdateContact() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['contacts'] });
+      queryClient.invalidateQueries({ queryKey: ['contacts-paginated'] });
       queryClient.invalidateQueries({ queryKey: ['contact', variables.id] });
       queryClient.invalidateQueries({ queryKey: ['contact-activity', variables.id] });
     },
