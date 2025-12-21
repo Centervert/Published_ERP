@@ -95,6 +95,7 @@ export function CampaignDetail({ campaign, onBack }: CampaignDetailProps) {
   const [fromName, setFromName] = useState(campaign.from_name);
   const [fromEmail, setFromEmail] = useState(campaign.from_email);
   const [replyToEmail, setReplyToEmail] = useState(campaign.reply_to_email || '');
+  const [routeRepliesToAsc, setRouteRepliesToAsc] = useState(false);
   const [subject, setSubject] = useState(campaign.subject);
   const [campaignName, setCampaignName] = useState(campaign.name);
   
@@ -142,6 +143,7 @@ export function CampaignDetail({ campaign, onBack }: CampaignDetailProps) {
       listIds: selectedListIds,
       imprintIds: selectedImprintIds.length > 0 ? selectedImprintIds : undefined,
       additionalRecipients: additionalRecipients.length > 0 ? additionalRecipients : undefined,
+      routeRepliesToAsc: routeRepliesToAsc,
     });
     setSendDialogOpen(false);
     onBack();
@@ -704,7 +706,27 @@ export function CampaignDetail({ campaign, onBack }: CampaignDetailProps) {
                         value={replyToEmail}
                         onChange={(e) => setReplyToEmail(e.target.value)}
                         placeholder="replies@example.com"
+                        disabled={routeRepliesToAsc}
+                        className={routeRepliesToAsc ? 'opacity-50' : ''}
                       />
+                    </div>
+                    <div className="flex items-center space-x-2 pt-2">
+                      <Checkbox 
+                        id="route-to-asc" 
+                        checked={routeRepliesToAsc}
+                        onCheckedChange={(checked) => {
+                          setRouteRepliesToAsc(checked === true);
+                          if (checked) {
+                            setReplyToEmail('');
+                          }
+                        }}
+                      />
+                      <label 
+                        htmlFor="route-to-asc" 
+                        className="text-sm text-muted-foreground cursor-pointer"
+                      >
+                        Route replies to each recipient's assigned ASC
+                      </label>
                     </div>
                   </div>
                   <Button size="sm" onClick={handleUpdateFrom} disabled={updateCampaign.isPending}>
