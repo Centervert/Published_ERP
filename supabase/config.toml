@@ -12,9 +12,9 @@ verify_jwt = false
 [functions.unsubscribe]
 verify_jwt = false
 
-# Send campaign - requires auth
+# Send campaign - uses custom auth (worker API key or user auth)
 [functions.send-campaign]
-verify_jwt = true
+verify_jwt = false
 
 # Worker API endpoints - use custom API key auth
 [functions.get-pending-emails]

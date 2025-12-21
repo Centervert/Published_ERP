@@ -143,6 +143,23 @@ serve(async (req) => {
   }
 
   try {
+    // Check for worker API key OR valid authorization header
+    const workerKey = req.headers.get("x-worker-key");
+    const expectedWorkerKey = Deno.env.get("WORKER_API_KEY");
+    const authHeader = req.headers.get("authorization");
+    
+    // Allow access if worker API key matches OR if there's a valid auth header
+    const hasWorkerAuth = workerKey && workerKey === expectedWorkerKey;
+    const hasUserAuth = authHeader && authHeader.startsWith("Bearer ");
+    
+    if (!hasWorkerAuth && !hasUserAuth) {
+      console.log("[send-campaign] Unauthorized: no valid auth found");
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
     const supabase = createClient(supabaseUrl, supabaseKey);
