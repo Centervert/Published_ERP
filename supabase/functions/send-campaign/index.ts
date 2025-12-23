@@ -231,28 +231,6 @@ serve(async (req) => {
 
     console.log(`[send-campaign] Found ${contacts.length} contacts to queue`);
 
-    // Auto-BCC: Fetch Staff list members to receive copies of all campaigns
-    let staffEmails: string[] = [];
-    const { data: staffList } = await supabase
-      .from("lists")
-      .select("id")
-      .eq("name", "Staff")
-      .single();
-    
-    if (staffList) {
-      const { data: staffContacts } = await supabase
-        .from("contact_lists")
-        .select("contacts(email)")
-        .eq("list_id", staffList.id);
-      
-      if (staffContacts) {
-        staffEmails = staffContacts
-          .map((sc: any) => sc.contacts?.email)
-          .filter((email: string | undefined): email is string => !!email && email.includes('@'));
-        console.log(`[send-campaign] Auto-BCC: Adding ${staffEmails.length} staff members`);
-      }
-    }
-
     // Calculate spread duration based on recipient count
     // This prevents spam filters from flagging mass sends
     const recipientCount = contacts.length + (additionalRecipients?.length || 0);
@@ -431,58 +409,6 @@ serve(async (req) => {
       console.log(`[send-campaign] Added ${additionalRecipients.length} additional recipients`);
     }
 
-    // Add Staff list members as BCC recipients (internal copies)
-    if (staffEmails.length > 0) {
-      for (const email of staffEmails) {
-        // Skip if already in the queue (might be a contact or additional recipient)
-        if (queueEntries.some(q => q.email.toLowerCase() === email.toLowerCase())) continue;
-        
-        let personalizedHtml = baseHtml
-          .replace(/\{\{FIRST_NAME\}\}/g, "Staff")
-          .replace(/\{\{LAST_NAME\}\}/g, "Member")
-          .replace(/\{\{EMAIL\}\}/g, email);
-
-        // Add tracking pixel for staff
-        const trackingPixelUrl = `${supabaseUrl}/functions/v1/track-pixel?c=${campaignId}&t=staff&e=${encodeURIComponent(email)}`;
-        personalizedHtml = personalizedHtml.replace(
-          "</body>",
-          `<img src="${trackingPixelUrl}" width="1" height="1" style="display:none;" alt="" /></body>`
-        );
-
-        // Wrap links for click tracking
-        const linkRegex = /<a\s+([^>]*href=["'])([^"']+)(["'][^>]*)>/gi;
-        personalizedHtml = personalizedHtml.replace(linkRegex, (match: string, pre: string, url: string, post: string) => {
-          if (url.includes("unsubscribe")) return match;
-          const trackedUrl = `${supabaseUrl}/functions/v1/track-click?c=${campaignId}&t=staff&e=${encodeURIComponent(email)}&u=${encodeURIComponent(url)}`;
-          return `<a ${pre}${trackedUrl}${post}>`;
-        });
-
-        // Add unsubscribe link (staff can still unsubscribe if needed)
-        const unsubscribeUrl = `${supabaseUrl}/functions/v1/unsubscribe?c=${campaignId}&t=staff&e=${encodeURIComponent(email)}`;
-        personalizedHtml = personalizedHtml
-          .replace(/\{\{UNSUBSCRIBE_URL\}\}/gi, unsubscribeUrl)
-          .replace(/\{\{unsubscribe_url\}\}/g, unsubscribeUrl);
-
-        const listUnsubscribeHeader = `<${unsubscribeUrl}>, <mailto:unsubscribe@updates.authorservices.com?subject=Unsubscribe&body=${encodeURIComponent(email)}>`;
-
-        queueEntries.push({
-          campaign_id: campaignId,
-          contact_id: null,
-          email: email,
-          status: "pending",
-          subject: `[STAFF COPY] ${campaign.subject}`,
-          from_name: campaign.from_name,
-          from_email: campaign.from_email,
-          reply_to_email: campaign.reply_to_email || null,
-          html_content: personalizedHtml,
-          contact_first_name: "Staff",
-          contact_last_name: "Member",
-          list_unsubscribe_header: listUnsubscribeHeader,
-          scheduled_for: now.toISOString(), // Staff copies send immediately
-        });
-      }
-      console.log(`[send-campaign] Added ${staffEmails.length} staff BCC recipients`);
-    }
 
     // Insert all emails into the queue
     const { error: insertError } = await supabase.from("email_queue").insert(queueEntries);
