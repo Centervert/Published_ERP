@@ -13,6 +13,9 @@ import {
   TrendingUp,
   TrendingDown,
   BarChart3,
+  CheckCircle,
+  ShieldAlert,
+  MailX,
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -64,7 +67,7 @@ export function CampaignAnalytics({ onBack }: CampaignAnalyticsProps) {
         </div>
       </div>
 
-      {/* Summary Stats */}
+      {/* Summary Stats - Row 1 */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardContent className="pt-6">
@@ -76,6 +79,23 @@ export function CampaignAnalytics({ onBack }: CampaignAnalyticsProps) {
               <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
                 <Send className="h-6 w-6 text-primary" />
               </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Delivery Rate</p>
+                <p className="text-3xl font-bold">{stats.avgDeliveryRate.toFixed(1)}%</p>
+              </div>
+              <div className="h-12 w-12 rounded-full bg-emerald-500/10 flex items-center justify-center">
+                <CheckCircle className="h-6 w-6 text-emerald-500" />
+              </div>
+            </div>
+            <div className="mt-2 text-sm text-muted-foreground">
+              {stats.totalDelivered.toLocaleString()} delivered
             </div>
           </CardContent>
         </Card>
@@ -133,6 +153,73 @@ export function CampaignAnalytics({ onBack }: CampaignAnalyticsProps) {
             </div>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Summary Stats - Row 2 (Reputation/Health Metrics) */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Bounce Rate</p>
+                <p className="text-3xl font-bold">{stats.avgBounceRate.toFixed(2)}%</p>
+              </div>
+              <div className="h-12 w-12 rounded-full bg-orange-500/10 flex items-center justify-center">
+                <MailX className="h-6 w-6 text-orange-500" />
+              </div>
+            </div>
+            <div className="mt-2 flex items-center gap-1 text-sm">
+              {stats.avgBounceRate <= 2 ? (
+                <>
+                  <TrendingUp className="h-4 w-4 text-green-500" />
+                  <span className="text-green-600">Healthy list</span>
+                </>
+              ) : (
+                <>
+                  <AlertTriangle className="h-4 w-4 text-red-500" />
+                  <span className="text-red-600">Clean your list</span>
+                </>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Spam Complaints</p>
+                <p className="text-3xl font-bold">{stats.totalComplained}</p>
+              </div>
+              <div className="h-12 w-12 rounded-full bg-red-500/10 flex items-center justify-center">
+                <ShieldAlert className="h-6 w-6 text-red-500" />
+              </div>
+            </div>
+            <div className="mt-2 text-sm text-muted-foreground">
+              {stats.avgComplaintRate.toFixed(3)}% rate
+              {stats.avgComplaintRate > 0.1 && (
+                <span className="text-red-600 ml-1">(High risk!)</span>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Total Bounces</p>
+                <p className="text-3xl font-bold">{stats.totalBounced}</p>
+              </div>
+              <div className="h-12 w-12 rounded-full bg-orange-500/10 flex items-center justify-center">
+                <AlertTriangle className="h-6 w-6 text-orange-500" />
+              </div>
+            </div>
+            <div className="mt-2 text-sm text-muted-foreground">
+              Contacts auto-marked as bounced
+            </div>
+          </CardContent>
+        </Card>
 
         <Card>
           <CardContent className="pt-6">
@@ -156,7 +243,16 @@ export function CampaignAnalytics({ onBack }: CampaignAnalyticsProps) {
       </div>
 
       {/* Detailed Stats */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-4">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-2 mb-2">
+              <Send className="h-4 w-4 text-primary" />
+              <span className="text-sm font-medium">Total Delivered</span>
+            </div>
+            <p className="text-2xl font-bold">{stats.totalDelivered.toLocaleString()}</p>
+          </CardContent>
+        </Card>
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-2 mb-2">
@@ -178,10 +274,10 @@ export function CampaignAnalytics({ onBack }: CampaignAnalyticsProps) {
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-2 mb-2">
-              <AlertTriangle className="h-4 w-4 text-orange-500" />
-              <span className="text-sm font-medium">Total Bounces</span>
+              <BarChart3 className="h-4 w-4 text-purple-500" />
+              <span className="text-sm font-medium">Campaigns Sent</span>
             </div>
-            <p className="text-2xl font-bold">{stats.totalBounced.toLocaleString()}</p>
+            <p className="text-2xl font-bold">{stats.campaignCount}</p>
           </CardContent>
         </Card>
       </div>
@@ -195,11 +291,12 @@ export function CampaignAnalytics({ onBack }: CampaignAnalyticsProps) {
           <div className="border-t">
             {/* Table Header */}
             <div className="grid grid-cols-12 gap-4 px-6 py-3 border-b text-sm text-muted-foreground bg-muted/50">
-              <div className="col-span-4">Campaign</div>
+              <div className="col-span-3">Campaign</div>
               <div className="col-span-2">Sent</div>
               <div className="col-span-2">Recipients</div>
+              <div className="col-span-2">Delivery</div>
               <div className="col-span-2">Open Rate</div>
-              <div className="col-span-2">Click Rate</div>
+              <div className="col-span-1">Bounce</div>
             </div>
 
             {/* Campaign Rows */}
@@ -208,7 +305,7 @@ export function CampaignAnalytics({ onBack }: CampaignAnalyticsProps) {
                 key={campaign.id}
                 className="grid grid-cols-12 gap-4 px-6 py-4 border-b last:border-0 hover:bg-muted/30 transition-colors"
               >
-                <div className="col-span-4">
+                <div className="col-span-3">
                   <p className="font-medium truncate">{campaign.name}</p>
                 </div>
                 <div className="col-span-2 text-sm text-muted-foreground">
@@ -220,17 +317,25 @@ export function CampaignAnalytics({ onBack }: CampaignAnalyticsProps) {
                 <div className="col-span-2">
                   <Badge 
                     variant="secondary" 
-                    className={campaign.openRate >= 20 ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}
+                    className={campaign.deliveryRate >= 95 ? 'bg-emerald-100 text-emerald-800' : campaign.deliveryRate >= 90 ? 'bg-amber-100 text-amber-800' : 'bg-red-100 text-red-800'}
                   >
-                    {campaign.openRate.toFixed(1)}%
+                    {campaign.deliveryRate.toFixed(1)}%
                   </Badge>
                 </div>
                 <div className="col-span-2">
                   <Badge 
                     variant="secondary" 
-                    className={campaign.clickRate >= 2 ? 'bg-blue-100 text-blue-800' : 'bg-muted text-muted-foreground'}
+                    className={campaign.openRate >= 20 ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}
                   >
-                    {campaign.clickRate.toFixed(1)}%
+                    {campaign.openRate.toFixed(1)}%
+                  </Badge>
+                </div>
+                <div className="col-span-1">
+                  <Badge 
+                    variant="secondary" 
+                    className={campaign.bounceRate <= 2 ? 'bg-muted text-muted-foreground' : 'bg-red-100 text-red-800'}
+                  >
+                    {campaign.bounceRate.toFixed(1)}%
                   </Badge>
                 </div>
               </div>
@@ -245,9 +350,11 @@ export function CampaignAnalytics({ onBack }: CampaignAnalyticsProps) {
           <CardTitle className="text-lg text-blue-800 dark:text-blue-300">📈 Performance Tips</CardTitle>
         </CardHeader>
         <CardContent className="text-sm text-blue-700 dark:text-blue-400 space-y-2">
+          <p>• <strong>Delivery rate below 95%?</strong> Check for invalid emails and clean your list regularly.</p>
           <p>• <strong>Open rates below 20%?</strong> Try A/B testing subject lines and sending at different times.</p>
           <p>• <strong>Click rates below 2%?</strong> Make your CTAs more prominent and ensure content matches subject expectations.</p>
-          <p>• <strong>High unsubscribe rate?</strong> Review email frequency and ensure content is relevant to your audience.</p>
+          <p>• <strong>High bounce rate ({'>'}2%)?</strong> Remove hard bounced contacts immediately to protect sender reputation.</p>
+          <p>• <strong>Spam complaints?</strong> Keep them under 0.1% to avoid deliverability issues. Review content and targeting.</p>
         </CardContent>
       </Card>
     </div>
