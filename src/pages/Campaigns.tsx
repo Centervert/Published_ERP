@@ -46,6 +46,7 @@ import {
 import { format } from 'date-fns';
 import { CampaignDetail } from '@/components/campaigns/CampaignDetail';
 import { CampaignAnalytics } from '@/components/campaigns/CampaignAnalytics';
+import { CampaignProgressIndicator } from '@/components/campaigns/CampaignProgressIndicator';
 import { cn } from '@/lib/utils';
 
 const statusColors: Record<string, string> = {
@@ -342,20 +343,29 @@ export default function Campaigns() {
                   )}
                 </div>
 
-                {/* Recipients Column */}
+                {/* Recipients Column - Show progress for sending campaigns */}
                 <div className="col-span-2">
-                  <p className="text-sm">
-                    {campaign.total_recipients > 0 
-                      ? `${campaign.total_recipients} contacts`
-                      : '—'
-                    }
-                  </p>
+                  {campaign.status === 'sending' ? (
+                    <CampaignProgressIndicator 
+                      campaignId={campaign.id} 
+                      status={campaign.status} 
+                    />
+                  ) : (
+                    <p className="text-sm">
+                      {campaign.total_recipients > 0 
+                        ? `${campaign.total_recipients.toLocaleString()} contacts`
+                        : '—'
+                      }
+                    </p>
+                  )}
                 </div>
 
                 {/* Performance Column */}
                 <div className="col-span-2">
                   {campaign.status === 'sent' ? (
                     <p className="text-sm text-muted-foreground">View report</p>
+                  ) : campaign.status === 'sending' ? (
+                    <p className="text-sm text-muted-foreground">In progress</p>
                   ) : (
                     <p className="text-sm text-muted-foreground">—</p>
                   )}
