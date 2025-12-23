@@ -231,6 +231,23 @@ serve(async (req) => {
 
     console.log(`[send-campaign] Found ${contacts.length} contacts to queue`);
 
+    // Calculate spread duration based on recipient count
+    // This prevents spam filters from flagging mass sends
+    const recipientCount = contacts.length + (additionalRecipients?.length || 0);
+    let spreadDurationMinutes = 0;
+    if (recipientCount >= 100000) {
+      spreadDurationMinutes = 120; // 2 hours for 100k+
+    } else if (recipientCount >= 25000) {
+      spreadDurationMinutes = 60; // 1 hour for 25k-100k
+    } else if (recipientCount >= 5000) {
+      spreadDurationMinutes = 30; // 30 min for 5k-25k
+    } else if (recipientCount >= 500) {
+      spreadDurationMinutes = 15; // 15 min for 500-5k
+    }
+    // Less than 500 recipients = instant (spreadDurationMinutes = 0)
+    
+    console.log(`[send-campaign] Using spread duration: ${spreadDurationMinutes} minutes for ${recipientCount} recipients`);
+
     // If routing replies to ASC, fetch ASC profiles
     let ascProfiles: Record<string, string> = {};
     if (routeRepliesToAsc) {
@@ -268,7 +285,17 @@ serve(async (req) => {
 
     // Prepare queue entries with all data needed for sending
     // Generate List-Unsubscribe headers for deliverability
-    const queueEntries = contacts.map(contact => {
+    // Calculate scheduled_for timestamps to spread emails over time
+    const now = new Date();
+    const spreadMs = spreadDurationMinutes * 60 * 1000;
+    
+    const queueEntries = contacts.map((contact, index) => {
+      // Calculate scheduled_for time: distribute evenly across the spread duration
+      let scheduledFor = now;
+      if (spreadDurationMinutes > 0 && contacts.length > 1) {
+        const offsetMs = Math.floor((index / (contacts.length - 1)) * spreadMs);
+        scheduledFor = new Date(now.getTime() + offsetMs);
+      }
       let personalizedHtml = baseHtml
         .replace(/\{\{FIRST_NAME\}\}/g, contact.first_name || "there")
         .replace(/\{\{LAST_NAME\}\}/g, contact.last_name || "")
@@ -325,6 +352,7 @@ serve(async (req) => {
         contact_first_name: contact.first_name,
         contact_last_name: contact.last_name,
         list_unsubscribe_header: listUnsubscribeHeader,
+        scheduled_for: scheduledFor.toISOString(),
       };
     });
 
@@ -375,6 +403,7 @@ serve(async (req) => {
           contact_first_name: "Test",
           contact_last_name: "User",
           list_unsubscribe_header: listUnsubscribeHeader,
+          scheduled_for: now.toISOString(), // Test emails send immediately
         });
       }
       console.log(`[send-campaign] Added ${additionalRecipients.length} additional recipients`);
