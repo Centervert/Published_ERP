@@ -34,15 +34,24 @@ export function EmailBuilder({
   onSave 
 }: EmailBuilderProps) {
   const { toast } = useToast();
-  const [mode, setMode] = useState<EditorMode>('chat');
+  const hasExistingContent = (initialBlocks && initialBlocks.length > 0) || !!initialHtml;
+  const [mode, setMode] = useState<EditorMode>(hasExistingContent ? 'visual' : 'chat');
   const [blocks, setBlocks] = useState<EmailBlock[]>(initialBlocks || []);
   const [html, setHtml] = useState(initialHtml || '');
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>(
+    hasExistingContent 
+      ? [{ 
+          id: 'existing-content', 
+          role: 'assistant' as const, 
+          content: 'You have existing email content. Switch to Visual Edit mode to modify blocks, or use the chat to make changes with AI.' 
+        }] 
+      : []
+  );
   const [isLoading, setIsLoading] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
-  const [hasGenerated, setHasGenerated] = useState(false);
+  const [hasGenerated, setHasGenerated] = useState(hasExistingContent);
   const [lastPromptData, setLastPromptData] = useState<EmailPromptData | null>(null);
 
   // Update HTML preview when blocks change
@@ -484,7 +493,7 @@ export function EmailBuilder({
   };
 
   const handleChatMessage = async (message: string) => {
-    if (!imprint || !lastPromptData) return;
+    if (!imprint) return;
 
     const userMsgId = crypto.randomUUID();
     setMessages(prev => [...prev, { id: userMsgId, role: 'user', content: message }]);
@@ -522,11 +531,11 @@ export function EmailBuilder({
           footer_image_url: imprint.footer_image_url,
           website_url: imprint.website_url,
         },
-        emailType: lastPromptData.emailType,
-        description: lastPromptData.description,
-        keyPoints: lastPromptData.keyPoints,
-        callToAction: lastPromptData.callToAction,
-        tone: lastPromptData.tone,
+        emailType: lastPromptData?.emailType || 'general',
+        description: lastPromptData?.description || 'Edit existing email content',
+        keyPoints: lastPromptData?.keyPoints,
+        callToAction: lastPromptData?.callToAction,
+        tone: lastPromptData?.tone || 'professional',
         conversationHistory,
         followUpMessage: message,
         outputFormat: 'blocks',
