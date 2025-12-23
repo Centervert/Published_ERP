@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useLists } from '@/hooks/useContacts';
+import { useLists, useListContacts, List } from '@/hooks/useContacts';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,13 +13,23 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Plus, Trash2, FolderOpen, Loader2 } from 'lucide-react';
+import { Plus, Trash2, FolderOpen, Loader2, Pencil, Users } from 'lucide-react';
+import { ListDetailSheet } from './ListDetailSheet';
+
+function ListContactCount({ listId }: { listId: string }) {
+  const { contacts, isLoading } = useListContacts(listId);
+  
+  if (isLoading) return <Loader2 className="h-3 w-3 animate-spin" />;
+  return <span>{contacts.length}</span>;
+}
 
 export function ListsManager() {
   const { lists, isLoading, createList, deleteList } = useLists();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [selectedList, setSelectedList] = useState<List | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,10 +41,16 @@ export function ListsManager() {
     setOpen(false);
   };
 
-  const handleDelete = async (id: string, listName: string) => {
+  const handleDelete = async (e: React.MouseEvent, id: string, listName: string) => {
+    e.stopPropagation();
     if (confirm(`Delete list "${listName}"? Contacts will not be deleted.`)) {
       await deleteList.mutateAsync(id);
     }
+  };
+
+  const handleEdit = (list: List) => {
+    setSelectedList(list);
+    setDetailOpen(true);
   };
 
   if (isLoading) {
@@ -46,93 +62,124 @@ export function ListsManager() {
   }
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-        <div>
-          <CardTitle className="text-lg">Lists</CardTitle>
-          <CardDescription>Organize contacts into lists</CardDescription>
-        </div>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button size="sm">
-              <Plus className="h-4 w-4 mr-1" />
-              New List
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Create List</DialogTitle>
-              <DialogDescription>
-                Create a new list to organize your contacts.
-              </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleCreate}>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="list-name">Name</Label>
-                  <Input
-                    id="list-name"
-                    placeholder="e.g., Newsletter Subscribers"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="list-desc">Description (optional)</Label>
-                  <Input
-                    id="list-desc"
-                    placeholder="What's this list for?"
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                  />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={createList.isPending}>
-                  {createList.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Create
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
-      </CardHeader>
-      <CardContent>
-        {lists.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
-            <FolderOpen className="h-8 w-8 mb-2" />
-            <p className="text-sm">No lists yet</p>
+    <>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+          <div>
+            <CardTitle className="text-lg">Lists</CardTitle>
+            <CardDescription>Organize contacts into lists</CardDescription>
           </div>
-        ) : (
-          <div className="space-y-2">
-            {lists.map((list) => (
-              <div
-                key={list.id}
-                className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors"
-              >
-                <div>
-                  <p className="font-medium">{list.name}</p>
-                  {list.description && (
-                    <p className="text-sm text-muted-foreground">{list.description}</p>
-                  )}
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button size="sm">
+                <Plus className="h-4 w-4 mr-1" />
+                New List
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Create List</DialogTitle>
+                <DialogDescription>
+                  Create a new list to organize your contacts.
+                </DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleCreate}>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="list-name">Name</Label>
+                    <Input
+                      id="list-name"
+                      placeholder="e.g., Newsletter Subscribers"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="list-desc">Description (optional)</Label>
+                    <Input
+                      id="list-desc"
+                      placeholder="What's this list for?"
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                    />
+                  </div>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                  onClick={() => handleDelete(list.id, list.name)}
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={createList.isPending}>
+                    {createList.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Create
+                  </Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </CardHeader>
+        <CardContent>
+          {lists.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+              <FolderOpen className="h-8 w-8 mb-2" />
+              <p className="text-sm">No lists yet</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {lists.map((list) => (
+                <div
+                  key={list.id}
+                  className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors cursor-pointer"
+                  onClick={() => handleEdit(list)}
                 >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            ))}
-          </div>
-        )}
-      </CardContent>
-    </Card>
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="min-w-0">
+                      <p className="font-medium">{list.name}</p>
+                      {list.description && (
+                        <p className="text-sm text-muted-foreground truncate">{list.description}</p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1 text-sm text-muted-foreground px-2">
+                      <Users className="h-3.5 w-3.5" />
+                      <ListContactCount listId={list.id} />
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleEdit(list);
+                      }}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                      onClick={(e) => handleDelete(e, list.id, list.name)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <ListDetailSheet
+        list={selectedList}
+        open={detailOpen}
+        onOpenChange={(open) => {
+          setDetailOpen(open);
+          if (!open) setSelectedList(null);
+        }}
+      />
+    </>
   );
 }
