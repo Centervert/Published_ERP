@@ -190,14 +190,13 @@ serve(async (req) => {
       .update({ status: "sending" })
       .eq("id", campaignId);
 
-    // Get contacts from selected lists (active only, not unsubscribed/bounced)
+    // Get contacts from selected lists OR imprints (active only, not unsubscribed/bounced)
+    // Uses UNION logic: anyone in selected lists OR anyone with selected imprints
     // Include assigned_asc for reply-to routing
-    let contactsQuery = supabase
-      .from("contacts")
-      .select("id, email, first_name, last_name, imprint_id, assigned_asc")
-      .eq("status", "active");
-
-    // Filter by lists if specified
+    
+    let contactIds = new Set<string>();
+    
+    // Get contacts from selected lists
     if (listIds.length > 0) {
       const { data: contactListEntries } = await supabase
         .from("contact_lists")
@@ -205,17 +204,52 @@ serve(async (req) => {
         .in("list_id", listIds);
 
       if (contactListEntries && contactListEntries.length > 0) {
-        const contactIds = contactListEntries.map(e => e.contact_id);
-        contactsQuery = contactsQuery.in("id", contactIds);
+        contactListEntries.forEach(e => contactIds.add(e.contact_id));
+        console.log(`[send-campaign] Found ${contactListEntries.length} contacts from lists`);
       }
     }
 
-    // Filter by imprints if specified
+    // Get contacts from selected imprints (adds to the set, creating union)
     if (imprintIds && imprintIds.length > 0) {
-      contactsQuery = contactsQuery.in("imprint_id", imprintIds);
+      const { data: imprintContacts } = await supabase
+        .from("contacts")
+        .select("id")
+        .eq("status", "active")
+        .in("imprint_id", imprintIds);
+
+      if (imprintContacts && imprintContacts.length > 0) {
+        imprintContacts.forEach(c => contactIds.add(c.id));
+        console.log(`[send-campaign] Found ${imprintContacts.length} contacts from imprints`);
+      }
     }
 
-    const { data: contacts, error: contactsError } = await contactsQuery;
+    // Now fetch full contact details for all collected IDs
+    let contacts: any[] = [];
+    let contactsError: any = null;
+    
+    if (contactIds.size > 0) {
+      const idArray = Array.from(contactIds);
+      // Supabase has a limit on IN clause, so batch if needed
+      const batchSize = 1000;
+      for (let i = 0; i < idArray.length; i += batchSize) {
+        const batch = idArray.slice(i, i + batchSize);
+        const { data: batchContacts, error } = await supabase
+          .from("contacts")
+          .select("id, email, first_name, last_name, imprint_id, assigned_asc")
+          .eq("status", "active")
+          .in("id", batch);
+        
+        if (error) {
+          contactsError = error;
+          break;
+        }
+        if (batchContacts) {
+          contacts.push(...batchContacts);
+        }
+      }
+    }
+    
+    console.log(`[send-campaign] Total unique contacts after union: ${contacts.length}`);
 
     if (contactsError) {
       throw new Error(`Failed to fetch contacts: ${contactsError.message}`);
