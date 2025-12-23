@@ -194,7 +194,20 @@ serve(async (req) => {
     // Uses UNION logic: anyone in selected lists OR anyone with selected imprints
     // Include assigned_asc for reply-to routing
     
-    let contactIds = new Set<string>();
+    let contacts: any[] = [];
+    let contactsError: any = null;
+    const seenEmails = new Set<string>();
+    
+    // Helper to add contacts without duplicates (by email)
+    const addUniqueContacts = (newContacts: any[]) => {
+      for (const contact of newContacts) {
+        const emailLower = contact.email?.toLowerCase();
+        if (emailLower && !seenEmails.has(emailLower)) {
+          seenEmails.add(emailLower);
+          contacts.push(contact);
+        }
+      }
+    };
     
     // Get contacts from selected lists
     if (listIds.length > 0) {
@@ -204,49 +217,63 @@ serve(async (req) => {
         .in("list_id", listIds);
 
       if (contactListEntries && contactListEntries.length > 0) {
-        contactListEntries.forEach(e => contactIds.add(e.contact_id));
-        console.log(`[send-campaign] Found ${contactListEntries.length} contacts from lists`);
+        console.log(`[send-campaign] Found ${contactListEntries.length} contact list entries`);
+        
+        // Fetch full contact details in smaller batches
+        const contactIdsList = contactListEntries.map(e => e.contact_id);
+        const batchSize = 500;
+        for (let i = 0; i < contactIdsList.length; i += batchSize) {
+          const batch = contactIdsList.slice(i, i + batchSize);
+          const { data: batchContacts, error } = await supabase
+            .from("contacts")
+            .select("id, email, first_name, last_name, imprint_id, assigned_asc")
+            .eq("status", "active")
+            .in("id", batch);
+          
+          if (error) {
+            console.error(`[send-campaign] Error fetching list contacts batch: ${error.message}`);
+            contactsError = error;
+            break;
+          }
+          if (batchContacts) {
+            addUniqueContacts(batchContacts);
+          }
+        }
+        console.log(`[send-campaign] Added ${contacts.length} contacts from lists`);
       }
     }
 
-    // Get contacts from selected imprints (adds to the set, creating union)
-    if (imprintIds && imprintIds.length > 0) {
-      const { data: imprintContacts } = await supabase
-        .from("contacts")
-        .select("id")
-        .eq("status", "active")
-        .in("imprint_id", imprintIds);
-
-      if (imprintContacts && imprintContacts.length > 0) {
-        imprintContacts.forEach(c => contactIds.add(c.id));
-        console.log(`[send-campaign] Found ${imprintContacts.length} contacts from imprints`);
-      }
-    }
-
-    // Now fetch full contact details for all collected IDs
-    let contacts: any[] = [];
-    let contactsError: any = null;
-    
-    if (contactIds.size > 0) {
-      const idArray = Array.from(contactIds);
-      // Supabase has a limit on IN clause, so batch if needed
-      const batchSize = 1000;
-      for (let i = 0; i < idArray.length; i += batchSize) {
-        const batch = idArray.slice(i, i + batchSize);
-        const { data: batchContacts, error } = await supabase
+    // Get contacts from selected imprints (paginate to get all, not just 1000)
+    if (imprintIds && imprintIds.length > 0 && !contactsError) {
+      let offset = 0;
+      const pageSize = 1000;
+      let hasMore = true;
+      let imprintContactCount = 0;
+      
+      while (hasMore) {
+        const { data: imprintContacts, error } = await supabase
           .from("contacts")
           .select("id, email, first_name, last_name, imprint_id, assigned_asc")
           .eq("status", "active")
-          .in("id", batch);
-        
+          .in("imprint_id", imprintIds)
+          .range(offset, offset + pageSize - 1);
+
         if (error) {
+          console.error(`[send-campaign] Error fetching imprint contacts: ${error.message}`);
           contactsError = error;
           break;
         }
-        if (batchContacts) {
-          contacts.push(...batchContacts);
+        
+        if (imprintContacts && imprintContacts.length > 0) {
+          imprintContactCount += imprintContacts.length;
+          addUniqueContacts(imprintContacts);
+          offset += pageSize;
+          hasMore = imprintContacts.length === pageSize;
+        } else {
+          hasMore = false;
         }
       }
+      console.log(`[send-campaign] Fetched ${imprintContactCount} contacts from imprints, total unique: ${contacts.length}`);
     }
     
     console.log(`[send-campaign] Total unique contacts after union: ${contacts.length}`);
