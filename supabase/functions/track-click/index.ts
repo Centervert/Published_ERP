@@ -8,7 +8,7 @@ serve(async (req) => {
   const campaignId = url.searchParams.get("c");
   const contactId = url.searchParams.get("t");
   const email = url.searchParams.get("e");
-  const targetUrl = url.searchParams.get("url");
+  const targetUrl = url.searchParams.get("url") || url.searchParams.get("u");
   
   console.log(`[Track Click] Campaign: ${campaignId}, Contact: ${contactId}, URL: ${targetUrl}`);
   
