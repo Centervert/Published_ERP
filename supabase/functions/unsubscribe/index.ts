@@ -2,7 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 // The app URL where users will be redirected after unsubscribing
-const APP_URL = "https://portal.authorservices.com";
+const APP_URL = "https://aserp.lovable.app";
 
 // Validation patterns
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
