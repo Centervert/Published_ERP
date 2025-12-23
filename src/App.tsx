@@ -19,6 +19,7 @@ import Users from "./pages/Users";
 import MyProfile from "./pages/MyProfile";
 import Products from "./pages/Products";
 import Deals from "./pages/Deals";
+import Unsubscribed from "./pages/Unsubscribed";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -140,6 +141,8 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+            {/* Public unsubscribe confirmation page */}
+            <Route path="/unsubscribed" element={<Unsubscribed />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
