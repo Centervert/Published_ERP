@@ -52,15 +52,34 @@ serve(async (req) => {
         .limit(1);
 
       if (!pending || pending.length === 0) {
-        // All emails processed - mark campaign as sent
+        // All emails processed - check if any succeeded
+        const { count: sentCount } = await supabase
+          .from("email_queue")
+          .select("id", { count: "exact", head: true })
+          .eq("campaign_id", campaign.id)
+          .eq("status", "sent");
+
+        const { count: failedCount } = await supabase
+          .from("email_queue")
+          .select("id", { count: "exact", head: true })
+          .eq("campaign_id", campaign.id)
+          .eq("status", "failed");
+
+        // Determine final status based on results
+        let finalStatus = "sent";
+        if ((sentCount || 0) === 0 && (failedCount || 0) > 0) {
+          // All emails failed
+          finalStatus = "failed";
+        }
+
         const { error: updateError } = await supabase
           .from("campaigns")
-          .update({ status: "sent", sent_at: new Date().toISOString() })
+          .update({ status: finalStatus, sent_at: new Date().toISOString() })
           .eq("id", campaign.id);
 
         if (!updateError) {
           completedCampaigns.push(campaign.id);
-          console.log(`Campaign ${campaign.id} marked as completed`);
+          console.log(`Campaign ${campaign.id} marked as ${finalStatus}`);
         }
       }
     }
