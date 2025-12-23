@@ -202,9 +202,10 @@ serve(async (req) => {
 
     console.log(`[invite-user] User created successfully: ${email}, id: ${newUser.user?.id}`);
 
-    // Step 2: Generate a magic link for the user to set their password
+    // Step 2: Generate a recovery link for the user to set their password
+    // Using 'recovery' type instead of 'magiclink' to prevent email scanner issues
     const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
-      type: 'magiclink',
+      type: 'recovery',
       email,
       options: {
         redirectTo: `${productionDomain}/reset-password`,
