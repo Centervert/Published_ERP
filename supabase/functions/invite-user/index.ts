@@ -237,7 +237,7 @@ serve(async (req) => {
     const emailHtml = getInviteEmailTemplate(fullName || "", inviteLink);
     
     const { data: emailResult, error: emailError } = await resend.emails.send({
-      from: "Author Services <no-reply@onboarding.authorservices.com>",
+      from: "Author Services <hello@onboarding.authorservices.com>",
       to: [email],
       subject: "You've been invited to Author Services Portal",
       html: emailHtml,
