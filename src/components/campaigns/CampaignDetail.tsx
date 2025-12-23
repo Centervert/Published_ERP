@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Campaign, useCampaignStats, useCampaigns } from '@/hooks/useCampaigns';
 import { useLists } from '@/hooks/useContacts';
 import type { EmailBlock } from '@/types/email-blocks';
@@ -92,12 +92,22 @@ export function CampaignDetail({ campaign, onBack, onCancelScheduled }: Campaign
   // Form states
   const [selectedListIds, setSelectedListIds] = useState<string[]>([]);
   const [selectedImprintIds, setSelectedImprintIds] = useState<string[]>([]);
+  // Initialize selectedImprintId from imprints list once loaded
   const [selectedImprintId, setSelectedImprintId] = useState<string>('');
   const [fromName, setFromName] = useState(campaign.from_name);
   const [fromEmail, setFromEmail] = useState(campaign.from_email);
   const [replyToEmail, setReplyToEmail] = useState(campaign.reply_to_email || '');
   const [routeRepliesToAsc, setRouteRepliesToAsc] = useState(false);
   const [subject, setSubject] = useState(campaign.subject);
+  
+  // Auto-select first imprint if none selected
+  useEffect(() => {
+    if (!selectedImprintId && imprints.length > 0) {
+      // Try to find imprint matching campaign's from_email, otherwise use first
+      const matchingImprint = imprints.find(i => i.from_email === campaign.from_email);
+      setSelectedImprintId(matchingImprint?.id || imprints[0].id);
+    }
+  }, [imprints, selectedImprintId, campaign.from_email]);
   const [campaignName, setCampaignName] = useState(campaign.name);
   
   // Send time state
