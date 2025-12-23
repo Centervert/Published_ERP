@@ -1,4 +1,5 @@
 import { format, parseISO, isToday, isYesterday, isSameDay } from 'date-fns';
+import DOMPurify from 'dompurify';
 import { 
   Mail, 
   Phone, 
@@ -187,7 +188,12 @@ export function CommunicationTimeline({ communications, isLoading, contactEmail,
                       {comm.type === 'email' ? (
                         <div 
                           className="text-sm text-foreground prose prose-sm max-w-none [&>*]:m-0 [&>p]:mb-2 [&>ul]:my-2 [&>ol]:my-2"
-                          dangerouslySetInnerHTML={{ __html: comm.body }}
+                          dangerouslySetInnerHTML={{ 
+                            __html: DOMPurify.sanitize(comm.body, {
+                              ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'a', 'ul', 'ol', 'li', 'span', 'div', 'b', 'i', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'pre', 'code', 'table', 'thead', 'tbody', 'tr', 'th', 'td'],
+                              ALLOWED_ATTR: ['href', 'target', 'rel', 'style', 'class']
+                            })
+                          }}
                         />
                       ) : (
                         <p className="text-sm text-muted-foreground">
