@@ -35,7 +35,6 @@ export function EmailPreview({ html, isStreaming }: EmailPreviewProps) {
           className={`mx-auto transition-all duration-300 ${
             view === 'desktop' ? 'max-w-[600px]' : 'max-w-[375px]'
           }`}
-          style={{ width: view === 'mobile' ? '375px' : '600px' }}
         >
           {html ? (
             <div className="bg-white rounded-lg shadow-lg overflow-hidden">
@@ -51,32 +50,27 @@ export function EmailPreview({ html, isStreaming }: EmailPreviewProps) {
                 </div>
               </div>
               
-              {/* Email Content - Scrollable */}
-              <div 
-                className="overflow-auto"
-                style={{ maxHeight: view === 'desktop' ? '600px' : '700px' }}
-              >
-                <iframe
-                  srcDoc={`<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"><style>body{margin:0;padding:0;overflow-x:hidden;} img{max-width:100%!important;height:auto!important;} table{max-width:100%!important;} *{box-sizing:border-box;}</style></head><body>${html}</body></html>`}
-                  className={`w-full border-0 transition-opacity ${
-                    isStreaming ? 'opacity-70' : 'opacity-100'
-                  }`}
-                  style={{ 
-                    minHeight: view === 'desktop' ? '600px' : '700px',
-                    height: 'auto',
-                    width: '100%'
-                  }}
-                  title="Email Preview"
-                  onLoad={(e) => {
-                    // Auto-resize iframe to content height
-                    const iframe = e.target as HTMLIFrameElement;
-                    if (iframe.contentDocument) {
-                      const height = iframe.contentDocument.body.scrollHeight;
-                      iframe.style.height = `${Math.max(height, view === 'desktop' ? 600 : 700)}px`;
-                    }
-                  }}
-                />
-              </div>
+              {/* Email Content */}
+              <iframe
+                srcDoc={`<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"><style>body{margin:0;padding:0;overflow-x:hidden;} img{max-width:100%!important;height:auto!important;} table{max-width:100%!important;} *{box-sizing:border-box;}</style></head><body>${html}</body></html>`}
+                className={`w-full border-0 transition-opacity ${
+                  isStreaming ? 'opacity-70' : 'opacity-100'
+                }`}
+                style={{ 
+                  minHeight: '500px',
+                  height: 'auto',
+                  width: '100%'
+                }}
+                title="Email Preview"
+                onLoad={(e) => {
+                  // Auto-resize iframe to content height
+                  const iframe = e.target as HTMLIFrameElement;
+                  if (iframe.contentDocument) {
+                    const height = iframe.contentDocument.body.scrollHeight;
+                    iframe.style.height = `${Math.max(height, 500)}px`;
+                  }
+                }}
+              />
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center h-[500px] text-center">
