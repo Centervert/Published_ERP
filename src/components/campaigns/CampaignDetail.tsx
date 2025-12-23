@@ -88,6 +88,10 @@ export function CampaignDetail({ campaign, onBack, onCancelScheduled }: Campaign
   const [emailBuilderOpen, setEmailBuilderOpen] = useState(false);
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
   const [isEditingName, setIsEditingName] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [testEmailOpen, setTestEmailOpen] = useState(false);
+  const [testEmailAddress, setTestEmailAddress] = useState('');
+  const [isSendingTestEmail, setIsSendingTestEmail] = useState(false);
   
   // Form states
   const [selectedListIds, setSelectedListIds] = useState<string[]>([]);
@@ -340,6 +344,37 @@ export function CampaignDetail({ campaign, onBack, onCancelScheduled }: Campaign
           setIsGeneratingSubject(false);
         }
       }
+    }
+  };
+
+  const handleSendTestEmail = async () => {
+    if (!testEmailAddress.trim() || !campaign.html_content) {
+      toast.error('Please enter a valid email address');
+      return;
+    }
+
+    setIsSendingTestEmail(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('send-test-email', {
+        body: {
+          to: testEmailAddress.trim(),
+          subject: subject || campaign.subject || 'Test Email',
+          html_content: campaign.html_content,
+          from_name: fromName || campaign.from_name,
+          from_email: fromEmail || campaign.from_email,
+        },
+      });
+
+      if (error) throw error;
+
+      toast.success(`Test email sent to ${testEmailAddress}`);
+      setTestEmailOpen(false);
+      setTestEmailAddress('');
+    } catch (error) {
+      console.error('Error sending test email:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to send test email');
+    } finally {
+      setIsSendingTestEmail(false);
     }
   };
 
@@ -1218,11 +1253,19 @@ export function CampaignDetail({ campaign, onBack, onCancelScheduled }: Campaign
         <div className="lg:col-span-2">
           <div className="sticky top-6">
             <div className="flex items-center justify-end gap-4 mb-4">
-              <button className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1.5">
+              <button 
+                onClick={() => setPreviewOpen(true)}
+                disabled={!campaign.html_content}
+                className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
                 <Eye className="h-4 w-4" />
                 Preview
               </button>
-              <button className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1.5">
+              <button 
+                onClick={() => setTestEmailOpen(true)}
+                disabled={!campaign.html_content}
+                className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
                 <Mail className="h-4 w-4" />
                 Send a Test Email
               </button>
@@ -1362,6 +1405,78 @@ export function CampaignDetail({ campaign, onBack, onCancelScheduled }: Campaign
               {sendCampaign.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               <Send className="mr-2 h-4 w-4" />
               Send Now
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Preview Dialog */}
+      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden p-0">
+          <DialogHeader className="p-4 border-b">
+            <DialogTitle>Email Preview</DialogTitle>
+          </DialogHeader>
+          <div className="overflow-auto" style={{ maxHeight: 'calc(90vh - 80px)' }}>
+            {campaign.html_content && (
+              <iframe
+                srcDoc={campaign.html_content}
+                className="w-full border-0"
+                style={{ minHeight: '600px', height: 'auto' }}
+                title="Full Email Preview"
+                onLoad={(e) => {
+                  const iframe = e.target as HTMLIFrameElement;
+                  if (iframe.contentDocument) {
+                    const height = iframe.contentDocument.body.scrollHeight;
+                    iframe.style.height = `${Math.max(height, 600)}px`;
+                  }
+                }}
+              />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Send Test Email Dialog */}
+      <Dialog open={testEmailOpen} onOpenChange={setTestEmailOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Send a Test Email</DialogTitle>
+            <DialogDescription>
+              Send a test version of this email to verify how it looks in an inbox.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="test-email">Email Address</Label>
+              <Input
+                id="test-email"
+                type="email"
+                placeholder="Enter email address"
+                value={testEmailAddress}
+                onChange={(e) => setTestEmailAddress(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleSendTestEmail();
+                  }
+                }}
+              />
+              <p className="text-xs text-muted-foreground">
+                The subject line will be prefixed with [TEST]
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setTestEmailOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleSendTestEmail} 
+              disabled={isSendingTestEmail || !testEmailAddress.trim()}
+            >
+              {isSendingTestEmail && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              <Send className="mr-2 h-4 w-4" />
+              Send Test
             </Button>
           </DialogFooter>
         </DialogContent>
