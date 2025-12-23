@@ -310,7 +310,7 @@ serve(async (req) => {
       }
 
       // Generate List-Unsubscribe header value for the VPS worker to use
-      const listUnsubscribeHeader = `<${unsubscribeUrl}>, <mailto:unsubscribe@news.authorservices.com?subject=Unsubscribe&body=${encodeURIComponent(contact.email)}>`;
+      const listUnsubscribeHeader = `<${unsubscribeUrl}>, <mailto:unsubscribe@updates.authorservices.com?subject=Unsubscribe&body=${encodeURIComponent(contact.email)}>`;
 
       return {
         campaign_id: campaignId,
