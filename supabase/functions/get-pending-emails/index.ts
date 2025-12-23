@@ -31,12 +31,13 @@ serve(async (req) => {
 
     const { limit = 10 } = await req.json().catch(() => ({}));
 
-    // Fetch pending emails with all data needed to send
+    // Fetch pending emails that are due to be sent (scheduled_for <= now)
     const { data: emails, error } = await supabase
       .from("email_queue")
       .select("*")
       .eq("status", "pending")
-      .order("created_at", { ascending: true })
+      .lte("scheduled_for", new Date().toISOString())
+      .order("scheduled_for", { ascending: true })
       .limit(limit);
 
     if (error) {

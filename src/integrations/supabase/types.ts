@@ -597,6 +597,7 @@ export type Database = {
           list_unsubscribe_header: string | null
           processed_at: string | null
           reply_to_email: string | null
+          scheduled_for: string | null
           status: string | null
           subject: string | null
         }
@@ -616,6 +617,7 @@ export type Database = {
           list_unsubscribe_header?: string | null
           processed_at?: string | null
           reply_to_email?: string | null
+          scheduled_for?: string | null
           status?: string | null
           subject?: string | null
         }
@@ -635,6 +637,7 @@ export type Database = {
           list_unsubscribe_header?: string | null
           processed_at?: string | null
           reply_to_email?: string | null
+          scheduled_for?: string | null
           status?: string | null
           subject?: string | null
         }
