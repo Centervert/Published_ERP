@@ -179,7 +179,8 @@ serve(async (req) => {
       );
     }
 
-    const origin = req.headers.get("origin") || supabaseUrl;
+    // Use production domain for invite redirects
+    const productionDomain = "https://asp.centervertsitedemos.com";
 
     // Step 1: Create the user without email confirmation
     const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
@@ -206,7 +207,7 @@ serve(async (req) => {
       type: 'magiclink',
       email,
       options: {
-        redirectTo: `${origin}/reset-password`,
+        redirectTo: `${productionDomain}/reset-password`,
       },
     });
 
