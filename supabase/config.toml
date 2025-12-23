@@ -76,3 +76,7 @@ verify_jwt = true
 # User invitation - requires auth (admin only)
 [functions.invite-user]
 verify_jwt = true
+
+# Send test email - requires auth
+[functions.send-test-email]
+verify_jwt = true
