@@ -604,6 +604,27 @@ export function useLists() {
     },
   });
 
+  const updateList = useMutation({
+    mutationFn: async ({ id, name, description }: { id: string; name: string; description?: string }) => {
+      const { data, error } = await supabase
+        .from('lists')
+        .update({ name, description: description || null })
+        .eq('id', id)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['lists'] });
+      toast({ title: 'List updated' });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error updating list', description: error.message, variant: 'destructive' });
+    },
+  });
+
   const deleteList = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from('lists').delete().eq('id', id);
@@ -622,7 +643,105 @@ export function useLists() {
     lists: listsQuery.data || [],
     isLoading: listsQuery.isLoading,
     createList,
+    updateList,
     deleteList,
+  };
+}
+
+// Hook for managing contacts within a specific list
+export function useListContacts(listId: string | null) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const listContactsQuery = useQuery({
+    queryKey: ['list-contacts', listId],
+    queryFn: async () => {
+      if (!listId) return [];
+      
+      const { data, error } = await supabase
+        .from('contact_lists')
+        .select(`
+          contact_id,
+          added_at,
+          contact:contacts(id, email, first_name, last_name)
+        `)
+        .eq('list_id', listId)
+        .order('added_at', { ascending: false });
+      
+      if (error) throw error;
+      return data.map((item: any) => ({
+        ...item.contact,
+        added_at: item.added_at,
+      }));
+    },
+    enabled: !!listId,
+  });
+
+  const addContactToList = useMutation({
+    mutationFn: async ({ listId, contactId }: { listId: string; contactId: string }) => {
+      const { error } = await supabase
+        .from('contact_lists')
+        .insert({ list_id: listId, contact_id: contactId });
+      
+      if (error) {
+        if (error.message.includes('duplicate')) {
+          throw new Error('Contact already in this list');
+        }
+        throw error;
+      }
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['list-contacts', variables.listId] });
+      toast({ title: 'Contact added to list' });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const removeContactFromList = useMutation({
+    mutationFn: async ({ listId, contactId }: { listId: string; contactId: string }) => {
+      const { error } = await supabase
+        .from('contact_lists')
+        .delete()
+        .eq('list_id', listId)
+        .eq('contact_id', contactId);
+      
+      if (error) throw error;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['list-contacts', variables.listId] });
+      toast({ title: 'Contact removed from list' });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error removing contact', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const bulkAddContactsToList = useMutation({
+    mutationFn: async ({ listId, contactIds }: { listId: string; contactIds: string[] }) => {
+      const entries = contactIds.map(contactId => ({ list_id: listId, contact_id: contactId }));
+      const { error } = await supabase
+        .from('contact_lists')
+        .upsert(entries, { onConflict: 'list_id,contact_id', ignoreDuplicates: true });
+      
+      if (error) throw error;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['list-contacts', variables.listId] });
+      toast({ title: `Added ${variables.contactIds.length} contacts to list` });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error adding contacts', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  return {
+    contacts: listContactsQuery.data || [],
+    isLoading: listContactsQuery.isLoading,
+    addContactToList,
+    removeContactFromList,
+    bulkAddContactsToList,
   };
 }
 
