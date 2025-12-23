@@ -30,6 +30,7 @@ export interface CampaignStats {
   openedHuman: number; // Excluding bots
   clicked: number;
   bounced: number;
+  complained: number;
   unsubscribed: number;
 }
 
@@ -267,6 +268,7 @@ export function useCampaignStats(campaignId: string | null) {
         openedHuman: 0,
         clicked: 0,
         bounced: 0,
+        complained: 0,
         unsubscribed: 0,
       };
 
@@ -286,6 +288,7 @@ export function useCampaignStats(campaignId: string | null) {
         }
         else if (event.event_type === 'clicked') uniqueClicks.add(event.email);
         else if (event.event_type === 'bounced') stats.bounced++;
+        else if (event.event_type === 'complained') stats.complained++;
         else if (event.event_type === 'unsubscribed') stats.unsubscribed++;
       });
 
@@ -301,12 +304,17 @@ export function useCampaignStats(campaignId: string | null) {
 
 export interface AggregateStats {
   totalSent: number;
+  totalDelivered: number;
   totalOpened: number;
   totalClicked: number;
   totalBounced: number;
+  totalComplained: number;
   totalUnsubscribed: number;
   avgOpenRate: number;
   avgClickRate: number;
+  avgDeliveryRate: number;
+  avgBounceRate: number;
+  avgComplaintRate: number;
   campaignCount: number;
   recentCampaigns: Array<{
     id: string;
@@ -315,6 +323,8 @@ export interface AggregateStats {
     total_recipients: number;
     openRate: number;
     clickRate: number;
+    deliveryRate: number;
+    bounceRate: number;
   }>;
 }
 
@@ -338,12 +348,17 @@ export function useAggregateStats() {
       if (campaignIds.length === 0) {
         return {
           totalSent: 0,
+          totalDelivered: 0,
           totalOpened: 0,
           totalClicked: 0,
           totalBounced: 0,
+          totalComplained: 0,
           totalUnsubscribed: 0,
           avgOpenRate: 0,
           avgClickRate: 0,
+          avgDeliveryRate: 0,
+          avgBounceRate: 0,
+          avgComplaintRate: 0,
           campaignCount: 0,
           recentCampaigns: [],
         } as AggregateStats;
@@ -357,10 +372,10 @@ export function useAggregateStats() {
       if (eventsError) throw eventsError;
 
       // Calculate stats per campaign
-      const campaignStats = new Map<string, { sent: number; opened: Set<string>; clicked: Set<string>; bounced: number; unsubscribed: number }>();
+      const campaignStats = new Map<string, { sent: number; delivered: number; opened: Set<string>; clicked: Set<string>; bounced: number; complained: number; unsubscribed: number }>();
       
       campaignIds.forEach(id => {
-        campaignStats.set(id, { sent: 0, opened: new Set(), clicked: new Set(), bounced: 0, unsubscribed: 0 });
+        campaignStats.set(id, { sent: 0, delivered: 0, opened: new Set(), clicked: new Set(), bounced: 0, complained: 0, unsubscribed: 0 });
       });
 
       events?.forEach(event => {
@@ -369,15 +384,17 @@ export function useAggregateStats() {
         
         switch (event.event_type) {
           case 'sent': stats.sent++; break;
+          case 'delivered': stats.delivered++; break;
           case 'opened': if (!event.is_bot) stats.opened.add(event.email); break;
           case 'clicked': stats.clicked.add(event.email); break;
           case 'bounced': stats.bounced++; break;
+          case 'complained': stats.complained++; break;
           case 'unsubscribed': stats.unsubscribed++; break;
         }
       });
 
       // Calculate aggregates
-      let totalSent = 0, totalOpened = 0, totalClicked = 0, totalBounced = 0, totalUnsubscribed = 0;
+      let totalSent = 0, totalDelivered = 0, totalOpened = 0, totalClicked = 0, totalBounced = 0, totalComplained = 0, totalUnsubscribed = 0;
       const recentCampaigns: AggregateStats['recentCampaigns'] = [];
 
       campaigns?.forEach(campaign => {
@@ -385,13 +402,16 @@ export function useAggregateStats() {
         if (!stats) return;
         
         const sent = stats.sent || campaign.total_recipients;
+        const delivered = stats.delivered;
         const opened = stats.opened.size;
         const clicked = stats.clicked.size;
         
         totalSent += sent;
+        totalDelivered += delivered;
         totalOpened += opened;
         totalClicked += clicked;
         totalBounced += stats.bounced;
+        totalComplained += stats.complained;
         totalUnsubscribed += stats.unsubscribed;
 
         recentCampaigns.push({
@@ -401,17 +421,24 @@ export function useAggregateStats() {
           total_recipients: campaign.total_recipients,
           openRate: sent > 0 ? (opened / sent) * 100 : 0,
           clickRate: opened > 0 ? (clicked / opened) * 100 : 0,
+          deliveryRate: sent > 0 ? (delivered / sent) * 100 : 0,
+          bounceRate: sent > 0 ? (stats.bounced / sent) * 100 : 0,
         });
       });
 
       return {
         totalSent,
+        totalDelivered,
         totalOpened,
         totalClicked,
         totalBounced,
+        totalComplained,
         totalUnsubscribed,
         avgOpenRate: totalSent > 0 ? (totalOpened / totalSent) * 100 : 0,
         avgClickRate: totalOpened > 0 ? (totalClicked / totalOpened) * 100 : 0,
+        avgDeliveryRate: totalSent > 0 ? (totalDelivered / totalSent) * 100 : 0,
+        avgBounceRate: totalSent > 0 ? (totalBounced / totalSent) * 100 : 0,
+        avgComplaintRate: totalSent > 0 ? (totalComplained / totalSent) * 100 : 0,
         campaignCount: campaigns?.length || 0,
         recentCampaigns,
       } as AggregateStats;

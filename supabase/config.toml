@@ -30,6 +30,10 @@ verify_jwt = false
 [functions.process-scheduled-campaigns]
 verify_jwt = false
 
+# Resend webhook - public, uses signature verification
+[functions.resend-webhook]
+verify_jwt = false
+
 # AI Email generation - requires auth
 [functions.generate-email]
 verify_jwt = true
