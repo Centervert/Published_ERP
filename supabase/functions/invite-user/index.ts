@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { Resend } from "https://esm.sh/resend@2.0.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -10,6 +11,81 @@ interface InviteUserRequest {
   email: string;
   fullName?: string;
   role?: string;
+}
+
+const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
+
+function getInviteEmailTemplate(name: string, inviteLink: string): string {
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>You're Invited to Author Services Portal</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f5;">
+  <table role="presentation" style="width: 100%; border-collapse: collapse;">
+    <tr>
+      <td align="center" style="padding: 40px 0;">
+        <table role="presentation" style="width: 600px; max-width: 100%; border-collapse: collapse; background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+          <!-- Header -->
+          <tr>
+            <td style="padding: 40px 40px 20px; text-align: center; background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%); border-radius: 12px 12px 0 0;">
+              <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 600;">Author Services Portal</h1>
+              <p style="margin: 8px 0 0; color: #a3c4e8; font-size: 14px;">Your publishing partner</p>
+            </td>
+          </tr>
+          
+          <!-- Content -->
+          <tr>
+            <td style="padding: 40px;">
+              <h2 style="margin: 0 0 16px; color: #1e3a5f; font-size: 22px; font-weight: 600;">
+                Welcome${name ? `, ${name}` : ''}!
+              </h2>
+              <p style="margin: 0 0 24px; color: #4a5568; font-size: 16px; line-height: 1.6;">
+                You've been invited to join the <strong>Author Services Portal</strong>. Click the button below to accept your invitation and set up your account.
+              </p>
+              
+              <!-- CTA Button -->
+              <table role="presentation" style="width: 100%; border-collapse: collapse;">
+                <tr>
+                  <td align="center" style="padding: 16px 0;">
+                    <a href="${inviteLink}" 
+                       style="display: inline-block; padding: 16px 40px; background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%); color: #ffffff; text-decoration: none; font-size: 16px; font-weight: 600; border-radius: 8px; box-shadow: 0 4px 12px rgba(30, 58, 95, 0.3);">
+                      Accept Invitation
+                    </a>
+                  </td>
+                </tr>
+              </table>
+              
+              <p style="margin: 24px 0 0; color: #718096; font-size: 14px; line-height: 1.6;">
+                If you didn't expect this invitation, you can safely ignore this email.
+              </p>
+              
+              <!-- Link fallback -->
+              <p style="margin: 24px 0 0; padding: 16px; background-color: #f7fafc; border-radius: 8px; color: #718096; font-size: 12px; word-break: break-all;">
+                If the button doesn't work, copy and paste this link into your browser:<br>
+                <a href="${inviteLink}" style="color: #2d5a87;">${inviteLink}</a>
+              </p>
+            </td>
+          </tr>
+          
+          <!-- Footer -->
+          <tr>
+            <td style="padding: 24px 40px; background-color: #f7fafc; border-radius: 0 0 12px 12px; text-align: center;">
+              <p style="margin: 0; color: #a0aec0; font-size: 12px;">
+                © ${new Date().getFullYear()} Author Services. All rights reserved.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `;
 }
 
 serve(async (req) => {
@@ -103,35 +179,86 @@ serve(async (req) => {
       );
     }
 
-    // Use inviteUserByEmail to send an invitation
-    // Redirect to reset-password so the invited user can set their password
-    const { data: inviteData, error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
-      data: {
+    const origin = req.headers.get("origin") || supabaseUrl;
+
+    // Step 1: Create the user without email confirmation
+    const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
+      email,
+      email_confirm: false,
+      user_metadata: {
         full_name: fullName || "",
         invited_role: requestedRole,
       },
-      redirectTo: `${req.headers.get("origin") || supabaseUrl}/reset-password`,
     });
 
-    if (inviteError) {
-      console.error("[invite-user] Failed to invite user:", inviteError);
+    if (createError) {
+      console.error("[invite-user] Failed to create user:", createError);
       return new Response(
-        JSON.stringify({ error: inviteError.message }),
+        JSON.stringify({ error: createError.message }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    console.log(`[invite-user] User invited successfully: ${email}`);
+    console.log(`[invite-user] User created successfully: ${email}, id: ${newUser.user?.id}`);
 
-    // If role is specified and not member, add to user_roles table after user confirms
-    // We'll store the intended role in the user metadata for the trigger to pick up
-    // The handle_new_user trigger will need to check for invited_role in metadata
+    // Step 2: Generate a magic link for the user to set their password
+    const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
+      type: 'magiclink',
+      email,
+      options: {
+        redirectTo: `${origin}/reset-password`,
+      },
+    });
+
+    if (linkError) {
+      console.error("[invite-user] Failed to generate magic link:", linkError);
+      // Clean up the created user if link generation fails
+      await supabaseAdmin.auth.admin.deleteUser(newUser.user!.id);
+      return new Response(
+        JSON.stringify({ error: linkError.message }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const inviteLink = linkData.properties?.action_link;
+    if (!inviteLink) {
+      console.error("[invite-user] No action link in response");
+      await supabaseAdmin.auth.admin.deleteUser(newUser.user!.id);
+      return new Response(
+        JSON.stringify({ error: "Failed to generate invitation link" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`[invite-user] Magic link generated for ${email}`);
+
+    // Step 3: Send custom branded email via Resend
+    const emailHtml = getInviteEmailTemplate(fullName || "", inviteLink);
+    
+    const { data: emailResult, error: emailError } = await resend.emails.send({
+      from: "Author Services <no-reply@onboarding.authorservices.com>",
+      to: [email],
+      subject: "You've been invited to Author Services Portal",
+      html: emailHtml,
+    });
+
+    if (emailError) {
+      console.error("[invite-user] Failed to send email via Resend:", emailError);
+      // Clean up the created user if email sending fails
+      await supabaseAdmin.auth.admin.deleteUser(newUser.user!.id);
+      return new Response(
+        JSON.stringify({ error: `Failed to send invitation email: ${emailError.message}` }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`[invite-user] Invitation email sent successfully to ${email}, Resend ID: ${emailResult?.id}`);
 
     return new Response(
       JSON.stringify({ 
         success: true, 
         message: `Invitation sent to ${email}`,
-        userId: inviteData.user?.id 
+        userId: newUser.user?.id 
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
