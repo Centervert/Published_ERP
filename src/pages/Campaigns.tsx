@@ -88,7 +88,7 @@ export default function Campaigns() {
       name: `Campaign ${format(new Date(), 'MMM d, yyyy')}`,
       subject: '',
       from_name: '',
-      from_email: 'xulon@news.authorservices.com',
+      from_email: 'xulon@updates.authorservices.com',
       html_content: '',
     });
     if (newCampaign) {
