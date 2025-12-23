@@ -324,6 +324,7 @@ serve(async (req) => {
         html_content: personalizedHtml,
         contact_first_name: contact.first_name,
         contact_last_name: contact.last_name,
+        list_unsubscribe_header: listUnsubscribeHeader,
       };
     });
 
@@ -358,6 +359,9 @@ serve(async (req) => {
           .replace(/\{\{UNSUBSCRIBE_URL\}\}/gi, unsubscribeUrl)
           .replace(/\{\{unsubscribe_url\}\}/g, unsubscribeUrl);
 
+        // Generate List-Unsubscribe header for test recipients
+        const listUnsubscribeHeader = `<${unsubscribeUrl}>, <mailto:unsubscribe@updates.authorservices.com?subject=Unsubscribe&body=${encodeURIComponent(email)}>`;
+
         queueEntries.push({
           campaign_id: campaignId,
           contact_id: null,
@@ -370,6 +374,7 @@ serve(async (req) => {
           html_content: personalizedHtml,
           contact_first_name: "Test",
           contact_last_name: "User",
+          list_unsubscribe_header: listUnsubscribeHeader,
         });
       }
       console.log(`[send-campaign] Added ${additionalRecipients.length} additional recipients`);

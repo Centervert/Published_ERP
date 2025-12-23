@@ -594,6 +594,7 @@ export type Database = {
           html_content: string | null
           id: string
           last_error: string | null
+          list_unsubscribe_header: string | null
           processed_at: string | null
           reply_to_email: string | null
           status: string | null
@@ -612,6 +613,7 @@ export type Database = {
           html_content?: string | null
           id?: string
           last_error?: string | null
+          list_unsubscribe_header?: string | null
           processed_at?: string | null
           reply_to_email?: string | null
           status?: string | null
@@ -630,6 +632,7 @@ export type Database = {
           html_content?: string | null
           id?: string
           last_error?: string | null
+          list_unsubscribe_header?: string | null
           processed_at?: string | null
           reply_to_email?: string | null
           status?: string | null
