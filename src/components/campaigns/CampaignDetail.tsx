@@ -1220,11 +1220,19 @@ export function CampaignDetail({ campaign, onBack, onCancelScheduled }: Campaign
             <Card className="overflow-hidden border-2">
               <CardContent className="p-0">
                 {campaign.html_content ? (
-                  <iframe
-                    srcDoc={campaign.html_content}
-                    className="w-full h-[500px] border-0"
-                    title="Email Preview"
-                  />
+                  <div className="overflow-hidden" style={{ height: '500px' }}>
+                    <iframe
+                      srcDoc={campaign.html_content}
+                      className="border-0 origin-top-left"
+                      title="Email Preview"
+                      style={{
+                        width: '600px',
+                        height: '833px',
+                        transform: 'scale(0.6)',
+                        transformOrigin: 'top left',
+                      }}
+                    />
+                  </div>
                 ) : (
                   <div className="flex flex-col items-center justify-center h-[400px] text-center p-6 bg-muted/30">
                     <Mail className="h-12 w-12 text-muted-foreground/50 mb-4" />
