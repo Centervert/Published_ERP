@@ -344,81 +344,102 @@ serve(async (req) => {
       });
     }
 
-    // Prepare queue entries with all data needed for sending
+    // Process and insert queue entries in batches to avoid memory limits
     // Generate List-Unsubscribe headers for deliverability
     // Calculate scheduled_for timestamps to spread emails over time
     const now = new Date();
     const spreadMs = spreadDurationMinutes * 60 * 1000;
     
-    const queueEntries = contacts.map((contact, index) => {
-      // Calculate scheduled_for time: distribute evenly across the spread duration
-      let scheduledFor = now;
-      if (spreadDurationMinutes > 0 && contacts.length > 1) {
-        const offsetMs = Math.floor((index / (contacts.length - 1)) * spreadMs);
-        scheduledFor = new Date(now.getTime() + offsetMs);
-      }
-      let personalizedHtml = baseHtml
-        .replace(/\{\{FIRST_NAME\}\}/g, contact.first_name || "there")
-        .replace(/\{\{LAST_NAME\}\}/g, contact.last_name || "")
-        .replace(/\{\{EMAIL\}\}/g, contact.email);
+    const batchSize = 500; // Process 500 at a time to stay within memory limits
+    let totalQueued = 0;
+    
+    for (let batchStart = 0; batchStart < contacts.length; batchStart += batchSize) {
+      const batchEnd = Math.min(batchStart + batchSize, contacts.length);
+      const batchContacts = contacts.slice(batchStart, batchEnd);
+      
+      const queueEntries = batchContacts.map((contact, batchIndex) => {
+        const index = batchStart + batchIndex;
+        // Calculate scheduled_for time: distribute evenly across the spread duration
+        let scheduledFor = now;
+        if (spreadDurationMinutes > 0 && contacts.length > 1) {
+          const offsetMs = Math.floor((index / (contacts.length - 1)) * spreadMs);
+          scheduledFor = new Date(now.getTime() + offsetMs);
+        }
+        let personalizedHtml = baseHtml
+          .replace(/\{\{FIRST_NAME\}\}/g, contact.first_name || "there")
+          .replace(/\{\{LAST_NAME\}\}/g, contact.last_name || "")
+          .replace(/\{\{EMAIL\}\}/g, contact.email);
 
-      // Add tracking pixel
-      const trackingPixelUrl = `${supabaseUrl}/functions/v1/track-pixel?c=${campaignId}&t=${contact.id}&e=${encodeURIComponent(contact.email)}`;
-      personalizedHtml = personalizedHtml.replace(
-        "</body>",
-        `<img src="${trackingPixelUrl}" width="1" height="1" style="display:none;" alt="" /></body>`
-      );
+        // Add tracking pixel
+        const trackingPixelUrl = `${supabaseUrl}/functions/v1/track-pixel?c=${campaignId}&t=${contact.id}&e=${encodeURIComponent(contact.email)}`;
+        personalizedHtml = personalizedHtml.replace(
+          "</body>",
+          `<img src="${trackingPixelUrl}" width="1" height="1" style="display:none;" alt="" /></body>`
+        );
 
-      // Wrap links for click tracking
-      const linkRegex = /<a\s+([^>]*href=["'])([^"']+)(["'][^>]*)>/gi;
-      personalizedHtml = personalizedHtml.replace(linkRegex, (match: string, pre: string, url: string, post: string) => {
-        if (url.includes("unsubscribe")) return match;
-        const trackedUrl = `${supabaseUrl}/functions/v1/track-click?c=${campaignId}&t=${contact.id}&e=${encodeURIComponent(contact.email)}&u=${encodeURIComponent(url)}`;
-        return `<a ${pre}${trackedUrl}${post}>`;
+        // Wrap links for click tracking
+        const linkRegex = /<a\s+([^>]*href=["'])([^"']+)(["'][^>]*)>/gi;
+        personalizedHtml = personalizedHtml.replace(linkRegex, (match: string, pre: string, url: string, post: string) => {
+          if (url.includes("unsubscribe")) return match;
+          const trackedUrl = `${supabaseUrl}/functions/v1/track-click?c=${campaignId}&t=${contact.id}&e=${encodeURIComponent(contact.email)}&u=${encodeURIComponent(url)}`;
+          return `<a ${pre}${trackedUrl}${post}>`;
+        });
+
+        // Add unsubscribe link
+        const unsubscribeUrl = `${supabaseUrl}/functions/v1/unsubscribe?c=${campaignId}&t=${contact.id}&e=${encodeURIComponent(contact.email)}`;
+        personalizedHtml = personalizedHtml
+          .replace(/\{\{UNSUBSCRIBE_URL\}\}/gi, unsubscribeUrl)
+          .replace(/\{\{unsubscribe_url\}\}/g, unsubscribeUrl);
+
+        // Ensure footer has physical address for CAN-SPAM compliance
+        if (!personalizedHtml.includes('Author Services') && !personalizedHtml.includes('physical address')) {
+          personalizedHtml = personalizedHtml.replace(
+            '</body>',
+            '<p style="font-size:11px;color:#999;text-align:center;margin-top:20px;">Author Services, 2727 Paces Ferry Road SE, Building Two, Suite 250, Atlanta, GA 30339</p></body>'
+          );
+        }
+
+        // Determine reply-to email
+        let replyToEmail = campaign.reply_to_email || null;
+        if (routeRepliesToAsc && contact.assigned_asc && ascProfiles[contact.assigned_asc]) {
+          replyToEmail = ascProfiles[contact.assigned_asc];
+        }
+
+        // Generate List-Unsubscribe header value for the VPS worker to use
+        const listUnsubscribeHeader = `<${unsubscribeUrl}>, <mailto:unsubscribe@updates.authorservices.com?subject=Unsubscribe&body=${encodeURIComponent(contact.email)}>`;
+
+        return {
+          campaign_id: campaignId,
+          contact_id: contact.id,
+          email: contact.email,
+          status: "pending",
+          subject: campaign.subject,
+          from_name: campaign.from_name,
+          from_email: campaign.from_email,
+          reply_to_email: replyToEmail,
+          html_content: personalizedHtml,
+          contact_first_name: contact.first_name,
+          contact_last_name: contact.last_name,
+          list_unsubscribe_header: listUnsubscribeHeader,
+          scheduled_for: scheduledFor.toISOString(),
+        };
       });
 
-      // Add unsubscribe link
-      const unsubscribeUrl = `${supabaseUrl}/functions/v1/unsubscribe?c=${campaignId}&t=${contact.id}&e=${encodeURIComponent(contact.email)}`;
-      personalizedHtml = personalizedHtml
-        .replace(/\{\{UNSUBSCRIBE_URL\}\}/gi, unsubscribeUrl)
-        .replace(/\{\{unsubscribe_url\}\}/g, unsubscribeUrl);
-
-      // Ensure footer has physical address for CAN-SPAM compliance
-      if (!personalizedHtml.includes('Author Services') && !personalizedHtml.includes('physical address')) {
-        personalizedHtml = personalizedHtml.replace(
-          '</body>',
-          '<p style="font-size:11px;color:#999;text-align:center;margin-top:20px;">Author Services, 2727 Paces Ferry Road SE, Building Two, Suite 250, Atlanta, GA 30339</p></body>'
-        );
+      // Insert this batch
+      const { error: insertError } = await supabase.from("email_queue").insert(queueEntries);
+      
+      if (insertError) {
+        console.error(`[send-campaign] Failed to insert batch ${batchStart}-${batchEnd}:`, insertError);
+        throw new Error(`Failed to queue emails: ${insertError.message}`);
       }
-
-      // Determine reply-to email
-      let replyToEmail = campaign.reply_to_email || null;
-      if (routeRepliesToAsc && contact.assigned_asc && ascProfiles[contact.assigned_asc]) {
-        replyToEmail = ascProfiles[contact.assigned_asc];
-      }
-
-      // Generate List-Unsubscribe header value for the VPS worker to use
-      const listUnsubscribeHeader = `<${unsubscribeUrl}>, <mailto:unsubscribe@updates.authorservices.com?subject=Unsubscribe&body=${encodeURIComponent(contact.email)}>`;
-
-      return {
-        campaign_id: campaignId,
-        contact_id: contact.id,
-        email: contact.email,
-        status: "pending",
-        subject: campaign.subject,
-        from_name: campaign.from_name,
-        from_email: campaign.from_email,
-        reply_to_email: replyToEmail,
-        html_content: personalizedHtml,
-        contact_first_name: contact.first_name,
-        contact_last_name: contact.last_name,
-        list_unsubscribe_header: listUnsubscribeHeader,
-        scheduled_for: scheduledFor.toISOString(),
-      };
-    });
+      
+      totalQueued += queueEntries.length;
+      console.log(`[send-campaign] Queued batch ${batchStart}-${batchEnd} (${totalQueued}/${contacts.length})`);
+    }
 
     // Add additional recipients (test emails) to the queue
     if (additionalRecipients && additionalRecipients.length > 0) {
+      const additionalEntries = [];
       for (const email of additionalRecipients) {
         if (!email || !email.includes('@')) continue;
         
@@ -451,7 +472,7 @@ serve(async (req) => {
         // Generate List-Unsubscribe header for test recipients
         const listUnsubscribeHeader = `<${unsubscribeUrl}>, <mailto:unsubscribe@updates.authorservices.com?subject=Unsubscribe&body=${encodeURIComponent(email)}>`;
 
-        queueEntries.push({
+        additionalEntries.push({
           campaign_id: campaignId,
           contact_id: null,
           email: email,
@@ -467,19 +488,19 @@ serve(async (req) => {
           scheduled_for: now.toISOString(), // Test emails send immediately
         });
       }
-      console.log(`[send-campaign] Added ${additionalRecipients.length} additional recipients`);
+      
+      if (additionalEntries.length > 0) {
+        const { error: additionalError } = await supabase.from("email_queue").insert(additionalEntries);
+        if (additionalError) {
+          console.error("[send-campaign] Failed to insert additional recipients:", additionalError);
+        } else {
+          totalQueued += additionalEntries.length;
+          console.log(`[send-campaign] Added ${additionalEntries.length} additional recipients`);
+        }
+      }
     }
 
-
-    // Insert all emails into the queue
-    const { error: insertError } = await supabase.from("email_queue").insert(queueEntries);
-    
-    if (insertError) {
-      console.error("[send-campaign] Failed to insert queue entries:", insertError);
-      throw new Error(`Failed to queue emails: ${insertError.message}`);
-    }
-
-    console.log(`[send-campaign] Successfully queued ${contacts.length} emails for VPS worker to process`);
+    console.log(`[send-campaign] Successfully queued ${totalQueued} emails for VPS worker to process`);
 
     return new Response(
       JSON.stringify({ 
