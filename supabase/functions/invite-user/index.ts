@@ -181,6 +181,7 @@ serve(async (req) => {
 
     // Use production domain for invite redirects
     const productionDomain = "https://asp.centervertsitedemos.com";
+    const resetPasswordUrl = `${productionDomain}/reset-password`;
 
     // Step 1: Create the user without email confirmation
     const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
@@ -203,18 +204,14 @@ serve(async (req) => {
     console.log(`[invite-user] User created successfully: ${email}, id: ${newUser.user?.id}`);
 
     // Step 2: Generate a recovery link for the user to set their password
-    // Using 'recovery' type instead of 'magiclink' to prevent email scanner issues
+    // Using 'recovery' type to generate a token for password reset
     const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
       type: 'recovery',
       email,
-      options: {
-        redirectTo: `${productionDomain}/reset-password`,
-      },
     });
 
     if (linkError) {
-      console.error("[invite-user] Failed to generate magic link:", linkError);
-      // Clean up the created user if link generation fails
+      console.error("[invite-user] Failed to generate recovery link:", linkError);
       await supabaseAdmin.auth.admin.deleteUser(newUser.user!.id);
       return new Response(
         JSON.stringify({ error: linkError.message }),
@@ -222,8 +219,10 @@ serve(async (req) => {
       );
     }
 
-    const inviteLink = linkData.properties?.action_link;
-    if (!inviteLink) {
+    // Extract token_hash from the generated link for PKCE flow
+    // This makes the link scanner-resistant by requiring user interaction
+    const actionLink = linkData.properties?.action_link;
+    if (!actionLink) {
       console.error("[invite-user] No action link in response");
       await supabaseAdmin.auth.admin.deleteUser(newUser.user!.id);
       return new Response(
@@ -232,7 +231,15 @@ serve(async (req) => {
       );
     }
 
-    console.log(`[invite-user] Magic link generated for ${email}`);
+    // Parse the action link to extract token_hash and type
+    const actionUrl = new URL(actionLink);
+    const tokenHash = actionUrl.searchParams.get('token_hash') || actionUrl.hash.split('token=')[1]?.split('&')[0];
+    const tokenType = actionUrl.searchParams.get('type') || 'recovery';
+    
+    // Build our custom invite link with token_hash as query param (scanner-resistant)
+    const inviteLink = `${resetPasswordUrl}?token_hash=${encodeURIComponent(linkData.properties?.hashed_token || tokenHash || '')}&type=${tokenType}`;
+
+    console.log(`[invite-user] Recovery link generated for ${email}`);
 
     // Step 3: Send custom branded email via Resend
     const emailHtml = getInviteEmailTemplate(fullName || "", inviteLink);
