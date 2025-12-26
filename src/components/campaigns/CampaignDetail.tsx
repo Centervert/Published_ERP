@@ -272,14 +272,25 @@ export function CampaignDetail({ campaign, onBack, onCancelScheduled }: Campaign
       
       if (error) throw error;
       
+      const updates: { subject?: string; name?: string } = {};
+      
       if (data?.subject) {
         setSubject(data.subject);
-        // Auto-save the subject
+        updates.subject = data.subject;
+      }
+      
+      // Also update campaign name if one was generated and current name is default
+      if (data?.campaignName && campaign.name.startsWith('New Campaign')) {
+        setCampaignName(data.campaignName);
+        updates.name = data.campaignName;
+      }
+      
+      if (Object.keys(updates).length > 0) {
         await updateCampaign.mutateAsync({
           id: campaign.id,
-          subject: data.subject,
+          ...updates,
         });
-        toast.success('Subject generated!');
+        toast.success(updates.name ? 'Subject & name generated!' : 'Subject generated!');
       }
     } catch (error) {
       console.error('Error generating subject:', error);
@@ -339,12 +350,20 @@ export function CampaignDetail({ campaign, onBack, onCancelScheduled }: Campaign
           });
           
           if (!error && data?.subject) {
+            const updates: { subject?: string; name?: string } = { subject: data.subject };
             setSubject(data.subject);
+            
+            // Also update campaign name if generated and current name is default
+            if (data?.campaignName && campaign.name.startsWith('New Campaign')) {
+              setCampaignName(data.campaignName);
+              updates.name = data.campaignName;
+            }
+            
             await updateCampaign.mutateAsync({
               id: campaign.id,
-              subject: data.subject,
+              ...updates,
             });
-            toast.success('Subject line auto-generated!');
+            toast.success(updates.name ? 'Subject & campaign name auto-generated!' : 'Subject line auto-generated!');
           }
         } catch (error) {
           console.error('Error auto-generating subject:', error);
