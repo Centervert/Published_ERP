@@ -21,18 +21,21 @@ interface EmailPromptFormProps {
 }
 
 export type ImageSource = 'none' | 'generate' | 'url' | 'upload';
+export type CtaType = 'none' | 'custom' | 'asc_contact';
 
 export interface EmailPromptData {
   emailType: string;
   description: string;
   keyPoints: string;
   callToAction: string;
+  ctaType: CtaType;
   tone: string;
   imageSource: ImageSource;
   imageStyle?: string;
   imagePrompt?: string;
   imageUrl?: string;
   imageFile?: File;
+  includeGreeting?: boolean;
 }
 
 const emailTypes = [
@@ -68,8 +71,10 @@ export function EmailPromptForm({ onSubmit, isLoading }: EmailPromptFormProps) {
   const [emailType, setEmailType] = useState('');
   const [description, setDescription] = useState('');
   const [keyPoints, setKeyPoints] = useState('');
+  const [ctaType, setCtaType] = useState<CtaType>('custom');
   const [callToAction, setCallToAction] = useState('');
   const [tone, setTone] = useState('professional');
+  const [includeGreeting, setIncludeGreeting] = useState(true);
   
   // Image options
   const [imageSource, setImageSource] = useState<ImageSource>('none');
@@ -89,13 +94,15 @@ export function EmailPromptForm({ onSubmit, isLoading }: EmailPromptFormProps) {
       emailType,
       description,
       keyPoints,
-      callToAction,
+      callToAction: ctaType === 'custom' ? callToAction : '',
+      ctaType,
       tone,
       imageSource,
       imageStyle: imageSource === 'generate' ? imageStyle : undefined,
       imagePrompt: imageSource === 'generate' ? imagePrompt : undefined,
       imageUrl: imageSource === 'url' ? imageUrl : undefined,
       imageFile: imageSource === 'upload' ? imageFile || undefined : undefined,
+      includeGreeting,
     });
   };
 
@@ -225,14 +232,73 @@ export function EmailPromptForm({ onSubmit, isLoading }: EmailPromptFormProps) {
         <p className="text-xs text-muted-foreground">Add each point on a new line</p>
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="cta">Call to action (optional)</Label>
-        <Input
-          id="cta"
-          placeholder="e.g., Shop Now, Learn More, Register Today"
-          value={callToAction}
-          onChange={(e) => setCallToAction(e.target.value)}
-        />
+      {/* Personalization Options */}
+      <div className="space-y-4 pt-4 border-t">
+        <div className="flex items-center gap-2">
+          <Label className="text-base font-medium">Personalization</Label>
+        </div>
+        
+        <div className="flex items-center space-x-3 rounded-lg border p-3">
+          <input
+            type="checkbox"
+            id="include-greeting"
+            checked={includeGreeting}
+            onChange={(e) => setIncludeGreeting(e.target.checked)}
+            className="h-4 w-4 rounded border-gray-300"
+          />
+          <Label htmlFor="include-greeting" className="cursor-pointer text-sm flex-1">
+            <span className="font-medium">Dynamic greeting</span>
+            <p className="text-xs text-muted-foreground">
+              "Good morning/afternoon/evening, [First Name]" based on send time
+            </p>
+          </Label>
+        </div>
+      </div>
+
+      {/* Call to Action */}
+      <div className="space-y-3">
+        <Label>Call to action</Label>
+        <RadioGroup
+          value={ctaType}
+          onValueChange={(value) => setCtaType(value as CtaType)}
+          className="space-y-2"
+        >
+          <div className="flex items-start space-x-3 rounded-lg border p-3 cursor-pointer hover:bg-muted/50 transition-colors">
+            <RadioGroupItem value="asc_contact" id="cta-asc" className="mt-0.5" />
+            <Label htmlFor="cta-asc" className="cursor-pointer flex-1">
+              <span className="font-medium">Contact your Author Success Coach</span>
+              <p className="text-xs text-muted-foreground">
+                Personalized CTA with ASC name, email & phone buttons
+              </p>
+            </Label>
+          </div>
+          <div className="flex items-start space-x-3 rounded-lg border p-3 cursor-pointer hover:bg-muted/50 transition-colors">
+            <RadioGroupItem value="custom" id="cta-custom" className="mt-0.5" />
+            <Label htmlFor="cta-custom" className="cursor-pointer flex-1">
+              <span className="font-medium">Custom button</span>
+              <p className="text-xs text-muted-foreground">
+                Standard button with your own text and link
+              </p>
+            </Label>
+          </div>
+          <div className="flex items-start space-x-3 rounded-lg border p-3 cursor-pointer hover:bg-muted/50 transition-colors">
+            <RadioGroupItem value="none" id="cta-none" className="mt-0.5" />
+            <Label htmlFor="cta-none" className="cursor-pointer flex-1">
+              <span className="font-medium">No call to action</span>
+            </Label>
+          </div>
+        </RadioGroup>
+        
+        {ctaType === 'custom' && (
+          <div className="pl-6">
+            <Input
+              id="cta"
+              placeholder="e.g., Shop Now, Learn More, Register Today"
+              value={callToAction}
+              onChange={(e) => setCallToAction(e.target.value)}
+            />
+          </div>
+        )}
       </div>
 
       <div className="space-y-2">

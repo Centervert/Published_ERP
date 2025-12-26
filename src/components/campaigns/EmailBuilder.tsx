@@ -350,6 +350,8 @@ export function EmailBuilder({
         description: data.description,
         keyPoints: data.keyPoints,
         callToAction: data.callToAction,
+        ctaType: data.ctaType,
+        includeGreeting: data.includeGreeting,
         tone: data.tone,
         outputFormat: 'blocks',
       });
