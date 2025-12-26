@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -26,10 +26,20 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { useDecisions, DevItem, DevItemStatus } from '@/hooks/useDevItems';
 import { StatusBadge } from './StatusBadge';
 import { MarkdownRenderer } from './MarkdownRenderer';
-import { Plus, Search, Filter, X } from 'lucide-react';
+import { Plus, Search, Filter, Trash2, ArrowUp, ArrowDown } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 
@@ -39,11 +49,12 @@ interface DevDecisionsTabProps {
 }
 
 export function DevDecisionsTab({ documentId, isAdmin }: DevDecisionsTabProps) {
-  const { items: decisions, createItem, updateItem } = useDecisions(documentId);
+  const { items: decisions, createItem, updateItem, deleteItem } = useDecisions(documentId);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [selectedDecision, setSelectedDecision] = useState<DevItem | null>(null);
   const [isAddingNew, setIsAddingNew] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<DevItem | null>(null);
   const [newDecision, setNewDecision] = useState({
     title: '',
     body_md: '',
@@ -103,6 +114,37 @@ export function DevDecisionsTab({ documentId, isAdmin }: DevDecisionsTabProps) {
     }
   };
 
+  const handleUpdatePriority = async (id: string, priority: number) => {
+    try {
+      await updateItem.mutateAsync({ id, priority });
+      toast.success('Priority updated');
+      if (selectedDecision?.id === id) {
+        setSelectedDecision({ ...selectedDecision, priority });
+      }
+    } catch (error) {
+      toast.error('Failed to update priority');
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteConfirm) return;
+    try {
+      await deleteItem.mutateAsync(deleteConfirm.id);
+      toast.success('Decision deleted');
+      setDeleteConfirm(null);
+      if (selectedDecision?.id === deleteConfirm.id) {
+        setSelectedDecision(null);
+      }
+    } catch (error) {
+      toast.error('Failed to delete decision');
+    }
+  };
+
+  const adjustPriority = async (decision: DevItem, delta: number) => {
+    const newPriority = Math.max(0, (decision.priority || 0) + delta);
+    await handleUpdatePriority(decision.id, newPriority);
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -145,17 +187,19 @@ export function DevDecisionsTab({ documentId, isAdmin }: DevDecisionsTabProps) {
         <Table>
           <TableHeader>
             <TableRow>
+              {isAdmin && <TableHead className="w-[80px]">Priority</TableHead>}
               <TableHead>Title</TableHead>
               <TableHead className="w-[100px]">Status</TableHead>
               <TableHead className="w-[120px]">Owner</TableHead>
               <TableHead className="w-[150px]">Tags</TableHead>
               <TableHead className="w-[100px]">Date</TableHead>
+              {isAdmin && <TableHead className="w-[50px]"></TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredDecisions.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={isAdmin ? 7 : 5} className="text-center text-muted-foreground py-8">
                   No decisions found
                 </TableCell>
               </TableRow>
@@ -166,6 +210,37 @@ export function DevDecisionsTab({ documentId, isAdmin }: DevDecisionsTabProps) {
                   className="cursor-pointer hover:bg-muted/50"
                   onClick={() => setSelectedDecision(decision)}
                 >
+                  {isAdmin && (
+                    <TableCell onClick={e => e.stopPropagation()}>
+                      <div className="flex items-center gap-1">
+                        <Input
+                          type="number"
+                          min={0}
+                          value={decision.priority || 0}
+                          onChange={e => handleUpdatePriority(decision.id, parseInt(e.target.value) || 0)}
+                          className="w-14 h-7 text-center text-xs"
+                        />
+                        <div className="flex flex-col">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-4 w-4"
+                            onClick={() => adjustPriority(decision, 1)}
+                          >
+                            <ArrowUp className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-4 w-4"
+                            onClick={() => adjustPriority(decision, -1)}
+                          >
+                            <ArrowDown className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    </TableCell>
+                  )}
                   <TableCell className="font-medium">{decision.title}</TableCell>
                   <TableCell>
                     <StatusBadge status={decision.status} />
@@ -190,6 +265,18 @@ export function DevDecisionsTab({ documentId, isAdmin }: DevDecisionsTabProps) {
                   <TableCell className="text-muted-foreground text-sm">
                     {format(new Date(decision.created_at), 'MMM d, yyyy')}
                   </TableCell>
+                  {isAdmin && (
+                    <TableCell onClick={e => e.stopPropagation()}>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                        onClick={() => setDeleteConfirm(decision)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))
             )}
@@ -209,24 +296,39 @@ export function DevDecisionsTab({ documentId, isAdmin }: DevDecisionsTabProps) {
 
           {selectedDecision && (
             <div className="space-y-4 mt-6">
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">Status:</span>
-                {isAdmin ? (
-                  <Select
-                    value={selectedDecision.status || 'proposed'}
-                    onValueChange={v => handleUpdateStatus(selectedDecision.id, v as DevItemStatus)}
-                  >
-                    <SelectTrigger className="w-[130px] h-8">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="proposed">Proposed</SelectItem>
-                      <SelectItem value="accepted">Accepted</SelectItem>
-                      <SelectItem value="deprecated">Deprecated</SelectItem>
-                    </SelectContent>
-                  </Select>
-                ) : (
-                  <StatusBadge status={selectedDecision.status} />
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">Status:</span>
+                  {isAdmin ? (
+                    <Select
+                      value={selectedDecision.status || 'proposed'}
+                      onValueChange={v => handleUpdateStatus(selectedDecision.id, v as DevItemStatus)}
+                    >
+                      <SelectTrigger className="w-[130px] h-8">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="proposed">Proposed</SelectItem>
+                        <SelectItem value="accepted">Accepted</SelectItem>
+                        <SelectItem value="deprecated">Deprecated</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <StatusBadge status={selectedDecision.status} />
+                  )}
+                </div>
+
+                {isAdmin && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">Priority:</span>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={selectedDecision.priority || 0}
+                      onChange={e => handleUpdatePriority(selectedDecision.id, parseInt(e.target.value) || 0)}
+                      className="w-20 h-8"
+                    />
+                  </div>
                 )}
               </div>
 
@@ -251,6 +353,19 @@ export function DevDecisionsTab({ documentId, isAdmin }: DevDecisionsTabProps) {
               {selectedDecision.body_md && (
                 <div className="pt-4 border-t">
                   <MarkdownRenderer content={selectedDecision.body_md} />
+                </div>
+              )}
+
+              {isAdmin && (
+                <div className="pt-4 border-t">
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => setDeleteConfirm(selectedDecision)}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete Decision
+                  </Button>
                 </div>
               )}
             </div>
@@ -340,6 +455,27 @@ export function DevDecisionsTab({ documentId, isAdmin }: DevDecisionsTabProps) {
           </div>
         </SheetContent>
       </Sheet>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deleteConfirm} onOpenChange={open => !open && setDeleteConfirm(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Decision</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{deleteConfirm?.title}"? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
