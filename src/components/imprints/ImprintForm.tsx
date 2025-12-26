@@ -240,13 +240,22 @@ export function ImprintForm({ open, onClose, imprint }: ImprintFormProps) {
                 <FormField
                   control={form.control}
                   name="reply_to_email"
-                  render={({ field }) => (
+                  render={() => (
                     <FormItem>
-                      <FormLabel>Reply-To Email (Optional)</FormLabel>
+                      <div className="flex items-center gap-2">
+                        <FormLabel>Reply-To Email</FormLabel>
+                        <span className="text-xs px-2 py-0.5 rounded border text-muted-foreground">Coming Soon</span>
+                      </div>
                       <FormControl>
-                        <Input {...field} placeholder="support@xulonpress.com" />
+                        <Input 
+                          value="noreply@newauthor.authorservices.com" 
+                          disabled 
+                          className="opacity-50 cursor-not-allowed"
+                        />
                       </FormControl>
-                      <FormMessage />
+                      <p className="text-xs text-muted-foreground">
+                        Custom reply-to addresses will be available once mail forwarding is configured.
+                      </p>
                     </FormItem>
                   )}
                 />

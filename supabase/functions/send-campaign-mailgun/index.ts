@@ -11,7 +11,6 @@ interface SendCampaignRequest {
   listIds: string[];
   imprintIds?: string[];
   additionalRecipients?: string[];
-  routeRepliesToAsc?: boolean;
 }
 
 interface EmailBlock {
@@ -31,6 +30,27 @@ interface RenderOptions {
   };
 }
 
+// Web-safe font stacks (no Google Fonts import for email clients)
+const WEB_SAFE_FONTS: Record<string, string> = {
+  'Arial': 'Arial, Helvetica, sans-serif',
+  'Helvetica': 'Helvetica, Arial, sans-serif',
+  'Georgia': 'Georgia, Times New Roman, serif',
+  'Times New Roman': 'Times New Roman, Times, serif',
+  'Verdana': 'Verdana, Geneva, sans-serif',
+  'Trebuchet MS': 'Trebuchet MS, Lucida Sans, sans-serif',
+  'Courier New': 'Courier New, Courier, monospace',
+  'Tahoma': 'Tahoma, Verdana, sans-serif',
+  'Lucida Sans': 'Lucida Sans Unicode, Lucida Grande, sans-serif',
+};
+
+function getWebSafeFont(font: string | undefined): string {
+  if (!font) return 'Arial, Helvetica, sans-serif';
+  // If it's already a web-safe font, return the full stack
+  if (WEB_SAFE_FONTS[font]) return WEB_SAFE_FONTS[font];
+  // For Google Fonts, fall back to Arial with the original as first choice
+  return `${font}, Arial, Helvetica, sans-serif`;
+}
+
 function escapeHtml(text: string): string {
   return text
     .replace(/&/g, '&amp;')
@@ -41,8 +61,8 @@ function escapeHtml(text: string): string {
 }
 
 function renderBlockToHtml(block: EmailBlock, options: RenderOptions): string {
-  const bodyFont = options.imprint?.bodyFont || 'Arial, sans-serif';
-  const headingFont = options.imprint?.headingFont || bodyFont;
+  const bodyFont = getWebSafeFont(options.imprint?.bodyFont);
+  const headingFont = getWebSafeFont(options.imprint?.headingFont);
   const textColor = options.imprint?.textColor || '#333333';
   const primaryColor = options.imprint?.primaryColor || '#2563eb';
 
@@ -76,7 +96,7 @@ function renderBlockToHtml(block: EmailBlock, options: RenderOptions): string {
       const btnText = (block.textColor as string) || '#ffffff';
       const btnRadius = block.borderRadius || 4;
       const fullWidth = block.fullWidth ? 'width: 100%;' : '';
-      return `<tr><td style="padding: 10px 20px; text-align: ${block.align || 'center'};"><a href="${escapeHtml(block.url as string)}" target="_blank" style="display: inline-block; ${fullWidth} background-color: ${btnBg}; color: ${btnText}; text-decoration: none; padding: 12px 24px; border-radius: ${btnRadius}px; font-weight: bold; font-size: 16px;">${escapeHtml(block.text as string)}</a></td></tr>`;
+      return `<tr><td style="padding: 10px 20px; text-align: ${block.align || 'center'};"><a href="${escapeHtml(block.url as string)}" target="_blank" style="display: inline-block; ${fullWidth} background-color: ${btnBg}; color: ${btnText}; text-decoration: none; padding: 12px 24px; border-radius: ${btnRadius}px; font-weight: bold; font-size: 16px; font-family: ${bodyFont};">${escapeHtml(block.text as string)}</a></td></tr>`;
 
     case 'divider':
       return `<tr><td style="padding: 10px 20px;"><hr style="border: none; border-top: ${block.thickness || 1}px ${block.style || 'solid'} ${block.color || '#e5e7eb'}; margin: 0;" /></td></tr>`;
@@ -89,7 +109,9 @@ function renderBlockToHtml(block: EmailBlock, options: RenderOptions): string {
       const footerText = (block.textColor as string) || '#6b7280';
       // Use Mailgun personalization for unsubscribe URL
       const unsubUrl = '%recipient.unsubscribe_url%';
-      return `<tr><td style="background-color: ${footerBg}; padding: 20px; text-align: center;"><p style="margin: 0 0 10px 0; color: ${footerText}; font-size: 14px;">${block.content}</p>${block.showUnsubscribe !== false ? `<a href="${unsubUrl}" style="color: ${footerText}; font-size: 12px; text-decoration: underline;">${escapeHtml((block.unsubscribeText as string) || 'Unsubscribe')}</a>` : ''}</td></tr>`;
+      // Escape footer content to prevent XSS
+      const footerContent = escapeHtml(block.content as string || '');
+      return `<tr><td style="background-color: ${footerBg}; padding: 20px; text-align: center;"><p style="margin: 0 0 10px 0; color: ${footerText}; font-size: 14px; font-family: ${bodyFont};">${footerContent}</p>${block.showUnsubscribe !== false ? `<a href="${unsubUrl}" style="color: ${footerText}; font-size: 12px; text-decoration: underline; font-family: ${bodyFont};">${escapeHtml((block.unsubscribeText as string) || 'Unsubscribe')}</a>` : ''}</td></tr>`;
 
     default:
       return '';
@@ -98,12 +120,13 @@ function renderBlockToHtml(block: EmailBlock, options: RenderOptions): string {
 
 function renderBlocksToHtml(blocks: EmailBlock[], options: RenderOptions = {}): string {
   const bgColor = options.imprint?.backgroundColor || '#f4f4f4';
-  const bodyFont = options.imprint?.bodyFont || 'Arial, sans-serif';
-  const headingFont = options.imprint?.headingFont || bodyFont;
+  const bodyFont = getWebSafeFont(options.imprint?.bodyFont);
+  const headingFont = getWebSafeFont(options.imprint?.headingFont);
   const maxWidth = 600;
 
   const blocksHtml = blocks.map(block => renderBlockToHtml(block, options)).join('');
 
+  // No Google Fonts import - using web-safe fonts only for better email client compatibility
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -135,6 +158,68 @@ function renderBlocksToHtml(blocks: EmailBlock[], options: RenderOptions = {}): 
   </center>
 </body>
 </html>`;
+}
+
+function renderBlocksToPlainText(blocks: EmailBlock[]): string {
+  const lines: string[] = [];
+  
+  for (const block of blocks) {
+    switch (block.type) {
+      case 'text':
+        // Strip HTML tags and convert personalization tokens
+        let content = (block.content as string || '')
+          .replace(/<br\s*\/?>/gi, '\n')
+          .replace(/<\/p>/gi, '\n\n')
+          .replace(/<[^>]*>/g, '')
+          .replace(/\{\{FIRST_NAME\}\}/gi, '%recipient.first_name%')
+          .replace(/\{\{LAST_NAME\}\}/gi, '%recipient.last_name%')
+          .replace(/\{\{EMAIL\}\}/gi, '%recipient.email%')
+          .replace(/&nbsp;/g, ' ')
+          .replace(/&amp;/g, '&')
+          .replace(/&lt;/g, '<')
+          .replace(/&gt;/g, '>')
+          .replace(/&quot;/g, '"')
+          .trim();
+        if (content) lines.push(content);
+        break;
+        
+      case 'heading':
+        const heading = (block.content as string || '').trim();
+        if (heading) {
+          lines.push(heading.toUpperCase());
+          lines.push('');
+        }
+        break;
+        
+      case 'button':
+        const buttonText = block.text as string || 'Click here';
+        const buttonUrl = block.url as string || '';
+        lines.push(`${buttonText}: ${buttonUrl}`);
+        lines.push('');
+        break;
+        
+      case 'divider':
+        lines.push('-------------------------------------------');
+        break;
+        
+      case 'spacer':
+        lines.push('');
+        break;
+        
+      case 'footer':
+        lines.push('');
+        lines.push('-------------------------------------------');
+        const footerContent = (block.content as string || '').replace(/<[^>]*>/g, '').trim();
+        if (footerContent) lines.push(footerContent);
+        if (block.showUnsubscribe !== false) {
+          lines.push('');
+          lines.push('Unsubscribe: %recipient.unsubscribe_url%');
+        }
+        break;
+    }
+  }
+  
+  return lines.join('\n');
 }
 
 function formatRFC2822(date: Date): string {
@@ -192,7 +277,7 @@ serve(async (req) => {
       ? "https://api.eu.mailgun.net/v3" 
       : "https://api.mailgun.net/v3";
 
-    const { campaignId, listIds, imprintIds, additionalRecipients, routeRepliesToAsc }: SendCampaignRequest = await req.json();
+    const { campaignId, listIds, imprintIds, additionalRecipients }: SendCampaignRequest = await req.json();
     
     console.log(`[send-campaign-mailgun] Starting campaign ${campaignId}`);
     console.log(`[send-campaign-mailgun] Lists: ${listIds.join(", ")}, Imprints: ${imprintIds?.join(", ") || "all"}, Additional: ${additionalRecipients?.length || 0}`);
@@ -247,7 +332,7 @@ serve(async (req) => {
           const batch = contactIdsList.slice(i, i + batchSize);
           const { data: batchContacts } = await supabase
             .from("contacts")
-            .select("id, email, first_name, last_name, imprint_id, assigned_asc")
+            .select("id, email, first_name, last_name, imprint_id")
             .in("id", batch)
             .not("status", "in", "(bounced,complained,unsubscribed)");
           
@@ -267,7 +352,7 @@ serve(async (req) => {
       while (hasMore) {
         const { data: imprintContacts } = await supabase
           .from("contacts")
-          .select("id, email, first_name, last_name, imprint_id, assigned_asc")
+          .select("id, email, first_name, last_name, imprint_id")
           .in("imprint_id", imprintIds)
           .not("status", "in", "(bounced,complained,unsubscribed)")
           .range(offset, offset + pageSize - 1);
@@ -292,28 +377,38 @@ serve(async (req) => {
       throw new Error("No contacts found in selected lists/imprints");
     }
 
-    // Load ASC profiles for reply-to routing
-    let ascProfiles: Record<string, string> = {};
-    if (routeRepliesToAsc) {
-      const ascIds = [...new Set(contacts.filter(c => c.assigned_asc).map(c => c.assigned_asc as string))];
-      if (ascIds.length > 0) {
-        const { data: profiles } = await supabase
-          .from("profiles")
-          .select("id, email")
-          .in("id", ascIds);
-        
-        if (profiles) {
-          ascProfiles = Object.fromEntries(profiles.map(p => [p.id, p.email]));
-        }
+    // Fetch imprint for styling (use the first imprint if multiple, or fetch based on campaign)
+    let imprintOptions: RenderOptions = {};
+    if (imprintIds && imprintIds.length > 0) {
+      const { data: imprint } = await supabase
+        .from("imprints")
+        .select("primary_color, background_color, text_color, heading_font, body_font, logo_url")
+        .eq("id", imprintIds[0])
+        .single();
+      
+      if (imprint) {
+        imprintOptions = {
+          imprint: {
+            primaryColor: imprint.primary_color || undefined,
+            backgroundColor: imprint.background_color || undefined,
+            textColor: imprint.text_color || undefined,
+            headingFont: imprint.heading_font || undefined,
+            bodyFont: imprint.body_font || undefined,
+            logoUrl: imprint.logo_url || undefined,
+          }
+        };
+        console.log(`[send-campaign-mailgun] Applying imprint styling from: ${imprintIds[0]}`);
       }
     }
 
-    // Render HTML from blocks
+    // Render HTML from blocks with imprint styling
     let htmlTemplate = campaign.html_content;
+    let plainTextTemplate = '';
     
     if (campaign.blocks_json && Array.isArray(campaign.blocks_json) && campaign.blocks_json.length > 0) {
-      console.log(`[send-campaign-mailgun] Rendering ${campaign.blocks_json.length} blocks`);
-      htmlTemplate = renderBlocksToHtml(campaign.blocks_json as EmailBlock[], {});
+      console.log(`[send-campaign-mailgun] Rendering ${campaign.blocks_json.length} blocks with imprint styling`);
+      htmlTemplate = renderBlocksToHtml(campaign.blocks_json as EmailBlock[], imprintOptions);
+      plainTextTemplate = renderBlocksToPlainText(campaign.blocks_json as EmailBlock[]);
     }
 
     // Replace personalization tokens with Mailgun syntax
@@ -332,10 +427,15 @@ serve(async (req) => {
       );
     }
 
-    // Hardcoded sender
+    // Add CAN-SPAM address to plain text if not present
+    if (plainTextTemplate && !plainTextTemplate.includes('Author Services')) {
+      plainTextTemplate += '\n\n---\nAuthor Services, 2727 Paces Ferry Road SE, Building Two, Suite 250, Atlanta, GA 30339';
+    }
+
+    // Hardcoded sender and reply-to (no custom reply-to until mail forwarding is set up)
     const fromEmail = "noreply@newauthor.authorservices.com";
     const fromName = campaign.from_name || "Author Services";
-    const defaultReplyTo = campaign.reply_to_email || fromEmail;
+    const replyTo = "noreply@newauthor.authorservices.com";
 
     // Build recipient batches (max 1000 per Mailgun API call)
     const BATCH_SIZE = 1000;
@@ -356,19 +456,12 @@ serve(async (req) => {
         // Generate unsubscribe URL for this contact
         const unsubscribeUrl = `${supabaseUrl}/functions/v1/unsubscribe?c=${campaignId}&t=${contact.id}&e=${encodeURIComponent(contact.email)}`;
         
-        // Determine reply-to for this contact
-        let replyTo = defaultReplyTo;
-        if (routeRepliesToAsc && contact.assigned_asc && ascProfiles[contact.assigned_asc]) {
-          replyTo = ascProfiles[contact.assigned_asc];
-        }
-        
         recipientVariables[contact.email] = {
           first_name: contact.first_name || "there",
           last_name: contact.last_name || "",
           email: contact.email,
           contact_id: contact.id,
           unsubscribe_url: unsubscribeUrl,
-          reply_to: replyTo,
         };
         
         // Prepare sent event for logging
@@ -386,6 +479,12 @@ serve(async (req) => {
       formData.append("to", recipientEmails.join(","));
       formData.append("subject", campaign.subject);
       formData.append("html", htmlTemplate);
+      
+      // Add plain text version for better deliverability
+      if (plainTextTemplate) {
+        formData.append("text", plainTextTemplate);
+      }
+      
       formData.append("recipient-variables", JSON.stringify(recipientVariables));
       
       // Tracking
@@ -396,8 +495,8 @@ serve(async (req) => {
       // Custom variables for webhook correlation
       formData.append("v:campaign_id", campaignId);
       
-      // Headers
-      formData.append("h:Reply-To", defaultReplyTo);
+      // Headers - hardcoded reply-to
+      formData.append("h:Reply-To", replyTo);
       formData.append("h:List-Unsubscribe", `<%recipient.unsubscribe_url%>`);
       formData.append("h:List-Unsubscribe-Post", "List-Unsubscribe=One-Click");
       
@@ -461,12 +560,17 @@ serve(async (req) => {
         formData.append("to", additionalEmails.join(","));
         formData.append("subject", campaign.subject);
         formData.append("html", htmlTemplate);
+        
+        if (plainTextTemplate) {
+          formData.append("text", plainTextTemplate);
+        }
+        
         formData.append("recipient-variables", JSON.stringify(recipientVariables));
         formData.append("o:tracking", "yes");
         formData.append("o:tracking-opens", "yes");
         formData.append("o:tracking-clicks", "htmlonly");
         formData.append("v:campaign_id", campaignId);
-        formData.append("h:Reply-To", defaultReplyTo);
+        formData.append("h:Reply-To", replyTo);
         formData.append("h:List-Unsubscribe", `<%recipient.unsubscribe_url%>`);
         formData.append("h:List-Unsubscribe-Post", "List-Unsubscribe=One-Click");
         

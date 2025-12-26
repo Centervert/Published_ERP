@@ -100,8 +100,9 @@ export function CampaignDetail({ campaign, onBack, onCancelScheduled }: Campaign
   const [selectedImprintId, setSelectedImprintId] = useState<string>('');
   const [fromName, setFromName] = useState(campaign.from_name);
   const [fromEmail, setFromEmail] = useState(campaign.from_email);
-  const [replyToEmail, setReplyToEmail] = useState(campaign.reply_to_email || '');
-  const [routeRepliesToAsc, setRouteRepliesToAsc] = useState(false);
+  // Reply-to is disabled until mail forwarding is set up
+  // const [replyToEmail, setReplyToEmail] = useState(campaign.reply_to_email || '');
+  // const [routeRepliesToAsc, setRouteRepliesToAsc] = useState(false);
   const [subject, setSubject] = useState(campaign.subject);
   
   // Auto-select first imprint if none selected
@@ -132,7 +133,7 @@ export function CampaignDetail({ campaign, onBack, onCancelScheduled }: Campaign
     if (imprint) {
       setFromName(imprint.from_name);
       setFromEmail(imprint.from_email);
-      setReplyToEmail(imprint.reply_to_email || '');
+      // Reply-to is disabled until mail forwarding is set up
     }
   };
 
@@ -189,7 +190,7 @@ export function CampaignDetail({ campaign, onBack, onCancelScheduled }: Campaign
         listIds: selectedListIds,
         imprintIds: selectedImprintIds.length > 0 ? selectedImprintIds : undefined,
         additionalRecipients: additionalRecipients.length > 0 ? additionalRecipients : undefined,
-        routeRepliesToAsc: routeRepliesToAsc,
+        // routeRepliesToAsc is disabled until mail forwarding is set up
       });
     }
     setSendDialogOpen(false);
@@ -213,7 +214,8 @@ export function CampaignDetail({ campaign, onBack, onCancelScheduled }: Campaign
       id: campaign.id,
       from_name: fromName,
       from_email: fromEmail,
-      reply_to_email: replyToEmail || undefined,
+      // Reply-to is disabled until mail forwarding is set up
+      reply_to_email: undefined,
     });
     setFromOpen(false);
   };
@@ -912,33 +914,33 @@ export function CampaignDetail({ campaign, onBack, onCancelScheduled }: Campaign
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="reply-to">Reply-To Email (optional)</Label>
+                      <div className="flex items-center gap-2">
+                        <Label htmlFor="reply-to">Reply-To Email</Label>
+                        <Badge variant="outline" className="text-xs text-muted-foreground">Coming Soon</Badge>
+                      </div>
                       <Input
                         id="reply-to"
                         type="email"
-                        value={replyToEmail}
-                        onChange={(e) => setReplyToEmail(e.target.value)}
-                        placeholder="replies@example.com"
-                        disabled={routeRepliesToAsc}
-                        className={routeRepliesToAsc ? 'opacity-50' : ''}
+                        value="noreply@newauthor.authorservices.com"
+                        disabled
+                        className="opacity-50 cursor-not-allowed"
                       />
+                      <p className="text-xs text-muted-foreground">
+                        Custom reply-to addresses will be available once mail forwarding is configured.
+                      </p>
                     </div>
-                    <div className="flex items-center space-x-2 pt-2">
+                    <div className="flex items-center space-x-2 pt-2 opacity-50">
                       <Checkbox 
                         id="route-to-asc" 
-                        checked={routeRepliesToAsc}
-                        onCheckedChange={(checked) => {
-                          setRouteRepliesToAsc(checked === true);
-                          if (checked) {
-                            setReplyToEmail('');
-                          }
-                        }}
+                        checked={false}
+                        disabled
                       />
                       <label 
                         htmlFor="route-to-asc" 
-                        className="text-sm text-muted-foreground cursor-pointer"
+                        className="text-sm text-muted-foreground cursor-not-allowed"
                       >
                         Route replies to each recipient's assigned ASC
+                        <Badge variant="outline" className="ml-2 text-xs">Coming Soon</Badge>
                       </label>
                     </div>
                   </div>
