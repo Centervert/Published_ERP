@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { Resend } from "https://esm.sh/resend@2.0.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -12,8 +11,6 @@ interface InviteUserRequest {
   fullName?: string;
   role?: string;
 }
-
-const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
 function getInviteEmailTemplate(name: string, inviteLink: string): string {
   return `
@@ -104,6 +101,9 @@ serve(async (req) => {
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+    const mailgunApiKey = Deno.env.get("MAILGUN_API_KEY") ?? "";
+    const mailgunDomain = Deno.env.get("MAILGUN_DOMAIN") ?? "";
+    const mailgunRegion = Deno.env.get("MAILGUN_REGION") ?? "us";
     
     // Create client with user's auth to check their role
     const supabaseUser = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY") ?? "", {
@@ -204,7 +204,6 @@ serve(async (req) => {
     console.log(`[invite-user] User created successfully: ${email}, id: ${newUser.user?.id}`);
 
     // Step 2: Generate a recovery link for the user to set their password
-    // Using 'recovery' type to generate a token for password reset
     const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
       type: 'recovery',
       email,
@@ -220,7 +219,6 @@ serve(async (req) => {
     }
 
     // Extract token_hash from the generated link for PKCE flow
-    // This makes the link scanner-resistant by requiring user interaction
     const actionLink = linkData.properties?.action_link;
     if (!actionLink) {
       console.error("[invite-user] No action link in response");
@@ -241,27 +239,43 @@ serve(async (req) => {
 
     console.log(`[invite-user] Recovery link generated for ${email}`);
 
-    // Step 3: Send custom branded email via Resend
+    // Step 3: Send custom branded email via Mailgun
     const emailHtml = getInviteEmailTemplate(fullName || "", inviteLink);
     
-    const { data: emailResult, error: emailError } = await resend.emails.send({
-      from: "Author Services <hello@onboarding.authorservices.com>",
-      to: [email],
-      subject: "You've been invited to Author Services Portal",
-      html: emailHtml,
+    // Build Mailgun API URL based on region
+    const mailgunBaseUrl = mailgunRegion === "eu" 
+      ? "https://api.eu.mailgun.net/v3"
+      : "https://api.mailgun.net/v3";
+    
+    const mailgunUrl = `${mailgunBaseUrl}/${mailgunDomain}/messages`;
+    
+    const formData = new FormData();
+    formData.append("from", "Author Services <hello@onboarding.authorservices.com>");
+    formData.append("to", email);
+    formData.append("subject", "You've been invited to Author Services Portal");
+    formData.append("html", emailHtml);
+
+    const mailgunResponse = await fetch(mailgunUrl, {
+      method: "POST",
+      headers: {
+        "Authorization": `Basic ${btoa(`api:${mailgunApiKey}`)}`,
+      },
+      body: formData,
     });
 
-    if (emailError) {
-      console.error("[invite-user] Failed to send email via Resend:", emailError);
+    if (!mailgunResponse.ok) {
+      const errorText = await mailgunResponse.text();
+      console.error("[invite-user] Failed to send email via Mailgun:", errorText);
       // Clean up the created user if email sending fails
       await supabaseAdmin.auth.admin.deleteUser(newUser.user!.id);
       return new Response(
-        JSON.stringify({ error: `Failed to send invitation email: ${emailError.message}` }),
+        JSON.stringify({ error: `Failed to send invitation email: ${errorText}` }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    console.log(`[invite-user] Invitation email sent successfully to ${email}, Resend ID: ${emailResult?.id}`);
+    const mailgunResult = await mailgunResponse.json();
+    console.log(`[invite-user] Invitation email sent successfully to ${email}, Mailgun ID: ${mailgunResult.id}`);
 
     return new Response(
       JSON.stringify({ 
