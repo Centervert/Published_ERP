@@ -83,6 +83,10 @@ Do NOT include any call to action button.`;
     const greetingInstruction = includeGreeting ? `
 IMPORTANT: Start the email content (after the header) with a greeting block. This creates a personalized "Good morning/afternoon/evening, [First Name]" based on send time.` : '';
 
+    // Company address constant
+    const COMPANY_ADDRESS = 'Author Services, LLC. 555 Winderley Pl, Maitland, FL 32751 866-381-2665';
+    const REASON_TEXT = 'You received this email because you are a valued Author Services customer.';
+
     // System prompt for block-based output
     const blockSystemPrompt = `You are an expert email designer. You create email content as structured JSON blocks.
 
@@ -101,7 +105,8 @@ OUTPUT FORMAT:
 You MUST output ONLY a valid JSON object with a "blocks" array. No markdown, no code fences, no explanations.
 
 BLOCK TYPES AVAILABLE:
-- header: { type: "header", logoUrl?: string, backgroundColor?: string }
+- header: { type: "header", backgroundColor?: string }
+  NOTE: Do NOT include logoUrl - it will be added automatically from the brand settings
 - greeting: { type: "greeting", style: "formal"|"casual", fallbackName?: string } - Personalized "Good morning/afternoon/evening, [Name]"
 - heading: { type: "heading", content: string, level: 1|2|3, color?: string, align?: "left"|"center"|"right" }
 - text: { type: "text", content: string, fontSize?: number, color?: string, align?: "left"|"center"|"right" }
@@ -109,7 +114,8 @@ BLOCK TYPES AVAILABLE:
 - asc_contact: { type: "asc_contact", headingText?: string, showEmail: true, showPhone: true, backgroundColor?: string } - Personalized ASC contact CTA
 - divider: { type: "divider", color?: string }
 - spacer: { type: "spacer", height: number }
-- footer: { type: "footer", content: string, showUnsubscribe: true, companyAddress?: string, reasonText?: string }
+- footer: { type: "footer", content: "© ${imprint.name}. All rights reserved.", showUnsubscribe: true, companyAddress: "${COMPANY_ADDRESS}", reasonText: "${REASON_TEXT}" }
+  NOTE: ALWAYS use the exact companyAddress and reasonText shown above - these are required for CAN-SPAM compliance
 
 IMPORTANT - IMAGE BLOCKS:
 - DO NOT generate image blocks with placeholder or made-up URLs
@@ -119,7 +125,7 @@ ${greetingInstruction}
 ${ctaInstruction}
 
 EXAMPLE OUTPUT:
-{"blocks":[{"type":"header","logoUrl":"${imprint.logo_url || ''}","backgroundColor":"#ffffff"},${includeGreeting ? '{"type":"greeting","style":"formal","fallbackName":"there"},' : ''}{"type":"heading","content":"Welcome!","level":1,"color":"${imprint.primary_color || '#2563eb'}","align":"center"},{"type":"text","content":"Your message here...","fontSize":16,"color":"${imprint.text_color || '#333333'}"},${ctaType === 'asc_contact' ? '{"type":"asc_contact","headingText":"Contact your Author Success Coach today!","showEmail":true,"showPhone":true},' : ctaType === 'custom' && callToAction ? `{"type":"button","text":"${callToAction}","url":"#","backgroundColor":"${imprint.primary_color || '#2563eb'}"},` : ''}{"type":"footer","content":"© ${imprint.name}","showUnsubscribe":true}]}
+{"blocks":[{"type":"header","backgroundColor":"#ffffff"},${includeGreeting ? '{"type":"greeting","style":"formal","fallbackName":"there"},' : ''}{"type":"heading","content":"Welcome!","level":1,"color":"${imprint.primary_color || '#2563eb'}","align":"center"},{"type":"text","content":"Your message here...","fontSize":16,"color":"${imprint.text_color || '#333333'}"},${ctaType === 'asc_contact' ? '{"type":"asc_contact","headingText":"Contact your Author Success Coach today!","showEmail":true,"showPhone":true},' : ctaType === 'custom' && callToAction ? `{"type":"button","text":"${callToAction}","url":"#","backgroundColor":"${imprint.primary_color || '#2563eb'}"},` : ''}{"type":"footer","content":"© ${imprint.name}. All rights reserved.","showUnsubscribe":true,"companyAddress":"${COMPANY_ADDRESS}","reasonText":"${REASON_TEXT}"}]}
 
 CRITICAL FORMATTING RULES:
 - NEVER use markdown formatting like **bold**, *italic*, __underline__, or any asterisks
@@ -129,8 +135,8 @@ CRITICAL FORMATTING RULES:
 - Write plain text only - no special formatting characters
 - Use generic greetings in text blocks (the greeting block handles personalization)
 - Apply brand colors consistently
-- Include header with logo if available
-- Always end with footer block with showUnsubscribe: true
+- Always include a header block (logo will be added automatically)
+- ALWAYS end with footer block with EXACT companyAddress: "${COMPANY_ADDRESS}"
 - Output ONLY the JSON object, nothing else`;
 
     const messages: Array<{ role: string; content: string }> = [

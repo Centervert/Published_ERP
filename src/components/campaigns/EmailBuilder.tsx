@@ -154,7 +154,7 @@ export function EmailBuilder({
     return fullJson;
   }, []);
 
-  const parseBlocksFromAI = (jsonString: string): EmailBlock[] => {
+  const parseBlocksFromAI = useCallback((jsonString: string): EmailBlock[] => {
     try {
       // Clean up the response - remove markdown code blocks if present
       let cleanJson = jsonString.trim();
@@ -171,14 +171,19 @@ export function EmailBuilder({
 
       const parsed = JSON.parse(cleanJson);
       if (parsed.blocks && Array.isArray(parsed.blocks)) {
-        return aiBlocksToEmailBlocks(parsed.blocks);
+        // Pass imprint data for block normalization
+        return aiBlocksToEmailBlocks(parsed.blocks, imprint ? {
+          name: imprint.name,
+          logo_url: imprint.logo_url,
+          primary_color: imprint.primary_color,
+        } : undefined);
       }
       return [];
     } catch (e) {
       console.error('Failed to parse blocks from AI:', e, jsonString);
       return [];
     }
-  };
+  }, [imprint]);
 
   const handleGenerateImage = async (prompt: string) => {
     const userMsgId = crypto.randomUUID();
