@@ -29,6 +29,7 @@ export interface Company {
   from_email: string | null;
   reply_to_email: string | null;
   header_image_url: string | null;
+  header_image_dark_url: string | null;
   footer_image_url: string | null;
   created_at: string;
   updated_at: string;
