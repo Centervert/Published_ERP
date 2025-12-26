@@ -485,7 +485,7 @@ serve(async (req) => {
     if (imprintIds && imprintIds.length > 0) {
       const { data: imprint } = await supabase
         .from("imprints")
-        .select("primary_color, background_color, text_color, heading_font, body_font, logo_url, logo_dark_url, header_image_url")
+        .select("primary_color, background_color, text_color, heading_font, body_font, logo_url, logo_dark_url, header_image_url, header_image_dark_url")
         .eq("id", imprintIds[0])
         .single();
       
@@ -500,6 +500,7 @@ serve(async (req) => {
             logoUrl: imprint.logo_url || undefined,
             logoDarkUrl: imprint.logo_dark_url || undefined,
             headerImageUrl: imprint.header_image_url || undefined,
+            headerImageDarkUrl: imprint.header_image_dark_url || undefined,
           }
         };
         console.log(`[send-campaign-mailgun] Applying imprint styling from: ${imprintIds[0]}`);
