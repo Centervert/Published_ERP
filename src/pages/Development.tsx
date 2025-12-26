@@ -9,7 +9,8 @@ import { DevRisksTab } from '@/components/development/DevRisksTab';
 import { DevMeetingsTab } from '@/components/development/DevMeetingsTab';
 import { DevReleasesTab } from '@/components/development/DevReleasesTab';
 import { DevDocsTab } from '@/components/development/DevDocsTab';
-import { LayoutDashboard, Map, FileCheck, AlertTriangle, Users, Rocket, FileText, Loader2 } from 'lucide-react';
+import { DevTicketsTab } from '@/components/development/DevTicketsTab';
+import { LayoutDashboard, Map, FileCheck, AlertTriangle, Users, Rocket, FileText, ClipboardList, Loader2 } from 'lucide-react';
 
 export default function Development() {
   const [activeTab, setActiveTab] = useState('overview');
@@ -86,6 +87,10 @@ export default function Development() {
             <FileText className="h-4 w-4" />
             Docs
           </TabsTrigger>
+          <TabsTrigger value="tickets" className="gap-2">
+            <ClipboardList className="h-4 w-4" />
+            Tickets
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview">
@@ -108,6 +113,9 @@ export default function Development() {
         </TabsContent>
         <TabsContent value="docs">
           <DevDocsTab documentId={documentId} isAdmin={isSystemAdmin} />
+        </TabsContent>
+        <TabsContent value="tickets">
+          <DevTicketsTab documentId={documentId} isAdmin={isSystemAdmin} />
         </TabsContent>
       </Tabs>
     </div>
