@@ -893,55 +893,33 @@ export function CampaignDetail({ campaign, onBack, onCancelScheduled }: Campaign
                           ))}
                         </SelectContent>
                       </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="from-name">From Name</Label>
-                      <Input
-                        id="from-name"
-                        value={fromName}
-                        onChange={(e) => setFromName(e.target.value)}
-                        placeholder="Your Company"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="from-email">From Email</Label>
-                      <Input
-                        id="from-email"
-                        type="email"
-                        value={fromEmail}
-                        onChange={(e) => setFromEmail(e.target.value)}
-                        placeholder="email@example.com"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <Label htmlFor="reply-to">Reply-To Email</Label>
-                        <Badge variant="outline" className="text-xs text-muted-foreground">Coming Soon</Badge>
-                      </div>
-                      <Input
-                        id="reply-to"
-                        type="email"
-                        value="noreply@newauthor.authorservices.com"
-                        disabled
-                        className="opacity-50 cursor-not-allowed"
-                      />
                       <p className="text-xs text-muted-foreground">
-                        Custom reply-to addresses will be available once mail forwarding is configured.
+                        Select an imprint to apply its branding to this campaign.
                       </p>
                     </div>
-                    <div className="flex items-center space-x-2 pt-2 opacity-50">
-                      <Checkbox 
-                        id="route-to-asc" 
-                        checked={false}
-                        disabled
-                      />
-                      <label 
-                        htmlFor="route-to-asc" 
-                        className="text-sm text-muted-foreground cursor-not-allowed"
-                      >
-                        Route replies to each recipient's assigned ASC
-                        <Badge variant="outline" className="ml-2 text-xs">Coming Soon</Badge>
-                      </label>
+                    
+                    <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Label className="text-muted-foreground">Sender Address</Label>
+                        <Badge variant="outline" className="text-xs">Fixed</Badge>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">From Name:</span>
+                          <span className="font-medium">{imprints.find(i => i.id === selectedImprintId)?.from_name || 'Author Services'}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">From Email:</span>
+                          <span className="font-medium">noreply@newauthor.authorservices.com</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Reply-To:</span>
+                          <span className="font-medium">noreply@newauthor.authorservices.com</span>
+                        </div>
+                      </div>
+                      <p className="text-xs text-muted-foreground pt-2 border-t">
+                        Custom sender addresses will be available once mail forwarding is configured.
+                      </p>
                     </div>
                   </div>
                   <Button size="sm" onClick={handleUpdateFrom} disabled={updateCampaign.isPending}>
