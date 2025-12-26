@@ -14,7 +14,7 @@ export function ImageBlock({ block, isEditing }: ImageBlockProps) {
   }[block.align || 'center'];
 
   const width = block.width === 'full' ? '100%' : `${block.width}px`;
-  const paddingClass = block.fullBleed ? '' : 'px-4 py-2';
+  const paddingClass = block.fullBleed ? '' : 'px-4';
 
   if (!block.src) {
     return (
