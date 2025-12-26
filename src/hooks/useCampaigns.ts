@@ -133,7 +133,7 @@ export function useCampaigns() {
       additionalRecipients?: string[];
       routeRepliesToAsc?: boolean;
     }) => {
-      const { data, error } = await supabase.functions.invoke('send-campaign', {
+      const { data, error } = await supabase.functions.invoke('send-campaign-mailgun', {
         body: { campaignId, listIds, imprintIds, additionalRecipients, routeRepliesToAsc },
       });
       
