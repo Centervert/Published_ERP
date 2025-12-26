@@ -241,8 +241,17 @@ serve(async (req) => {
       console.log(`[mailgun-webhook] Inserted ${eventType} event for ${recipient}`);
     }
 
-    // Update contact status if needed
+    // Update contact status if needed and log activity
     if (updateContactStatus && resolvedContactId) {
+      // First get the current status for the activity log
+      const { data: currentContact } = await supabase
+        .from("contacts")
+        .select("status")
+        .eq("id", resolvedContactId)
+        .single();
+      
+      const oldStatus = currentContact?.status || 'active';
+      
       const { error: updateError } = await supabase
         .from("contacts")
         .update({ status: updateContactStatus })
@@ -252,6 +261,23 @@ serve(async (req) => {
         console.error("[mailgun-webhook] Error updating contact status:", updateError);
       } else {
         console.log(`[mailgun-webhook] Updated contact ${resolvedContactId} status to ${updateContactStatus}`);
+        
+        // Log activity for the status change
+        await supabase.from("contact_activity").insert({
+          contact_id: resolvedContactId,
+          activity_type: 'contact_updated',
+          description: `Status changed to ${updateContactStatus}`,
+          metadata: {
+            changes: {
+              status: { from: oldStatus, to: updateContactStatus }
+            },
+            source: 'webhook',
+            event_type: eventType,
+            campaign_id: campaignId || null,
+          },
+          created_by: null, // System action, no user
+        });
+        console.log(`[mailgun-webhook] Logged activity for status change on contact ${resolvedContactId}`);
       }
     }
 

@@ -19,10 +19,12 @@ import {
   MessageSquare,
   CheckSquare,
   Plus,
-  MoreHorizontal
+  MoreHorizontal,
+  History
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { CommunicationHub } from './CommunicationHub';
+import { ContactHistoryTab } from './ContactHistoryTab';
 
 interface TeamMember {
   id: string;
@@ -198,6 +200,13 @@ export function ContactActivityFeed({
             >
               Activity
             </TabsTrigger>
+            <TabsTrigger 
+              value="history" 
+              className="px-0 pb-3 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+            >
+              <History className="h-4 w-4 mr-1.5" />
+              History
+            </TabsTrigger>
           </TabsList>
         </div>
 
@@ -312,6 +321,13 @@ export function ContactActivityFeed({
                 })}
               </div>
             )}
+          </div>
+        </TabsContent>
+
+        {/* History Tab - Property Changes Audit Log */}
+        <TabsContent value="history" className="mt-0 flex-1 overflow-y-auto">
+          <div className="p-6">
+            <ContactHistoryTab contactId={contactId} />
           </div>
         </TabsContent>
       </Tabs>

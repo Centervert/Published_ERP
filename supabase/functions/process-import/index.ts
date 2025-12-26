@@ -335,13 +335,31 @@ serve(async (req) => {
         const { error: insertError, data: inserted } = await supabase
           .from('contacts')
           .upsert(dedupedContacts, { onConflict: 'email', ignoreDuplicates: false })
-          .select('id');
+          .select('id, email');
 
         if (insertError) {
           console.error('Insert error:', insertError);
           failedRows += dedupedContacts.length;
         } else {
           successfulRows += inserted?.length || dedupedContacts.length;
+          
+          // Log activity for newly created contacts
+          if (inserted && inserted.length > 0) {
+            const activityRecords = inserted.map((contact: { id: string; email: string }) => ({
+              contact_id: contact.id,
+              activity_type: 'contact_created',
+              description: `Contact imported from CSV`,
+              metadata: { source: 'import', job_id: jobId, file_name: job.file_name },
+              created_by: job.created_by,
+            }));
+            
+            // Insert activities in batches to avoid overwhelming the DB
+            const activityBatchSize = 50;
+            for (let a = 0; a < activityRecords.length; a += activityBatchSize) {
+              const activityBatch = activityRecords.slice(a, a + activityBatchSize);
+              await supabase.from('contact_activity').insert(activityBatch);
+            }
+          }
         }
       }
 
