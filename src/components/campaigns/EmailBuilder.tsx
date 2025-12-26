@@ -169,6 +169,49 @@ export function EmailBuilder({
         cleanJson = cleanJson.slice(0, -3);
       }
       cleanJson = cleanJson.trim();
+      
+      // Try to extract valid JSON by finding the matching closing brace
+      // This handles cases where AI adds extra text after the JSON
+      if (cleanJson.startsWith('{')) {
+        let braceCount = 0;
+        let inString = false;
+        let escapeNext = false;
+        let endIndex = -1;
+        
+        for (let i = 0; i < cleanJson.length; i++) {
+          const char = cleanJson[i];
+          
+          if (escapeNext) {
+            escapeNext = false;
+            continue;
+          }
+          
+          if (char === '\\' && inString) {
+            escapeNext = true;
+            continue;
+          }
+          
+          if (char === '"' && !escapeNext) {
+            inString = !inString;
+            continue;
+          }
+          
+          if (!inString) {
+            if (char === '{') braceCount++;
+            if (char === '}') {
+              braceCount--;
+              if (braceCount === 0) {
+                endIndex = i + 1;
+                break;
+              }
+            }
+          }
+        }
+        
+        if (endIndex > 0) {
+          cleanJson = cleanJson.slice(0, endIndex);
+        }
+      }
 
       const parsed = JSON.parse(cleanJson);
       if (parsed.blocks && Array.isArray(parsed.blocks)) {
