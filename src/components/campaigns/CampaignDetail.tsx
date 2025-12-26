@@ -1396,6 +1396,54 @@ export function CampaignDetail({ campaign, onBack, onCancelScheduled }: Campaign
                 {additionalRecipients.length > 0 && ` + ${additionalRecipients.length} additional recipient(s)`}
               </p>
             </div>
+
+            {/* Test Recipients Section */}
+            <div className="space-y-2 border-t pt-4">
+              <Label>Test Recipients (optional)</Label>
+              <p className="text-xs text-muted-foreground">
+                Add test emails who will also receive this campaign.
+              </p>
+              <div className="flex gap-2">
+                <Input
+                  type="email"
+                  placeholder="Enter email address"
+                  value={newRecipientEmail}
+                  onChange={(e) => setNewRecipientEmail(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddRecipient();
+                    }
+                  }}
+                  className="flex-1"
+                />
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="icon"
+                  onClick={handleAddRecipient}
+                  disabled={!newRecipientEmail.includes('@')}
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+              {additionalRecipients.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {additionalRecipients.map((email) => (
+                    <Badge key={email} variant="secondary" className="flex items-center gap-1 pr-1">
+                      {email}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveRecipient(email)}
+                        className="ml-1 rounded-full hover:bg-muted-foreground/20 p-0.5"
+                      >
+                        <XIcon className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setSendDialogOpen(false)}>
