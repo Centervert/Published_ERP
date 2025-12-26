@@ -37,6 +37,7 @@ import {
   UserCog,
   Package,
   Handshake,
+  Code,
 } from 'lucide-react';
 import authorServicesLogo from '@/assets/author-services-logo.png';
 
@@ -57,6 +58,7 @@ const backofficeItems = [
   { title: 'Master SKU List', url: '/products', icon: Package },
   { title: 'Imprints', url: '/imprints', icon: Building2 },
   { title: 'Settings', url: '/settings', icon: Settings },
+  { title: 'Development', url: '/development', icon: Code },
 ];
 
 export function AppSidebar() {
