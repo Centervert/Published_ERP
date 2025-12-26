@@ -404,7 +404,11 @@ export default function Campaigns() {
                       <DropdownMenuSeparator />
                       <DropdownMenuItem
                         className="text-destructive"
-                        onClick={() => handleDelete(campaign)}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleDelete(campaign);
+                        }}
                       >
                         <Trash2 className="mr-2 h-4 w-4" />
                         Delete
