@@ -108,9 +108,11 @@ export function CampaignDetail({ campaign, onBack, onCancelScheduled }: Campaign
   // Auto-select first imprint if none selected and set from values
   useEffect(() => {
     if (!selectedImprintId && imprints.length > 0) {
-      // Try to find imprint matching campaign's from_email, otherwise use first
-      const matchingImprint = imprints.find(i => i.from_email === campaign.from_email);
-      const selectedImprint = matchingImprint || imprints[0];
+      // Default to Author Services imprint (only one available for now)
+      const authorServicesImprint = imprints.find(i => 
+        i.slug === 'author-services' || i.name.toLowerCase() === 'author services'
+      );
+      const selectedImprint = authorServicesImprint || imprints[0];
       setSelectedImprintId(selectedImprint.id);
       // Also set from values so hasFrom becomes true
       setFromName(selectedImprint.from_name);
@@ -878,23 +880,35 @@ export function CampaignDetail({ campaign, onBack, onCancelScheduled }: Campaign
                           <SelectValue placeholder="Select an imprint" />
                         </SelectTrigger>
                         <SelectContent>
-                          {imprints.map((imprint) => (
-                            <SelectItem key={imprint.id} value={imprint.id}>
-                              <div className="flex items-center gap-2">
-                                {imprint.logo_url ? (
-                                  <img src={imprint.logo_url} alt="" className="h-4 w-4 object-contain" />
-                                ) : (
-                                  <div 
-                                    className="h-4 w-4 rounded text-[8px] text-white flex items-center justify-center font-bold"
-                                    style={{ backgroundColor: imprint.primary_color }}
-                                  >
-                                    {imprint.name.charAt(0)}
-                                  </div>
-                                )}
-                                {imprint.name}
-                              </div>
-                            </SelectItem>
-                          ))}
+                          {imprints.map((imprint) => {
+                            const isAuthorServices = imprint.slug === 'author-services' || imprint.name.toLowerCase() === 'author services';
+                            return (
+                              <SelectItem 
+                                key={imprint.id} 
+                                value={imprint.id}
+                                disabled={!isAuthorServices}
+                              >
+                                <div className="flex items-center gap-2 w-full">
+                                  {imprint.logo_url ? (
+                                    <img src={imprint.logo_url} alt="" className="h-4 w-4 object-contain" />
+                                  ) : (
+                                    <div 
+                                      className="h-4 w-4 rounded text-[8px] text-white flex items-center justify-center font-bold"
+                                      style={{ backgroundColor: imprint.primary_color }}
+                                    >
+                                      {imprint.name.charAt(0)}
+                                    </div>
+                                  )}
+                                  <span className={!isAuthorServices ? 'text-muted-foreground' : ''}>
+                                    {imprint.name}
+                                  </span>
+                                  {!isAuthorServices && (
+                                    <span className="ml-auto text-xs text-muted-foreground italic">Coming Soon</span>
+                                  )}
+                                </div>
+                              </SelectItem>
+                            );
+                          })}
                         </SelectContent>
                       </Select>
                       <p className="text-xs text-muted-foreground">
