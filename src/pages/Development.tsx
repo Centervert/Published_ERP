@@ -18,7 +18,8 @@ export default function Development() {
   const { data: userRole } = useCurrentUserRole();
   const [isCreating, setIsCreating] = useState(false);
   
-  const isAdmin = userRole === 'admin' || userRole === 'super_admin';
+  // Only System Admins can access/edit Development section
+  const isSystemAdmin = userRole === 'super_admin';
   const documentId = mainDoc?.id;
 
   // Auto-create the main development document if it doesn't exist
@@ -91,22 +92,22 @@ export default function Development() {
           <DevOverviewTab documentId={documentId} />
         </TabsContent>
         <TabsContent value="roadmap">
-          <DevRoadmapTab documentId={documentId} isAdmin={isAdmin} />
+          <DevRoadmapTab documentId={documentId} isAdmin={isSystemAdmin} />
         </TabsContent>
         <TabsContent value="decisions">
-          <DevDecisionsTab documentId={documentId} isAdmin={isAdmin} />
+          <DevDecisionsTab documentId={documentId} isAdmin={isSystemAdmin} />
         </TabsContent>
         <TabsContent value="risks">
-          <DevRisksTab documentId={documentId} isAdmin={isAdmin} />
+          <DevRisksTab documentId={documentId} isAdmin={isSystemAdmin} />
         </TabsContent>
         <TabsContent value="meetings">
-          <DevMeetingsTab documentId={documentId} isAdmin={isAdmin} />
+          <DevMeetingsTab documentId={documentId} isAdmin={isSystemAdmin} />
         </TabsContent>
         <TabsContent value="releases">
-          <DevReleasesTab documentId={documentId} isAdmin={isAdmin} />
+          <DevReleasesTab documentId={documentId} isAdmin={isSystemAdmin} />
         </TabsContent>
         <TabsContent value="docs">
-          <DevDocsTab documentId={documentId} isAdmin={isAdmin} />
+          <DevDocsTab documentId={documentId} isAdmin={isSystemAdmin} />
         </TabsContent>
       </Tabs>
     </div>
