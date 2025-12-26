@@ -192,6 +192,57 @@ export type Database = {
         }
         Relationships: []
       }
+      company: {
+        Row: {
+          created_at: string | null
+          favicon_url: string | null
+          footer_copyright_template: string | null
+          footer_reason_template: string | null
+          icon_url: string | null
+          id: string
+          legal_address: string | null
+          logo_dark_url: string | null
+          logo_url: string | null
+          name: string
+          phone: string | null
+          slug: string
+          updated_at: string | null
+          website_url: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          favicon_url?: string | null
+          footer_copyright_template?: string | null
+          footer_reason_template?: string | null
+          icon_url?: string | null
+          id?: string
+          legal_address?: string | null
+          logo_dark_url?: string | null
+          logo_url?: string | null
+          name: string
+          phone?: string | null
+          slug: string
+          updated_at?: string | null
+          website_url?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          favicon_url?: string | null
+          footer_copyright_template?: string | null
+          footer_reason_template?: string | null
+          icon_url?: string | null
+          id?: string
+          legal_address?: string | null
+          logo_dark_url?: string | null
+          logo_url?: string | null
+          name?: string
+          phone?: string | null
+          slug?: string
+          updated_at?: string | null
+          website_url?: string | null
+        }
+        Relationships: []
+      }
       contact_activity: {
         Row: {
           activity_type: string
@@ -889,6 +940,7 @@ export type Database = {
           background_color: string | null
           body_font: string | null
           brand_voice: string | null
+          company_id: string | null
           created_at: string | null
           created_by: string | null
           footer_image_url: string | null
@@ -915,6 +967,7 @@ export type Database = {
           background_color?: string | null
           body_font?: string | null
           brand_voice?: string | null
+          company_id?: string | null
           created_at?: string | null
           created_by?: string | null
           footer_image_url?: string | null
@@ -941,6 +994,7 @@ export type Database = {
           background_color?: string | null
           body_font?: string | null
           brand_voice?: string | null
+          company_id?: string | null
           created_at?: string | null
           created_by?: string | null
           footer_image_url?: string | null
@@ -962,7 +1016,15 @@ export type Database = {
           updated_at?: string | null
           website_url?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "imprints_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       lists: {
         Row: {
