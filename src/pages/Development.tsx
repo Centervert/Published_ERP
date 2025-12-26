@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useDevDocument, useDevDocuments } from '@/hooks/useDevDocuments';
 import { useCurrentUserRole } from '@/hooks/useUsers';
@@ -9,15 +9,42 @@ import { DevRisksTab } from '@/components/development/DevRisksTab';
 import { DevMeetingsTab } from '@/components/development/DevMeetingsTab';
 import { DevReleasesTab } from '@/components/development/DevReleasesTab';
 import { DevDocsTab } from '@/components/development/DevDocsTab';
-import { LayoutDashboard, Map, FileCheck, AlertTriangle, Users, Rocket, FileText } from 'lucide-react';
+import { LayoutDashboard, Map, FileCheck, AlertTriangle, Users, Rocket, FileText, Loader2 } from 'lucide-react';
 
 export default function Development() {
   const [activeTab, setActiveTab] = useState('overview');
-  const { data: mainDoc } = useDevDocument('development-notes');
+  const { data: mainDoc, isLoading: docLoading, refetch } = useDevDocument('development-notes');
+  const { createDocument } = useDevDocuments();
   const { data: userRole } = useCurrentUserRole();
+  const [isCreating, setIsCreating] = useState(false);
   
   const isAdmin = userRole === 'admin' || userRole === 'super_admin';
   const documentId = mainDoc?.id;
+
+  // Auto-create the main development document if it doesn't exist
+  useEffect(() => {
+    if (!docLoading && !mainDoc && !isCreating) {
+      setIsCreating(true);
+      createDocument.mutateAsync({
+        slug: 'development-notes',
+        title: 'Development Notes',
+        summary: 'Internal documentation and project tracking',
+      }).then(() => {
+        refetch();
+        setIsCreating(false);
+      }).catch(() => {
+        setIsCreating(false);
+      });
+    }
+  }, [docLoading, mainDoc, isCreating]);
+
+  if (docLoading || isCreating || !documentId) {
+    return (
+      <div className="container mx-auto py-6 px-4 max-w-7xl flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto py-6 px-4 max-w-7xl">
