@@ -1354,7 +1354,36 @@ export function CampaignDetail({ campaign, onBack, onCancelScheduled }: Campaign
       <EmailBuilder
         open={emailBuilderOpen}
         onOpenChange={setEmailBuilderOpen}
-        imprint={imprints.find(i => i.id === selectedImprintId) || null}
+        imprint={
+          selectedImprintId === 'parent' && company
+            ? {
+                id: 'parent',
+                name: company.name,
+                slug: company.slug,
+                from_name: company.from_name || company.name,
+                from_email: company.from_email || 'noreply@newauthor.authorservices.com',
+                reply_to_email: company.reply_to_email || null,
+                primary_color: company.primary_color || '#171927',
+                secondary_color: company.secondary_color || '#8E6C6C',
+                accent_color: company.accent_color || '#FFA76C',
+                background_color: company.background_color || '#F5F0E9',
+                text_color: company.text_color || '#0F0F0F',
+                heading_font: company.heading_font || 'Playfair Display',
+                body_font: company.body_font || 'DM Sans',
+                logo_url: company.logo_url || null,
+                logo_dark_url: company.logo_dark_url || null,
+                icon_url: company.icon_url || null,
+                header_image_url: company.header_image_url || null,
+                footer_image_url: company.footer_image_url || null,
+                brand_voice: company.brand_voice || null,
+                tagline: company.tagline || null,
+                website_url: company.website_url || null,
+                created_at: company.created_at || new Date().toISOString(),
+                updated_at: company.updated_at || new Date().toISOString(),
+                created_by: null,
+              }
+            : imprints.find(i => i.id === selectedImprintId) || null
+        }
         initialHtml={campaign.html_content}
         initialBlocks={campaign.blocks_json || undefined}
         onSave={handleSaveContent}
