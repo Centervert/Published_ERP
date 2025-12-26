@@ -22,7 +22,7 @@ export function HeaderBlock({ block, isEditing, logoUrl, logoDarkUrl }: HeaderBl
         <img
           src={displayLogo}
           alt="Logo"
-          className="max-h-16 w-auto mx-auto"
+          className="max-h-24 w-auto mx-auto"
         />
       ) : (
         <div className="h-16 flex items-center justify-center text-muted-foreground border-2 border-dashed rounded">
