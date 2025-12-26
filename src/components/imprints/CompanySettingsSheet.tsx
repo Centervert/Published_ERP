@@ -76,7 +76,6 @@ export function CompanySettingsSheet({ open, onClose, company }: CompanySettings
     icon?: File;
     header_image?: File;
     header_image_dark?: File;
-    footer_image?: File;
   }>({});
   const [clearedAssets, setClearedAssets] = useState<Set<string>>(new Set());
 
@@ -134,7 +133,6 @@ export function CompanySettingsSheet({ open, onClose, company }: CompanySettings
         favicon_url: assetUrls.icon_url || (clearedAssets.has('icon') ? null : company?.icon_url) || null,
         header_image_url: assetUrls.header_image_url || (clearedAssets.has('header_image') ? null : company?.header_image_url) || null,
         header_image_dark_url: assetUrls.header_image_dark_url || (clearedAssets.has('header_image_dark') ? null : (company as any)?.header_image_dark_url) || null,
-        footer_image_url: assetUrls.footer_image_url || (clearedAssets.has('footer_image') ? null : company?.footer_image_url) || null,
       };
 
       await updateCompany.mutateAsync(payload);
@@ -540,18 +538,6 @@ export function CompanySettingsSheet({ open, onClose, company }: CompanySettings
                   }}
                 />
 
-                <AssetUpload
-                  label="Email Footer Image"
-                  value={clearedAssets.has('footer_image') ? null : (company?.footer_image_url || null)}
-                  onChange={(file) => {
-                    setPendingAssets(prev => ({ ...prev, footer_image: file || undefined }));
-                    setClearedAssets(prev => { const n = new Set(prev); n.delete('footer_image'); return n; });
-                  }}
-                  onClear={() => {
-                    setPendingAssets(prev => ({ ...prev, footer_image: undefined }));
-                    setClearedAssets(prev => new Set(prev).add('footer_image'));
-                  }}
-                />
               </TabsContent>
             </Tabs>
 
