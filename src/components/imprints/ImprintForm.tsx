@@ -138,7 +138,7 @@ export function ImprintForm({ open, onClose, imprint }: ImprintFormProps) {
         website_url: values.website_url || null,
         logo_url: assetUrls.logo_url || imprint?.logo_url || null,
         logo_dark_url: assetUrls.logo_dark_url || imprint?.logo_dark_url || null,
-        icon_url: assetUrls.icon_url || null,
+        icon_url: assetUrls.icon_url || imprint?.icon_url || null,
         header_image_url: assetUrls.header_image_url || imprint?.header_image_url || null,
         header_image_dark_url: assetUrls.header_image_dark_url || imprint?.header_image_dark_url || null,
         footer_image_url: assetUrls.footer_image_url || imprint?.footer_image_url || null,
