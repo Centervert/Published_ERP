@@ -83,8 +83,8 @@ Do NOT include any call to action button.`;
     const greetingInstruction = includeGreeting ? `
 IMPORTANT: Start the email content (after the header) with a greeting block. This creates a personalized "Good morning/afternoon/evening, [First Name]" based on send time.` : '';
 
-    // Company address constant
-    const COMPANY_ADDRESS = 'Author Services, LLC. 555 Winderley Pl, Maitland, FL 32751 866-381-2665';
+    // CAN-SPAM compliant company address (unified across system)
+    const COMPANY_ADDRESS = 'Author Services, 2727 Paces Ferry Road SE, Building Two, Suite 250, Atlanta, GA 30339';
     const REASON_TEXT = 'You received this email because you are a valued Author Services customer.';
 
     // System prompt for block-based output
