@@ -71,7 +71,7 @@ export function EmailPromptForm({ onSubmit, isLoading }: EmailPromptFormProps) {
   const [emailType, setEmailType] = useState('');
   const [description, setDescription] = useState('');
   const [keyPoints, setKeyPoints] = useState('');
-  const [ctaType, setCtaType] = useState<CtaType>('custom');
+  const [ctaType, setCtaType] = useState<CtaType>('asc_contact');
   const [callToAction, setCallToAction] = useState('');
   const [tone, setTone] = useState('professional');
   const [includeGreeting, setIncludeGreeting] = useState(true);
