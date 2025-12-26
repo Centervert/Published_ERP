@@ -105,12 +105,16 @@ export function CampaignDetail({ campaign, onBack, onCancelScheduled }: Campaign
   // const [routeRepliesToAsc, setRouteRepliesToAsc] = useState(false);
   const [subject, setSubject] = useState(campaign.subject);
   
-  // Auto-select first imprint if none selected
+  // Auto-select first imprint if none selected and set from values
   useEffect(() => {
     if (!selectedImprintId && imprints.length > 0) {
       // Try to find imprint matching campaign's from_email, otherwise use first
       const matchingImprint = imprints.find(i => i.from_email === campaign.from_email);
-      setSelectedImprintId(matchingImprint?.id || imprints[0].id);
+      const selectedImprint = matchingImprint || imprints[0];
+      setSelectedImprintId(selectedImprint.id);
+      // Also set from values so hasFrom becomes true
+      setFromName(selectedImprint.from_name);
+      setFromEmail(selectedImprint.from_email);
     }
   }, [imprints, selectedImprintId, campaign.from_email]);
   const [campaignName, setCampaignName] = useState(campaign.name);
@@ -137,9 +141,9 @@ export function CampaignDetail({ campaign, onBack, onCancelScheduled }: Campaign
     }
   };
 
-  // Check completion status - use local state for hasFrom so it updates immediately when selecting imprint
+  // Check completion status - hasFrom is true when an imprint is selected (sender is now dynamic per-recipient)
   const hasRecipients = true; // Always has recipients (all contacts or specific lists)
-  const hasFrom = !!fromName && !!fromEmail;
+  const hasFrom = !!selectedImprintId;
   const hasSubject = !!campaign.subject || !!subject;
   const hasContent = !!campaign.html_content || (campaign.blocks_json && campaign.blocks_json.length > 0);
   
