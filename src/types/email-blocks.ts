@@ -79,6 +79,25 @@ export interface FooterBlock extends BaseBlock {
   textColor?: string;
   showUnsubscribe?: boolean;
   unsubscribeText?: string;
+  companyAddress?: string;
+  reasonText?: string;
+  privacyUrl?: string;
+}
+
+export interface GreetingBlock extends BaseBlock {
+  type: 'greeting';
+  style?: 'formal' | 'casual';
+  fallbackName?: string;
+}
+
+export interface AscContactBlock extends BaseBlock {
+  type: 'asc_contact';
+  headingText?: string;
+  showEmail?: boolean;
+  showPhone?: boolean;
+  backgroundColor?: string;
+  textColor?: string;
+  buttonColor?: string;
 }
 
 export type EmailBlock =
@@ -90,7 +109,9 @@ export type EmailBlock =
   | DividerBlock
   | SpacerBlock
   | ColumnsBlock
-  | FooterBlock;
+  | FooterBlock
+  | GreetingBlock
+  | AscContactBlock;
 
 export interface EmailDocument {
   blocks: EmailBlock[];
@@ -111,7 +132,9 @@ export const DEFAULT_BLOCK_STYLES: Record<EmailBlock['type'], Partial<EmailBlock
   divider: { color: '#e5e7eb', thickness: 1, style: 'solid' },
   spacer: { height: 24 },
   columns: { gap: 16 },
-  footer: { backgroundColor: '#f9fafb', textColor: '#6b7280', showUnsubscribe: true, unsubscribeText: 'Unsubscribe' },
+  footer: { backgroundColor: '#f9fafb', textColor: '#6b7280', showUnsubscribe: true, unsubscribeText: 'Unsubscribe', companyAddress: '', reasonText: 'You received this email because you are a valued Author Services customer.' },
+  greeting: { style: 'formal', fallbackName: 'there' },
+  asc_contact: { headingText: 'Contact your Author Success Coach today!', showEmail: true, showPhone: true, backgroundColor: '#f0f9ff', textColor: '#1e40af', buttonColor: '#2563eb' },
 };
 
 // AI Output format (what the AI generates - without IDs)

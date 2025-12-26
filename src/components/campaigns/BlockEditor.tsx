@@ -1,6 +1,6 @@
 import { DndContext, closestCenter, DragEndEvent, DragStartEvent, DragOverlay, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { Plus, Type, Heading1, Image, MousePointer, Minus, Space, LayoutGrid, FileText, Undo2, Redo2 } from 'lucide-react';
+import { Plus, Type, Heading1, Image, MousePointer, Minus, Space, LayoutGrid, FileText, Undo2, Redo2, Hand, UserCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -15,6 +15,8 @@ import { ButtonBlock } from './blocks/ButtonBlock';
 import { DividerBlock } from './blocks/DividerBlock';
 import { SpacerBlock } from './blocks/SpacerBlock';
 import { FooterBlock } from './blocks/FooterBlock';
+import { GreetingBlock } from './blocks/GreetingBlock';
+import { AscContactBlock } from './blocks/AscContactBlock';
 import { PropertyPanel } from './PropertyPanel';
 import { findBlockIndex } from '@/lib/block-utils';
 
@@ -26,10 +28,12 @@ interface BlockEditorProps {
 
 const BLOCK_TYPES = [
   { type: 'header', label: 'Header', icon: LayoutGrid },
+  { type: 'greeting', label: 'Greeting', icon: Hand },
   { type: 'heading', label: 'Heading', icon: Heading1 },
   { type: 'text', label: 'Text', icon: Type },
   { type: 'image', label: 'Image', icon: Image },
   { type: 'button', label: 'Button', icon: MousePointer },
+  { type: 'asc_contact', label: 'ASC Contact CTA', icon: UserCheck },
   { type: 'divider', label: 'Divider', icon: Minus },
   { type: 'spacer', label: 'Spacer', icon: Space },
   { type: 'footer', label: 'Footer', icon: FileText },
@@ -118,6 +122,8 @@ export function BlockEditor({ blocks: initialBlocks, onChange, className }: Bloc
     switch (block.type) {
       case 'header':
         return <HeaderBlock block={block} isEditing />;
+      case 'greeting':
+        return <GreetingBlock block={block} isEditing />;
       case 'text':
         return <TextBlock block={block} isEditing />;
       case 'heading':
@@ -126,6 +132,8 @@ export function BlockEditor({ blocks: initialBlocks, onChange, className }: Bloc
         return <ImageBlock block={block} isEditing />;
       case 'button':
         return <ButtonBlock block={block} isEditing />;
+      case 'asc_contact':
+        return <AscContactBlock block={block} isEditing />;
       case 'divider':
         return <DividerBlock block={block} />;
       case 'spacer':

@@ -10,6 +10,8 @@ import type {
   SpacerBlock,
   ColumnsBlock,
   FooterBlock,
+  GreetingBlock,
+  AscContactBlock,
 } from '@/types/email-blocks';
 
 export interface RenderOptions {
@@ -26,6 +28,8 @@ export interface RenderOptions {
   };
   trackingPixelUrl?: string;
   unsubscribeUrl?: string;
+  // For preview purposes - show placeholder data
+  isPreview?: boolean;
 }
 
 function escapeHtml(text: string): string {
@@ -186,15 +190,118 @@ function renderFooter(block: FooterBlock, options: RenderOptions): string {
 
   return `
     <tr>
-      <td style="background-color: ${bgColor}; padding: 20px; text-align: center;">
-        <p style="margin: 0 0 10px 0; color: ${textColor}; font-size: 14px;">
+      <td style="background-color: ${bgColor}; padding: 24px; text-align: center;">
+        <p style="margin: 0 0 12px 0; color: ${textColor}; font-size: 14px;">
           ${block.content}
         </p>
-        ${block.showUnsubscribe !== false ? `
-          <a href="${escapeHtml(unsubscribeUrl)}" style="color: ${textColor}; font-size: 12px; text-decoration: underline;">
-            ${escapeHtml(block.unsubscribeText || 'Unsubscribe')}
-          </a>
+        ${block.companyAddress ? `
+          <p style="margin: 0 0 12px 0; color: ${textColor}; font-size: 12px;">
+            ${escapeHtml(block.companyAddress)}
+          </p>
         ` : ''}
+        ${block.reasonText ? `
+          <p style="margin: 0 0 12px 0; color: ${textColor}; font-size: 12px; font-style: italic;">
+            ${escapeHtml(block.reasonText)}
+          </p>
+        ` : ''}
+        <p style="margin: 0; font-size: 12px;">
+          ${block.showUnsubscribe !== false ? `
+            <a href="${escapeHtml(unsubscribeUrl)}" style="color: ${textColor}; text-decoration: underline;">
+              ${escapeHtml(block.unsubscribeText || 'Unsubscribe')}
+            </a>
+          ` : ''}
+          ${block.privacyUrl ? `
+            ${block.showUnsubscribe !== false ? '<span style="color: ' + textColor + ';"> | </span>' : ''}
+            <a href="${escapeHtml(block.privacyUrl)}" style="color: ${textColor}; text-decoration: underline;">
+              Privacy Policy
+            </a>
+          ` : ''}
+        </p>
+      </td>
+    </tr>
+  `;
+}
+
+function renderGreeting(block: GreetingBlock, options: RenderOptions): string {
+  const fontFamily = options.imprint?.bodyFont || 'Arial, sans-serif';
+  const textColor = options.imprint?.textColor || '#333333';
+  const fallbackName = block.fallbackName || 'there';
+  
+  // For preview, show a placeholder. At send time, Mailgun variables will be used
+  const greetingPrefix = block.style === 'casual' ? 'Hey' : '{{greeting}}';
+  const firstName = options.isPreview ? 'Sarah' : '%recipient.first_name%';
+  const fallback = options.isPreview ? '' : `|default:${fallbackName}`;
+  
+  // The greeting will be dynamically replaced at send time
+  // For preview, use current time to determine greeting
+  let previewGreeting = 'Good morning';
+  if (options.isPreview) {
+    const hour = new Date().getHours();
+    if (hour >= 17) previewGreeting = 'Good evening';
+    else if (hour >= 12) previewGreeting = 'Good afternoon';
+  }
+  
+  const displayGreeting = options.isPreview 
+    ? (block.style === 'casual' ? 'Hey' : previewGreeting)
+    : (block.style === 'casual' ? 'Hey' : '%recipient.greeting%');
+  
+  const displayName = options.isPreview ? 'Sarah' : `%recipient.first_name${fallback}%`;
+
+  return `
+    <tr>
+      <td style="padding: 10px 20px;">
+        <p style="margin: 0; color: ${textColor}; font-size: 16px; line-height: 1.6; font-family: ${fontFamily};">
+          ${displayGreeting}, <span style="font-weight: 500;">${displayName}</span>
+        </p>
+      </td>
+    </tr>
+  `;
+}
+
+function renderAscContact(block: AscContactBlock, options: RenderOptions): string {
+  const bgColor = block.backgroundColor || '#f0f9ff';
+  const textColor = block.textColor || '#1e40af';
+  const buttonColor = block.buttonColor || options.imprint?.primaryColor || '#2563eb';
+  const headingText = block.headingText || 'Contact your Author Success Coach today!';
+  const showEmail = block.showEmail !== false;
+  const showPhone = block.showPhone !== false;
+  
+  // For preview, show placeholder. At send time, Mailgun variables will be used
+  const ascName = options.isPreview ? 'Tyler Amos' : '%recipient.asc_name%';
+  const ascEmail = options.isPreview ? 'tyler@authorservices.com' : '%recipient.asc_email%';
+  const ascPhone = options.isPreview ? '(555) 123-4567' : '%recipient.asc_phone%';
+  
+  const emailButton = showEmail ? `
+    <a href="mailto:${ascEmail}" style="display: inline-block; background-color: ${buttonColor}; color: #ffffff; text-decoration: none; padding: 10px 20px; border-radius: 4px; font-weight: 500; font-size: 14px; margin: 4px;">
+      ✉ Email
+    </a>
+  ` : '';
+  
+  const phoneButton = showPhone ? `
+    <a href="tel:${ascPhone}" style="display: inline-block; background-color: ${buttonColor}; color: #ffffff; text-decoration: none; padding: 10px 20px; border-radius: 4px; font-weight: 500; font-size: 14px; margin: 4px;">
+      📞 ${ascPhone}
+    </a>
+  ` : '';
+
+  return `
+    <tr>
+      <td style="padding: 10px 20px;">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: ${bgColor}; border-radius: 8px;">
+          <tr>
+            <td style="padding: 24px; text-align: center;">
+              <h3 style="margin: 0 0 16px 0; color: ${textColor}; font-size: 18px; font-weight: 600;">
+                ${escapeHtml(headingText)}
+              </h3>
+              <p style="margin: 0 0 16px 0; color: ${textColor}; font-size: 16px; font-weight: 500;">
+                👤 ${ascName}
+              </p>
+              <div>
+                ${emailButton}
+                ${phoneButton}
+              </div>
+            </td>
+          </tr>
+        </table>
       </td>
     </tr>
   `;
@@ -204,6 +311,8 @@ function renderBlock(block: EmailBlock, options: RenderOptions): string {
   switch (block.type) {
     case 'header':
       return renderHeader(block, options);
+    case 'greeting':
+      return renderGreeting(block, options);
     case 'text':
       return renderText(block, options);
     case 'heading':
@@ -212,6 +321,8 @@ function renderBlock(block: EmailBlock, options: RenderOptions): string {
       return renderImage(block, options);
     case 'button':
       return renderButton(block, options);
+    case 'asc_contact':
+      return renderAscContact(block, options);
     case 'divider':
       return renderDivider(block);
     case 'spacer':
@@ -290,7 +401,7 @@ export function renderBlocksToHtml(
 </html>`;
 }
 
-// For preview (no tracking pixel, placeholder URLs)
+// For preview (no tracking pixel, placeholder URLs, with preview data)
 export function renderBlocksToPreviewHtml(
   blocks: EmailBlock[],
   options: Omit<RenderOptions, 'trackingPixelUrl'>
@@ -298,5 +409,6 @@ export function renderBlocksToPreviewHtml(
   return renderBlocksToHtml(blocks, {
     ...options,
     unsubscribeUrl: '#unsubscribe',
+    isPreview: true,
   });
 }
