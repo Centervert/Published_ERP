@@ -21,7 +21,7 @@ export interface Imprint {
   logo_dark_url: string | null;
   icon_url: string | null;
   header_image_url: string | null;
-  header_image_dark_url?: string | null; // Optional - only on company, not imprints table
+  header_image_dark_url: string | null;
   footer_image_url: string | null;
   brand_voice: string | null;
   tagline: string | null;

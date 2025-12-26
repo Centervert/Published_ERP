@@ -75,6 +75,7 @@ export function ImprintForm({ open, onClose, imprint }: ImprintFormProps) {
     logo_dark?: File;
     icon?: File;
     header_image?: File;
+    header_image_dark?: File;
     footer_image?: File;
   }>({});
 
@@ -139,6 +140,7 @@ export function ImprintForm({ open, onClose, imprint }: ImprintFormProps) {
         logo_dark_url: assetUrls.logo_dark_url || imprint?.logo_dark_url || null,
         icon_url: assetUrls.icon_url || null,
         header_image_url: assetUrls.header_image_url || imprint?.header_image_url || null,
+        header_image_dark_url: assetUrls.header_image_dark_url || imprint?.header_image_dark_url || null,
         footer_image_url: assetUrls.footer_image_url || imprint?.footer_image_url || null,
       };
 
@@ -470,26 +472,64 @@ export function ImprintForm({ open, onClose, imprint }: ImprintFormProps) {
               </TabsContent>
 
               <TabsContent value="assets" className="space-y-4 mt-4">
-                <AssetUpload
-                  label="Logo"
-                  value={imprint?.logo_url || null}
-                  onChange={(file) => setPendingAssets(prev => ({ ...prev, logo: file || undefined }))}
-                  onClear={() => setPendingAssets(prev => ({ ...prev, logo: undefined }))}
-                />
+                <div className="space-y-1">
+                  <h4 className="text-sm font-medium">Logos</h4>
+                  <p className="text-xs text-muted-foreground">Square logos for navigation and compact spaces</p>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <AssetUpload
+                    label="Logo (Light Background)"
+                    value={imprint?.logo_url || null}
+                    onChange={(file) => setPendingAssets(prev => ({ ...prev, logo: file || undefined }))}
+                    onClear={() => setPendingAssets(prev => ({ ...prev, logo: undefined }))}
+                  />
 
-                <AssetUpload
-                  label="Logo (Dark Background)"
-                  value={imprint?.logo_dark_url || null}
-                  onChange={(file) => setPendingAssets(prev => ({ ...prev, logo_dark: file || undefined }))}
-                  onClear={() => setPendingAssets(prev => ({ ...prev, logo_dark: undefined }))}
-                />
+                  <AssetUpload
+                    label="Logo (Dark Background)"
+                    value={imprint?.logo_dark_url || null}
+                    onChange={(file) => setPendingAssets(prev => ({ ...prev, logo_dark: file || undefined }))}
+                    onClear={() => setPendingAssets(prev => ({ ...prev, logo_dark: undefined }))}
+                  />
+                </div>
 
-                <AssetUpload
-                  label="Icon / Favicon"
-                  value={imprint?.icon_url || null}
-                  onChange={(file) => setPendingAssets(prev => ({ ...prev, icon: file || undefined }))}
-                  onClear={() => setPendingAssets(prev => ({ ...prev, icon: undefined }))}
-                />
+                <div className="space-y-1 pt-4 border-t">
+                  <h4 className="text-sm font-medium">Email Header Images</h4>
+                  <p className="text-xs text-muted-foreground">Wide banner images for email headers (recommended: 600px wide)</p>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <AssetUpload
+                    label="Header (Light Background)"
+                    value={imprint?.header_image_url || null}
+                    onChange={(file) => setPendingAssets(prev => ({ ...prev, header_image: file || undefined }))}
+                    onClear={() => setPendingAssets(prev => ({ ...prev, header_image: undefined }))}
+                  />
+
+                  <AssetUpload
+                    label="Header (Dark Background)"
+                    value={imprint?.header_image_dark_url || null}
+                    onChange={(file) => setPendingAssets(prev => ({ ...prev, header_image_dark: file || undefined }))}
+                    onClear={() => setPendingAssets(prev => ({ ...prev, header_image_dark: undefined }))}
+                  />
+                </div>
+
+                <div className="space-y-1 pt-4 border-t">
+                  <h4 className="text-sm font-medium">Other Assets</h4>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <AssetUpload
+                    label="Icon / Favicon"
+                    value={imprint?.icon_url || null}
+                    onChange={(file) => setPendingAssets(prev => ({ ...prev, icon: file || undefined }))}
+                    onClear={() => setPendingAssets(prev => ({ ...prev, icon: undefined }))}
+                  />
+
+                  <AssetUpload
+                    label="Footer Image"
+                    value={imprint?.footer_image_url || null}
+                    onChange={(file) => setPendingAssets(prev => ({ ...prev, footer_image: file || undefined }))}
+                    onClear={() => setPendingAssets(prev => ({ ...prev, footer_image: undefined }))}
+                  />
+                </div>
               </TabsContent>
             </Tabs>
 
