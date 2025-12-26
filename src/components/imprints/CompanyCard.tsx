@@ -1,5 +1,4 @@
 import { Company } from '@/hooks/useCompany';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Building2, Edit, Globe, Phone, MapPin } from 'lucide-react';
 
@@ -10,68 +9,70 @@ interface CompanyCardProps {
 
 export function CompanyCard({ company, onEdit }: CompanyCardProps) {
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            {/* Prefer icon (square) over logo (horizontal) for this compact display */}
-            {company.icon_url ? (
-              <img 
-                src={company.icon_url} 
-                alt={company.name} 
-                className="h-12 w-12 object-contain rounded"
-              />
-            ) : company.logo_url ? (
-              <img 
-                src={company.logo_url} 
-                alt={company.name} 
-                className="h-12 max-w-[120px] object-contain"
-              />
-            ) : (
-              <div className="h-12 w-12 rounded bg-primary/10 flex items-center justify-center">
-                <Building2 className="h-6 w-6 text-primary" />
-              </div>
-            )}
-            <div>
-              <CardTitle className="text-lg">{company.name}</CardTitle>
-              <CardDescription>Parent Company</CardDescription>
-            </div>
+    <div className="flex items-center justify-between p-4 rounded-lg border bg-card">
+      <div className="flex items-center gap-4">
+        {/* Logo/Icon */}
+        {company.icon_url ? (
+          <img 
+            src={company.icon_url} 
+            alt={company.name} 
+            className="h-10 w-10 object-contain rounded"
+          />
+        ) : company.logo_url ? (
+          <img 
+            src={company.logo_url} 
+            alt={company.name} 
+            className="h-10 max-w-[100px] object-contain"
+          />
+        ) : (
+          <div className="h-10 w-10 rounded bg-primary/10 flex items-center justify-center">
+            <Building2 className="h-5 w-5 text-primary" />
           </div>
-          <Button variant="outline" size="sm" onClick={onEdit}>
-            <Edit className="h-4 w-4 mr-2" />
-            Edit
-          </Button>
+        )}
+        
+        {/* Name */}
+        <div>
+          <h3 className="font-medium">{company.name}</h3>
+          {company.tagline && (
+            <p className="text-sm text-muted-foreground">{company.tagline}</p>
+          )}
         </div>
-      </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+
+        {/* Divider */}
+        <div className="hidden md:block h-8 w-px bg-border mx-2" />
+
+        {/* Quick info */}
+        <div className="hidden md:flex items-center gap-6 text-sm text-muted-foreground">
           {company.website_url && (
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <Globe className="h-4 w-4" />
-              <a 
-                href={company.website_url} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="hover:text-foreground hover:underline"
-              >
-                {company.website_url.replace(/^https?:\/\//, '')}
-              </a>
-            </div>
+            <a 
+              href={company.website_url} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 hover:text-foreground transition-colors"
+            >
+              <Globe className="h-3.5 w-3.5" />
+              <span>{company.website_url.replace(/^https?:\/\//, '')}</span>
+            </a>
           )}
           {company.phone && (
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <Phone className="h-4 w-4" />
+            <div className="flex items-center gap-1.5">
+              <Phone className="h-3.5 w-3.5" />
               <span>{company.phone}</span>
             </div>
           )}
           {company.legal_address && (
-            <div className="flex items-start gap-2 text-muted-foreground">
-              <MapPin className="h-4 w-4 mt-0.5 shrink-0" />
-              <span className="line-clamp-1">{company.legal_address}</span>
+            <div className="flex items-center gap-1.5 max-w-[200px]">
+              <MapPin className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate">{company.legal_address}</span>
             </div>
           )}
         </div>
-      </CardContent>
-    </Card>
+      </div>
+
+      <Button variant="outline" size="sm" onClick={onEdit}>
+        <Edit className="h-4 w-4 mr-2" />
+        Edit
+      </Button>
+    </div>
   );
 }
