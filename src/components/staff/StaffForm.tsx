@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { X, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 
 const DEPARTMENTS = [
   { value: 'sales', label: 'Sales' },
@@ -97,11 +97,8 @@ export function StaffForm({ open, onClose, staff }: StaffFormProps) {
   return (
     <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
       <SheetContent className="w-[400px] sm:w-[500px]">
-        <SheetHeader className="flex flex-row items-center justify-between">
+        <SheetHeader>
           <SheetTitle>{isEditing ? 'Edit Staff Member' : 'Add Staff Member'}</SheetTitle>
-          <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8">
-            <X className="h-4 w-4" />
-          </Button>
         </SheetHeader>
 
         <div className="mt-6 space-y-4">
