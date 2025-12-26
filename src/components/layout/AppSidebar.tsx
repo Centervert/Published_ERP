@@ -3,7 +3,6 @@ import { NavLink } from '@/components/NavLink';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useTheme } from 'next-themes';
 import {
   Sidebar,
   SidebarContent,
@@ -39,8 +38,7 @@ import {
   Package,
   Handshake,
 } from 'lucide-react';
-import authorServicesLogoLight from '@/assets/author-services-logo-light.png';
-import authorServicesLogoDark from '@/assets/author-services-logo-dark.png';
+import authorServicesLogo from '@/assets/author-services-logo.png';
 
 const homeItem = { title: 'Home', url: '/', icon: LayoutDashboard };
 
@@ -66,11 +64,7 @@ export function AppSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
-  const { resolvedTheme } = useTheme();
   const collapsed = state === 'collapsed';
-  
-  // Use dark logo for dark backgrounds, light logo for light backgrounds
-  const logo = resolvedTheme === 'dark' ? authorServicesLogoDark : authorServicesLogoLight;
 
   // Fetch user profile and role
   const { data: userProfile } = useQuery({
@@ -196,7 +190,7 @@ export function AppSidebar() {
       <SidebarHeader className="p-3">
         <div className="flex items-center justify-center py-2">
           <img 
-            src={logo} 
+            src={authorServicesLogo}
             alt="Author Services" 
             className={collapsed ? "h-8 object-contain" : "h-9 object-contain"}
           />
