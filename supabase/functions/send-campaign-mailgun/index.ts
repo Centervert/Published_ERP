@@ -533,7 +533,7 @@ serve(async (req) => {
       .replace(/\{\{unsubscribe_url\}\}/gi, '%recipient.unsubscribe_url%');
 
     // CAN-SPAM compliant address (unified across system)
-    const COMPANY_ADDRESS = "Author Services, 2727 Paces Ferry Road SE, Building Two, Suite 250, Atlanta, GA 30339";
+    const COMPANY_ADDRESS = "Author Services, 555 Winderley Pl Suite 225, Maitland, FL 32751";
     
     // Ensure footer has physical address for CAN-SPAM compliance
     if (!htmlTemplate.includes('Author Services') && !htmlTemplate.includes('physical address')) {

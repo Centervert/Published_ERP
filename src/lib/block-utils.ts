@@ -1,8 +1,9 @@
 import type { EmailBlock, AIEmailBlock, HeaderBlock, FooterBlock } from '@/types/email-blocks';
 import { getLogoForBackground } from '@/lib/color-utils';
 
-// CAN-SPAM compliant company address (unified across system) - HARDCODED
-const COMPANY_ADDRESS = 'Author Services, 2727 Paces Ferry Road SE, Building Two, Suite 250, Atlanta, GA 30339';
+// CAN-SPAM compliant company info (unified across system) - HARDCODED
+const COMPANY_ADDRESS = 'Author Services, 555 Winderley Pl Suite 225, Maitland, FL 32751';
+const COMPANY_PHONE = '866-381-2665';
 const DEFAULT_REASON_TEXT = 'You received this email because you are a valued Author Services customer.';
 const DEFAULT_COPYRIGHT = '© Author Services. All rights reserved.';
 

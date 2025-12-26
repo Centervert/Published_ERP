@@ -59,9 +59,11 @@ export default function Unsubscribed() {
       <footer className="bg-[#1a1a2e] text-white/70 py-8 px-10 text-center">
         <div className="font-serif text-lg text-white mb-3">{brand}</div>
         <div className="text-sm leading-relaxed">
-          2727 Paces Ferry Road SE, Building Two, Suite 250
+          555 Winderley Pl Suite 225
           <br />
-          Atlanta, GA 30339
+          Maitland, FL 32751
+          <br />
+          866-381-2665
           <br />
           <br />
           Questions?{" "}
