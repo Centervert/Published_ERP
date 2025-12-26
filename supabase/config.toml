@@ -12,26 +12,16 @@ verify_jwt = false
 [functions.unsubscribe]
 verify_jwt = false
 
-# Send campaign - uses custom auth (worker API key or user auth)
-[functions.send-campaign]
+# Mailgun campaign sender - uses custom auth (worker API key or user auth)
+[functions.send-campaign-mailgun]
 verify_jwt = false
 
-# Worker API endpoints - use custom API key auth
-[functions.get-pending-emails]
-verify_jwt = false
-
-[functions.update-email-status]
-verify_jwt = false
-
-[functions.check-campaign-completion]
+# Mailgun webhook - public, uses HMAC signature verification
+[functions.mailgun-webhook]
 verify_jwt = false
 
 # Process scheduled campaigns - worker API key auth
 [functions.process-scheduled-campaigns]
-verify_jwt = false
-
-# Resend webhook - public, uses signature verification
-[functions.resend-webhook]
 verify_jwt = false
 
 # AI Email generation - requires auth

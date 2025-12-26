@@ -85,8 +85,11 @@ export type Database = {
       campaigns: {
         Row: {
           blocks_json: Json | null
+          bounce_count: number | null
+          complaint_count: number | null
           created_at: string | null
           created_by: string | null
+          delivered_count: number | null
           from_email: string
           from_name: string
           html_content: string
@@ -106,8 +109,11 @@ export type Database = {
         }
         Insert: {
           blocks_json?: Json | null
+          bounce_count?: number | null
+          complaint_count?: number | null
           created_at?: string | null
           created_by?: string | null
+          delivered_count?: number | null
           from_email: string
           from_name: string
           html_content: string
@@ -127,8 +133,11 @@ export type Database = {
         }
         Update: {
           blocks_json?: Json | null
+          bounce_count?: number | null
+          complaint_count?: number | null
           created_at?: string | null
           created_by?: string | null
+          delivered_count?: number | null
           from_email?: string
           from_name?: string
           html_content?: string
@@ -573,84 +582,6 @@ export type Database = {
           },
           {
             foreignKeyName: "fk_email_events_contact"
-            columns: ["contact_id"]
-            isOneToOne: false
-            referencedRelation: "contacts"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      email_queue: {
-        Row: {
-          attempts: number | null
-          campaign_id: string | null
-          contact_first_name: string | null
-          contact_id: string | null
-          contact_last_name: string | null
-          created_at: string | null
-          email: string
-          from_email: string | null
-          from_name: string | null
-          html_content: string | null
-          id: string
-          last_error: string | null
-          list_unsubscribe_header: string | null
-          processed_at: string | null
-          reply_to_email: string | null
-          scheduled_for: string | null
-          status: string | null
-          subject: string | null
-        }
-        Insert: {
-          attempts?: number | null
-          campaign_id?: string | null
-          contact_first_name?: string | null
-          contact_id?: string | null
-          contact_last_name?: string | null
-          created_at?: string | null
-          email: string
-          from_email?: string | null
-          from_name?: string | null
-          html_content?: string | null
-          id?: string
-          last_error?: string | null
-          list_unsubscribe_header?: string | null
-          processed_at?: string | null
-          reply_to_email?: string | null
-          scheduled_for?: string | null
-          status?: string | null
-          subject?: string | null
-        }
-        Update: {
-          attempts?: number | null
-          campaign_id?: string | null
-          contact_first_name?: string | null
-          contact_id?: string | null
-          contact_last_name?: string | null
-          created_at?: string | null
-          email?: string
-          from_email?: string | null
-          from_name?: string | null
-          html_content?: string | null
-          id?: string
-          last_error?: string | null
-          list_unsubscribe_header?: string | null
-          processed_at?: string | null
-          reply_to_email?: string | null
-          scheduled_for?: string | null
-          status?: string | null
-          subject?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "email_queue_campaign_id_fkey"
-            columns: ["campaign_id"]
-            isOneToOne: false
-            referencedRelation: "campaigns"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "email_queue_contact_id_fkey"
             columns: ["contact_id"]
             isOneToOne: false
             referencedRelation: "contacts"
