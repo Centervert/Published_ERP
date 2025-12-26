@@ -31,6 +31,8 @@ function getDefaultsForType(type: EmailBlock['type']): Record<string, unknown> {
   switch (type) {
     case 'header':
       return { backgroundColor: '#ffffff', padding: 20 };
+    case 'greeting':
+      return { style: 'formal', fallbackName: 'there' };
     case 'text':
       return { content: 'Enter your text here...', fontSize: 16, color: '#333333', align: 'left', lineHeight: 1.6 };
     case 'heading':
@@ -39,6 +41,8 @@ function getDefaultsForType(type: EmailBlock['type']): Record<string, unknown> {
       return { src: '', width: 'full', align: 'center', alt: '' };
     case 'button':
       return { text: 'Click Here', url: '#', backgroundColor: '#2563eb', textColor: '#ffffff', borderRadius: 4, align: 'center' };
+    case 'asc_contact':
+      return { headingText: 'Contact your Author Success Coach today!', showEmail: true, showPhone: true, backgroundColor: '#f0f9ff', textColor: '#1e40af', buttonColor: '#2563eb' };
     case 'divider':
       return { color: '#e5e7eb', thickness: 1, style: 'solid' };
     case 'spacer':
@@ -46,7 +50,7 @@ function getDefaultsForType(type: EmailBlock['type']): Record<string, unknown> {
     case 'columns':
       return { columns: [{ width: '50%', blocks: [] }, { width: '50%', blocks: [] }], gap: 16 };
     case 'footer':
-      return { content: '© 2025 Company Name', backgroundColor: '#f9fafb', textColor: '#6b7280', showUnsubscribe: true, unsubscribeText: 'Unsubscribe' };
+      return { content: '© 2025 Company Name', backgroundColor: '#f9fafb', textColor: '#6b7280', showUnsubscribe: true, unsubscribeText: 'Unsubscribe', reasonText: 'You received this email because you are a valued Author Services customer.' };
     default:
       return {};
   }
@@ -117,7 +121,7 @@ export function getBlock(blocks: EmailBlock[], blockId: string): EmailBlock | un
 export function validateBlocks(blocks: unknown): blocks is EmailBlock[] {
   if (!Array.isArray(blocks)) return false;
   
-  const validTypes = ['header', 'text', 'heading', 'image', 'button', 'divider', 'spacer', 'columns', 'footer'];
+  const validTypes = ['header', 'greeting', 'text', 'heading', 'image', 'button', 'asc_contact', 'divider', 'spacer', 'columns', 'footer'];
   
   return blocks.every((block) => {
     if (typeof block !== 'object' || block === null) return false;

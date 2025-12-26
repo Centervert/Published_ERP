@@ -28,6 +28,8 @@ interface GenerateEmailRequest {
   description: string;
   keyPoints: string;
   callToAction: string;
+  ctaType?: 'none' | 'custom' | 'asc_contact';
+  includeGreeting?: boolean;
   tone: string;
   conversationHistory?: Array<{ role: string; content: string }>;
   followUpMessage?: string;
@@ -46,11 +48,15 @@ serve(async (req) => {
       description, 
       keyPoints, 
       callToAction, 
+      ctaType = 'custom',
+      includeGreeting = true,
       tone,
       conversationHistory,
       followUpMessage,
       outputFormat = 'blocks'
     }: GenerateEmailRequest = await req.json();
+
+    console.log("Generate email request:", { emailType, ctaType, includeGreeting, tone });
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
@@ -59,6 +65,23 @@ serve(async (req) => {
 
     const headingFont = imprint.heading_font || 'Arial';
     const bodyFont = imprint.body_font || 'Arial';
+
+    // Build CTA instruction based on type
+    let ctaInstruction = '';
+    if (ctaType === 'asc_contact') {
+      ctaInstruction = `
+For the call to action, you MUST include an asc_contact block (personalized Author Success Coach contact). This block displays the recipient's assigned coach's name with email and phone buttons.`;
+    } else if (ctaType === 'custom' && callToAction) {
+      ctaInstruction = `
+For the call to action, include a button block with text: "${callToAction}"`;
+    } else if (ctaType === 'none') {
+      ctaInstruction = `
+Do NOT include any call to action button.`;
+    }
+
+    // Greeting instruction
+    const greetingInstruction = includeGreeting ? `
+IMPORTANT: Start the email content (after the header) with a greeting block. This creates a personalized "Good morning/afternoon/evening, [First Name]" based on send time.` : '';
 
     // System prompt for block-based output
     const blockSystemPrompt = `You are an expert email designer. You create email content as structured JSON blocks.
@@ -79,20 +102,24 @@ You MUST output ONLY a valid JSON object with a "blocks" array. No markdown, no 
 
 BLOCK TYPES AVAILABLE:
 - header: { type: "header", logoUrl?: string, backgroundColor?: string }
+- greeting: { type: "greeting", style: "formal"|"casual", fallbackName?: string } - Personalized "Good morning/afternoon/evening, [Name]"
 - heading: { type: "heading", content: string, level: 1|2|3, color?: string, align?: "left"|"center"|"right" }
 - text: { type: "text", content: string, fontSize?: number, color?: string, align?: "left"|"center"|"right" }
 - button: { type: "button", text: string, url: string, backgroundColor?: string, textColor?: string }
+- asc_contact: { type: "asc_contact", headingText?: string, showEmail: true, showPhone: true, backgroundColor?: string } - Personalized ASC contact CTA
 - divider: { type: "divider", color?: string }
 - spacer: { type: "spacer", height: number }
-- footer: { type: "footer", content: string, showUnsubscribe: true }
+- footer: { type: "footer", content: string, showUnsubscribe: true, companyAddress?: string, reasonText?: string }
 
 IMPORTANT - IMAGE BLOCKS:
 - DO NOT generate image blocks with placeholder or made-up URLs
 - Only include an image block if you are given a REAL, valid image URL in the request
 - Images are handled separately by the user - never invent image URLs
+${greetingInstruction}
+${ctaInstruction}
 
 EXAMPLE OUTPUT:
-{"blocks":[{"type":"header","logoUrl":"${imprint.logo_url || ''}","backgroundColor":"#ffffff"},{"type":"heading","content":"Welcome!","level":1,"color":"${imprint.primary_color || '#2563eb'}","align":"center"},{"type":"text","content":"Your message here...","fontSize":16,"color":"${imprint.text_color || '#333333'}"},{"type":"button","text":"Learn More","url":"#","backgroundColor":"${imprint.primary_color || '#2563eb'}"},{"type":"footer","content":"© ${imprint.name}","showUnsubscribe":true}]}
+{"blocks":[{"type":"header","logoUrl":"${imprint.logo_url || ''}","backgroundColor":"#ffffff"},${includeGreeting ? '{"type":"greeting","style":"formal","fallbackName":"there"},' : ''}{"type":"heading","content":"Welcome!","level":1,"color":"${imprint.primary_color || '#2563eb'}","align":"center"},{"type":"text","content":"Your message here...","fontSize":16,"color":"${imprint.text_color || '#333333'}"},${ctaType === 'asc_contact' ? '{"type":"asc_contact","headingText":"Contact your Author Success Coach today!","showEmail":true,"showPhone":true},' : ctaType === 'custom' && callToAction ? `{"type":"button","text":"${callToAction}","url":"#","backgroundColor":"${imprint.primary_color || '#2563eb'}"},` : ''}{"type":"footer","content":"© ${imprint.name}","showUnsubscribe":true}]}
 
 CRITICAL FORMATTING RULES:
 - NEVER use markdown formatting like **bold**, *italic*, __underline__, or any asterisks
@@ -100,7 +127,7 @@ CRITICAL FORMATTING RULES:
 - For emphasis, create separate heading blocks or use ALL CAPS sparingly
 - For lists, create multiple text blocks - one for each item
 - Write plain text only - no special formatting characters
-- Use generic greetings (no personalization tags)
+- Use generic greetings in text blocks (the greeting block handles personalization)
 - Apply brand colors consistently
 - Include header with logo if available
 - Always end with footer block with showUnsubscribe: true
