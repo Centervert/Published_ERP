@@ -17,6 +17,8 @@ interface ImprintData {
   name?: string;
   logo_url?: string | null;
   logo_dark_url?: string | null;
+  header_image_url?: string | null;
+  header_image_dark_url?: string | null;
   primary_color?: string | null;
 }
 
@@ -28,15 +30,22 @@ export function aiBlocksToEmailBlocks(aiBlocks: AIEmailBlock[], imprint?: Imprin
       id: generateBlockId(),
     };
     
-    // Normalize header blocks - choose logo based on background color
+    // Normalize header blocks - prefer header_image_url over logo_url
     if (block.type === 'header') {
       const headerBlock = baseBlock as HeaderBlock;
       const bgColor = headerBlock.backgroundColor || '#ffffff';
-      const logoUrl = getLogoForBackground(bgColor, imprint?.logo_url, imprint?.logo_dark_url);
+      
+      // First try header images, then fall back to logos
+      let headerImageUrl: string | null = null;
+      if (imprint?.header_image_url || imprint?.header_image_dark_url) {
+        headerImageUrl = getLogoForBackground(bgColor, imprint?.header_image_url, imprint?.header_image_dark_url);
+      } else {
+        headerImageUrl = getLogoForBackground(bgColor, imprint?.logo_url, imprint?.logo_dark_url);
+      }
       
       return {
         ...headerBlock,
-        logoUrl: logoUrl,
+        logoUrl: headerImageUrl,
       } as HeaderBlock;
     }
     
