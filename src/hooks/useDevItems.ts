@@ -103,6 +103,19 @@ export function useDevItems(documentId: string | undefined, itemType?: DevItemTy
     },
   });
 
+  const deleteItem = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('dev_items')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['dev-items', documentId] });
+    },
+  });
+
   return {
     items: itemsQuery.data ?? [],
     isLoading: itemsQuery.isLoading,
@@ -110,6 +123,7 @@ export function useDevItems(documentId: string | undefined, itemType?: DevItemTy
     createItem,
     updateItem,
     archiveItem,
+    deleteItem,
   };
 }
 
