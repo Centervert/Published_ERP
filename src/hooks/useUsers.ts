@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 
 // Map database roles to display names
 export const ROLE_DISPLAY_NAMES: Record<string, string> = {
-  super_admin: 'Super Admin',
+  super_admin: 'System Admin',
   admin: 'Admin',
   asc: 'Author Success Coach',
   ae: 'Account Executive',
@@ -14,7 +14,7 @@ export const ROLE_DISPLAY_NAMES: Record<string, string> = {
 
 // Map display names back to database roles
 export const DISPLAY_NAME_TO_ROLE: Record<string, string> = {
-  'Super Admin': 'super_admin',
+  'System Admin': 'super_admin',
   'Admin': 'admin',
   'Author Success Coach': 'asc',
   'Account Executive': 'ae',

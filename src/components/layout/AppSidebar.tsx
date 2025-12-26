@@ -53,13 +53,21 @@ const crmItems = [
   { title: 'Deals', url: '/deals', icon: Handshake },
 ];
 
-const backofficeItems = [
-  { title: 'Users', url: '/users', icon: Users },
-  { title: 'Master SKU List', url: '/products', icon: Package },
-  { title: 'Imprints', url: '/imprints', icon: Building2 },
-  { title: 'Settings', url: '/settings', icon: Settings },
-  { title: 'Development', url: '/development', icon: Code },
-];
+// Backoffice items - Development is conditionally added for System Admins only
+const getBackofficeItems = (isSystemAdmin: boolean) => {
+  const items = [
+    { title: 'Users', url: '/users', icon: Users },
+    { title: 'Master SKU List', url: '/products', icon: Package },
+    { title: 'Imprints', url: '/imprints', icon: Building2 },
+    { title: 'Settings', url: '/settings', icon: Settings },
+  ];
+  
+  if (isSystemAdmin) {
+    items.push({ title: 'Development', url: '/development', icon: Code });
+  }
+  
+  return items;
+};
 
 export function AppSidebar() {
   const { state } = useSidebar();
@@ -115,7 +123,7 @@ export function AppSidebar() {
 
   const getRoleLabel = (role: string | null | undefined) => {
     switch (role) {
-      case 'super_admin': return 'Super Admin';
+      case 'super_admin': return 'System Admin';
       case 'admin': return 'Admin';
       case 'asc': return 'Author Success Coach';
       case 'ae': return 'Account Executive';
@@ -124,10 +132,12 @@ export function AppSidebar() {
     }
   };
 
-  // Marketing role only sees marketing section
+  // Role-based visibility
+  const isSystemAdmin = userRole === 'super_admin';
   const isMarketingOnly = userRole === 'marketing';
   const showCRM = !isMarketingOnly;
   const showBackoffice = !isMarketingOnly;
+  const backofficeItems = getBackofficeItems(isSystemAdmin);
 
   const isGroupActive = (items: typeof marketingItems) => 
     items.some(item => location.pathname === item.url);
