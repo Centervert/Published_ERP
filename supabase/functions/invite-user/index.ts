@@ -180,7 +180,7 @@ serve(async (req) => {
     }
 
     // Use production domain for invite redirects
-    const productionDomain = "https://asp.centervertsitedemos.com";
+    const productionDomain = "https://portal.authorservices.com";
     const resetPasswordUrl = `${productionDomain}/reset-password`;
 
     // Step 1: Create the user without email confirmation
