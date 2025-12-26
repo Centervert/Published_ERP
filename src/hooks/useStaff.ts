@@ -20,6 +20,7 @@ export interface StaffWithUser extends Staff {
     id: string;
     full_name: string | null;
     email: string;
+    role?: string | null;
   } | null;
 }
 
@@ -41,21 +42,38 @@ export function useStaff(departmentFilter?: string) {
       const { data, error } = await query;
       if (error) throw error;
 
-      // Fetch linked user profiles
+      // Fetch linked user profiles and roles
       const userIds = (data || [])
         .filter(s => s.user_id)
         .map(s => s.user_id as string);
 
-      let profiles: Record<string, { id: string; full_name: string | null; email: string }> = {};
+      let profiles: Record<string, { id: string; full_name: string | null; email: string; role?: string | null }> = {};
       
       if (userIds.length > 0) {
+        // Fetch profiles
         const { data: profilesData } = await supabase
           .from('profiles')
           .select('id, full_name, email')
           .in('id', userIds);
         
+        // Fetch roles
+        const { data: rolesData } = await supabase
+          .from('user_roles')
+          .select('user_id, role')
+          .in('user_id', userIds);
+        
+        const rolesMap: Record<string, string> = {};
+        if (rolesData) {
+          rolesData.forEach(r => {
+            rolesMap[r.user_id] = r.role;
+          });
+        }
+        
         if (profilesData) {
-          profiles = Object.fromEntries(profilesData.map(p => [p.id, p]));
+          profiles = Object.fromEntries(profilesData.map(p => [p.id, { 
+            ...p, 
+            role: rolesMap[p.id] || null 
+          }]));
         }
       }
 
