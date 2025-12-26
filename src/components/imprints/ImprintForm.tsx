@@ -490,20 +490,6 @@ export function ImprintForm({ open, onClose, imprint }: ImprintFormProps) {
                   onChange={(file) => setPendingAssets(prev => ({ ...prev, icon: file || undefined }))}
                   onClear={() => setPendingAssets(prev => ({ ...prev, icon: undefined }))}
                 />
-
-                <AssetUpload
-                  label="Email Header Image"
-                  value={imprint?.header_image_url || null}
-                  onChange={(file) => setPendingAssets(prev => ({ ...prev, header_image: file || undefined }))}
-                  onClear={() => setPendingAssets(prev => ({ ...prev, header_image: undefined }))}
-                />
-
-                <AssetUpload
-                  label="Email Footer Image"
-                  value={imprint?.footer_image_url || null}
-                  onChange={(file) => setPendingAssets(prev => ({ ...prev, footer_image: file || undefined }))}
-                  onClear={() => setPendingAssets(prev => ({ ...prev, footer_image: undefined }))}
-                />
               </TabsContent>
             </Tabs>
 
