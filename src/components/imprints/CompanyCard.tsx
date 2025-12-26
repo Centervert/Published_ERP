@@ -2,7 +2,6 @@ import { Company } from '@/hooks/useCompany';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Building2, Edit, Globe, Phone, MapPin } from 'lucide-react';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 interface CompanyCardProps {
   company: Company;
@@ -15,15 +14,24 @@ export function CompanyCard({ company, onEdit }: CompanyCardProps) {
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Avatar className="h-12 w-12">
-              {company.logo_url ? (
-                <AvatarImage src={company.logo_url} alt={company.name} />
-              ) : (
-                <AvatarFallback className="bg-primary/10">
-                  <Building2 className="h-6 w-6 text-primary" />
-                </AvatarFallback>
-              )}
-            </Avatar>
+            {/* Prefer icon (square) over logo (horizontal) for this compact display */}
+            {company.icon_url ? (
+              <img 
+                src={company.icon_url} 
+                alt={company.name} 
+                className="h-12 w-12 object-contain rounded"
+              />
+            ) : company.logo_url ? (
+              <img 
+                src={company.logo_url} 
+                alt={company.name} 
+                className="h-12 max-w-[120px] object-contain"
+              />
+            ) : (
+              <div className="h-12 w-12 rounded bg-primary/10 flex items-center justify-center">
+                <Building2 className="h-6 w-6 text-primary" />
+              </div>
+            )}
             <div>
               <CardTitle className="text-lg">{company.name}</CardTitle>
               <CardDescription>Parent Company</CardDescription>
