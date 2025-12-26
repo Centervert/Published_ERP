@@ -50,13 +50,76 @@ serve(async (req) => {
     
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Parse form data from Mailgun webhook
-    const formData = await req.formData();
-    
-    // Extract signature data
-    const timestamp = formData.get("timestamp")?.toString() || "";
-    const token = formData.get("token")?.toString() || "";
-    const signature = formData.get("signature")?.toString() || "";
+    // Determine content type and parse accordingly
+    const contentType = req.headers.get("content-type") || "";
+    let eventData: any;
+    let timestamp = "";
+    let token = "";
+    let signature = "";
+
+    if (contentType.includes("application/json")) {
+      // New Mailgun format - JSON payload
+      const jsonBody = await req.json();
+      console.log("[mailgun-webhook] Received JSON payload");
+      
+      // Extract signature from JSON
+      if (jsonBody.signature) {
+        timestamp = jsonBody.signature.timestamp?.toString() || "";
+        token = jsonBody.signature.token || "";
+        signature = jsonBody.signature.signature || "";
+      }
+      
+      // Event data is in the event-data field
+      eventData = jsonBody["event-data"] || jsonBody;
+      
+    } else if (contentType.includes("multipart/form-data") || contentType.includes("application/x-www-form-urlencoded")) {
+      // Legacy Mailgun format - form data
+      const formData = await req.formData();
+      console.log("[mailgun-webhook] Received form data payload");
+      
+      timestamp = formData.get("timestamp")?.toString() || "";
+      token = formData.get("token")?.toString() || "";
+      signature = formData.get("signature")?.toString() || "";
+      
+      const eventDataStr = formData.get("event-data")?.toString();
+      if (eventDataStr) {
+        eventData = JSON.parse(eventDataStr);
+      } else {
+        eventData = {
+          event: formData.get("event")?.toString(),
+          recipient: formData.get("recipient")?.toString(),
+          "user-variables": {},
+          "client-info": {},
+          message: { headers: {} }
+        };
+        
+        const userVars = formData.get("user-variables");
+        if (userVars) {
+          try {
+            eventData["user-variables"] = JSON.parse(userVars.toString());
+          } catch {}
+        }
+      }
+    } else {
+      // Try JSON as fallback
+      try {
+        const jsonBody = await req.json();
+        console.log("[mailgun-webhook] Fallback to JSON parsing");
+        
+        if (jsonBody.signature) {
+          timestamp = jsonBody.signature.timestamp?.toString() || "";
+          token = jsonBody.signature.token || "";
+          signature = jsonBody.signature.signature || "";
+        }
+        eventData = jsonBody["event-data"] || jsonBody;
+      } catch {
+        console.error("[mailgun-webhook] Could not parse request body");
+        return new Response(JSON.stringify({ error: "Invalid request body" }), { 
+          status: 400, 
+          headers: { ...corsHeaders, "Content-Type": "application/json" } 
+        });
+      }
+    }
     
     // Verify HMAC signature
     if (webhookSigningKey && signature) {
@@ -70,40 +133,13 @@ serve(async (req) => {
       }
     }
 
-    // Parse event data
-    const eventDataStr = formData.get("event-data")?.toString();
-    let eventData: any;
-    
-    if (eventDataStr) {
-      eventData = JSON.parse(eventDataStr);
-    } else {
-      // Legacy format - build from form fields
-      eventData = {
-        event: formData.get("event")?.toString(),
-        recipient: formData.get("recipient")?.toString(),
-        "user-variables": {},
-        "client-info": {},
-        message: {
-          headers: {}
-        }
-      };
-      
-      // Try to extract user variables
-      const userVars = formData.get("user-variables");
-      if (userVars) {
-        try {
-          eventData["user-variables"] = JSON.parse(userVars.toString());
-        } catch {}
-      }
-    }
-
-    const event = eventData.event || formData.get("event")?.toString();
-    const recipient = eventData.recipient || formData.get("recipient")?.toString();
-    const campaignId = eventData["user-variables"]?.campaign_id || formData.get("campaign_id")?.toString();
-    const contactId = eventData["user-variables"]?.contact_id || formData.get("contact_id")?.toString();
-    const userAgent = eventData["client-info"]?.["user-agent"] || formData.get("user-agent")?.toString() || "";
-    const ip = eventData["client-info"]?.["client-ip"] || formData.get("ip")?.toString() || "";
-    const url = eventData.url || formData.get("url")?.toString();
+    const event = eventData.event;
+    const recipient = eventData.recipient;
+    const campaignId = eventData["user-variables"]?.campaign_id;
+    const contactId = eventData["user-variables"]?.contact_id;
+    const userAgent = eventData["client-info"]?.["user-agent"] || "";
+    const ip = eventData["client-info"]?.["client-ip"] || "";
+    const url = eventData.url;
     
     console.log(`[mailgun-webhook] Event: ${event}, Recipient: ${recipient}, Campaign: ${campaignId}`);
 
@@ -135,7 +171,7 @@ serve(async (req) => {
         
       case "failed":
         // Check if permanent or temporary
-        const severity = eventData.severity || formData.get("severity")?.toString();
+        const severity = eventData.severity;
         if (severity === "permanent") {
           eventType = "bounced";
           updateContactStatus = "bounced";
