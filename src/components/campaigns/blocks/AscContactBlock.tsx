@@ -40,18 +40,16 @@ export function AscContactBlock({ block, isEditing }: AscContactBlockProps) {
         </span>
       </div>
       
-      <div className="flex flex-wrap items-center justify-center gap-4">
+      <div className="flex flex-col items-center gap-3">
+        {/* Email as plain text to avoid spam filters */}
         {showEmail && (
-          <a 
-            href={`mailto:${previewAsc.email}`}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-md text-white text-sm font-medium"
-            style={{ backgroundColor: buttonColor }}
-            onClick={(e) => isEditing && e.preventDefault()}
-          >
+          <div className="flex items-center gap-2" style={{ color: textColor }}>
             <Mail className="h-4 w-4" />
-            Email
-          </a>
+            <span className="text-sm">{previewAsc.email}</span>
+          </div>
         )}
+        
+        {/* Phone as clickable button - tel: links are safe */}
         {showPhone && (
           <a 
             href={`tel:${previewAsc.phone}`}
@@ -60,7 +58,7 @@ export function AscContactBlock({ block, isEditing }: AscContactBlockProps) {
             onClick={(e) => isEditing && e.preventDefault()}
           >
             <Phone className="h-4 w-4" />
-            {previewAsc.phone}
+            Call {previewAsc.phone}
           </a>
         )}
       </div>
