@@ -304,6 +304,29 @@ function renderPropertiesForBlock(
               rows={2}
             />
           </PropertyField>
+          <PropertyField label="Company Address">
+            <Textarea
+              value={block.companyAddress || ''}
+              onChange={(e) => onUpdate({ companyAddress: e.target.value })}
+              rows={2}
+              placeholder="123 Main St, City, State 12345"
+            />
+          </PropertyField>
+          <PropertyField label="Reason Text">
+            <Textarea
+              value={block.reasonText || ''}
+              onChange={(e) => onUpdate({ reasonText: e.target.value })}
+              rows={2}
+              placeholder="You received this email because..."
+            />
+          </PropertyField>
+          <PropertyField label="Privacy Policy URL">
+            <Input
+              value={block.privacyUrl || ''}
+              onChange={(e) => onUpdate({ privacyUrl: e.target.value })}
+              placeholder="https://..."
+            />
+          </PropertyField>
           <PropertyField label="Background Color">
             <ColorInput
               value={block.backgroundColor || '#f9fafb'}
@@ -330,6 +353,81 @@ function renderPropertiesForBlock(
               />
             </PropertyField>
           )}
+        </>
+      );
+
+    case 'greeting':
+      return (
+        <>
+          <PropertyField label="Greeting Style">
+            <Select
+              value={block.style || 'formal'}
+              onValueChange={(v) => onUpdate({ style: v as 'formal' | 'casual' })}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="formal">Formal (Good morning/afternoon/evening)</SelectItem>
+                <SelectItem value="casual">Casual (Hey)</SelectItem>
+              </SelectContent>
+            </Select>
+          </PropertyField>
+          <PropertyField label="Fallback Name">
+            <Input
+              value={block.fallbackName || 'there'}
+              onChange={(e) => onUpdate({ fallbackName: e.target.value })}
+              placeholder="there"
+            />
+          </PropertyField>
+          <p className="text-xs text-muted-foreground">
+            Uses recipient's first name. Fallback is used if name is empty.
+          </p>
+        </>
+      );
+
+    case 'asc_contact':
+      return (
+        <>
+          <PropertyField label="Heading Text">
+            <Input
+              value={block.headingText || 'Contact your Author Success Coach today!'}
+              onChange={(e) => onUpdate({ headingText: e.target.value })}
+            />
+          </PropertyField>
+          <PropertyField label="Show Email Button">
+            <Switch
+              checked={block.showEmail !== false}
+              onCheckedChange={(v) => onUpdate({ showEmail: v })}
+            />
+          </PropertyField>
+          <PropertyField label="Show Phone Button">
+            <Switch
+              checked={block.showPhone !== false}
+              onCheckedChange={(v) => onUpdate({ showPhone: v })}
+            />
+          </PropertyField>
+          <PropertyField label="Background Color">
+            <ColorInput
+              value={block.backgroundColor || '#f0f9ff'}
+              onChange={(v) => onUpdate({ backgroundColor: v })}
+            />
+          </PropertyField>
+          <PropertyField label="Text Color">
+            <ColorInput
+              value={block.textColor || '#1e40af'}
+              onChange={(v) => onUpdate({ textColor: v })}
+            />
+          </PropertyField>
+          <PropertyField label="Button Color">
+            <ColorInput
+              value={block.buttonColor || '#2563eb'}
+              onChange={(v) => onUpdate({ buttonColor: v })}
+            />
+          </PropertyField>
+          <p className="text-xs text-muted-foreground">
+            Displays contact's assigned ASC info with email/phone buttons.
+          </p>
         </>
       );
 
