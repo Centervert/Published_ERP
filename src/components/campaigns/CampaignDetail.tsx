@@ -22,6 +22,16 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -148,6 +158,53 @@ export function CampaignDetail({ campaign, onBack, onCancelScheduled }: Campaign
   const [recipientsConfirmed, setRecipientsConfirmed] = useState(false);
   // Track if user has explicitly confirmed send time
   const [sendTimeConfirmed, setSendTimeConfirmed] = useState(false);
+  
+  // Track unsaved changes
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [exitConfirmOpen, setExitConfirmOpen] = useState(false);
+  
+  // Track changes to local state vs saved campaign data
+  useEffect(() => {
+    const subjectChanged = subject !== campaign.subject;
+    const nameChanged = campaignName !== campaign.name;
+    const fromNameChanged = fromName !== campaign.from_name;
+    const fromEmailChanged = fromEmail !== campaign.from_email;
+    
+    setHasUnsavedChanges(subjectChanged || nameChanged || fromNameChanged || fromEmailChanged);
+  }, [subject, campaignName, fromName, fromEmail, campaign.subject, campaign.name, campaign.from_name, campaign.from_email]);
+  
+  // Handle back navigation with unsaved changes check
+  const handleBack = () => {
+    if (hasUnsavedChanges) {
+      setExitConfirmOpen(true);
+    } else {
+      onBack();
+    }
+  };
+  
+  // Save all pending changes before exiting
+  const handleSaveAndExit = async () => {
+    try {
+      await updateCampaign.mutateAsync({
+        id: campaign.id,
+        subject,
+        name: campaignName.trim() || campaign.name,
+        from_name: fromName,
+        from_email: fromEmail,
+      });
+      setExitConfirmOpen(false);
+      onBack();
+    } catch (error) {
+      console.error('Error saving campaign:', error);
+      toast.error('Failed to save changes');
+    }
+  };
+  
+  // Exit without saving
+  const handleExitWithoutSaving = () => {
+    setExitConfirmOpen(false);
+    onBack();
+  };
   
   // Check completion status - hasFrom is true when an imprint is selected (sender is now dynamic per-recipient)
   const hasRecipients = recipientsConfirmed; // Only complete after user confirms
@@ -423,7 +480,7 @@ export function CampaignDetail({ campaign, onBack, onCancelScheduled }: Campaign
     return (
       <div className="space-y-6 max-w-6xl">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={onBack}>
+          <Button variant="ghost" size="icon" onClick={handleBack}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div className="flex-1">
@@ -551,7 +608,7 @@ export function CampaignDetail({ campaign, onBack, onCancelScheduled }: Campaign
     return (
       <div className="space-y-6 max-w-6xl">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={onBack}>
+          <Button variant="ghost" size="icon" onClick={handleBack}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div className="flex-1">
@@ -769,7 +826,7 @@ export function CampaignDetail({ campaign, onBack, onCancelScheduled }: Campaign
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <Button variant="ghost" onClick={onBack}>
+          <Button variant="ghost" onClick={handleBack}>
             Finish later
           </Button>
           <DropdownMenu>
@@ -1608,6 +1665,26 @@ export function CampaignDetail({ campaign, onBack, onCancelScheduled }: Campaign
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Exit Confirmation Dialog */}
+      <AlertDialog open={exitConfirmOpen} onOpenChange={setExitConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Unsaved changes</AlertDialogTitle>
+            <AlertDialogDescription>
+              You have unsaved changes to this campaign. Would you like to save before leaving?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleExitWithoutSaving}>
+              Discard changes
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={handleSaveAndExit}>
+              Save & exit
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
