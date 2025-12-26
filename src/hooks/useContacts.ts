@@ -268,7 +268,16 @@ export function useUpdateContact() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, originalData, ...updates }: Partial<Contact> & { id: string; originalData?: Partial<Contact> }) => {
+    mutationFn: async ({ 
+      id, 
+      originalData, 
+      source = 'manual',
+      ...updates 
+    }: Partial<Contact> & { 
+      id: string; 
+      originalData?: Partial<Contact>;
+      source?: 'manual' | 'import' | 'webhook' | 'bulk';
+    }) => {
       const { imprint, contact_links, ...cleanUpdates } = updates as any;
       
       const { data, error } = await supabase
@@ -281,8 +290,13 @@ export function useUpdateContact() {
       if (error) throw error;
 
       // Build changes object showing from -> to for each field
-      const changes: Record<string, { from: string; to: string }> = {};
-      const fieldsToTrack = ['first_name', 'last_name', 'email', 'phone', 'address', 'timezone', 'contact_type', 'status', 'notes'];
+      const changes: Record<string, { from: string; to: string; fromName?: string; toName?: string }> = {};
+      
+      // Track all relevant fields including new ones
+      const fieldsToTrack = [
+        'first_name', 'last_name', 'email', 'phone', 'address', 'timezone', 
+        'contact_type', 'status', 'imprint_id', 'staff_asc_id', 'staff_ae_id'
+      ];
       
       for (const field of fieldsToTrack) {
         if (field in cleanUpdates) {
@@ -294,10 +308,10 @@ export function useUpdateContact() {
         }
       }
 
-      // Track ASC and AE assignment changes separately with profile names
+      // Track ASC and AE assignment changes separately with profile names (legacy profile-based assignments)
       const assignmentChanges: { field: string; from: string | null; to: string | null; fromName?: string; toName?: string }[] = [];
       
-      // Check if ASC changed
+      // Check if ASC changed (profile-based)
       if ('assigned_asc' in cleanUpdates && originalData?.assigned_asc !== cleanUpdates.assigned_asc) {
         assignmentChanges.push({
           field: 'assigned_asc',
@@ -306,7 +320,7 @@ export function useUpdateContact() {
         });
       }
       
-      // Check if AE changed
+      // Check if AE changed (profile-based)
       if ('assigned_ae' in cleanUpdates && originalData?.assigned_ae !== cleanUpdates.assigned_ae) {
         assignmentChanges.push({
           field: 'assigned_ae',
@@ -336,6 +350,52 @@ export function useUpdateContact() {
         }
       }
 
+      // Fetch staff names for staff-based field changes
+      const staffFieldsChanged = ['staff_asc_id', 'staff_ae_id'].filter(f => f in changes);
+      if (staffFieldsChanged.length > 0) {
+        const staffIds = staffFieldsChanged
+          .flatMap(f => [changes[f].from, changes[f].to])
+          .filter((id): id is string => !!id);
+        
+        if (staffIds.length > 0) {
+          const { data: staff } = await supabase
+            .from('staff')
+            .select('id, full_name')
+            .in('id', staffIds);
+          
+          const staffMap = new Map(staff?.map(s => [s.id, s.full_name]) || []);
+          
+          for (const field of staffFieldsChanged) {
+            if (changes[field].from) {
+              changes[field].fromName = staffMap.get(changes[field].from) || 'Unknown';
+            }
+            if (changes[field].to) {
+              changes[field].toName = staffMap.get(changes[field].to) || 'Unknown';
+            }
+          }
+        }
+      }
+
+      // Fetch imprint names for imprint_id changes
+      if ('imprint_id' in changes) {
+        const imprintIds = [changes.imprint_id.from, changes.imprint_id.to].filter((id): id is string => !!id);
+        if (imprintIds.length > 0) {
+          const { data: imprints } = await supabase
+            .from('imprints')
+            .select('id, name')
+            .in('id', imprintIds);
+          
+          const imprintMap = new Map(imprints?.map(i => [i.id, i.name]) || []);
+          
+          if (changes.imprint_id.from) {
+            changes.imprint_id.fromName = imprintMap.get(changes.imprint_id.from) || 'Unknown';
+          }
+          if (changes.imprint_id.to) {
+            changes.imprint_id.toName = imprintMap.get(changes.imprint_id.to) || 'Unknown';
+          }
+        }
+      }
+
       const { data: { user } } = await supabase.auth.getUser();
 
       // Log regular field changes
@@ -349,12 +409,12 @@ export function useUpdateContact() {
           contact_id: id,
           activity_type: 'contact_updated',
           description,
-          metadata: { changes },
+          metadata: { changes, source },
           created_by: user?.id,
         });
       }
 
-      // Log assignment changes separately
+      // Log assignment changes separately (legacy profile-based)
       for (const change of assignmentChanges) {
         const fieldLabel = change.field === 'assigned_asc' ? 'A.S.C.' : 'A.E.';
         let description: string;
@@ -377,6 +437,7 @@ export function useUpdateContact() {
             to: change.to,
             fromName: change.fromName,
             toName: change.toName,
+            source,
           },
           created_by: user?.id,
         });
@@ -389,6 +450,7 @@ export function useUpdateContact() {
       queryClient.invalidateQueries({ queryKey: ['contacts-paginated'] });
       queryClient.invalidateQueries({ queryKey: ['contact', variables.id] });
       queryClient.invalidateQueries({ queryKey: ['contact-activity', variables.id] });
+      queryClient.invalidateQueries({ queryKey: ['contact-history', variables.id] });
     },
     onError: (error: Error) => {
       toast({ title: 'Error updating contact', description: error.message, variant: 'destructive' });
