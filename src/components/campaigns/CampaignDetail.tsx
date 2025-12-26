@@ -143,8 +143,13 @@ export function CampaignDetail({ campaign, onBack, onCancelScheduled }: Campaign
     }
   };
 
+  // Track if user has explicitly confirmed recipients
+  const [recipientsConfirmed, setRecipientsConfirmed] = useState(false);
+  // Track if user has explicitly confirmed send time
+  const [sendTimeConfirmed, setSendTimeConfirmed] = useState(false);
+  
   // Check completion status - hasFrom is true when an imprint is selected (sender is now dynamic per-recipient)
-  const hasRecipients = true; // Always has recipients (all contacts or specific lists)
+  const hasRecipients = recipientsConfirmed; // Only complete after user confirms
   const hasFrom = !!selectedImprintId;
   const hasSubject = !!campaign.subject || !!subject;
   const hasContent = !!campaign.html_content || (campaign.blocks_json && campaign.blocks_json.length > 0);
@@ -157,7 +162,7 @@ export function CampaignDetail({ campaign, onBack, onCancelScheduled }: Campaign
     return scheduledAt > new Date();
   };
   
-  const hasScheduleTime = sendTimeOption === 'now' || (scheduledDate && scheduledTime && isScheduledTimeValid());
+  const hasScheduleTime = sendTimeConfirmed && (sendTimeOption === 'now' || (scheduledDate && scheduledTime && isScheduledTimeValid()));
   const isReadyToSend = hasRecipients && hasFrom && hasSubject && hasContent && hasScheduleTime;
 
   // Use human opens for accurate rate calculation
@@ -1082,7 +1087,7 @@ export function CampaignDetail({ campaign, onBack, onCancelScheduled }: Campaign
                         </div>
                       )}
                     </div>
-                    <Button size="sm" onClick={() => setToOpen(false)}>Done</Button>
+                    <Button size="sm" onClick={() => { setRecipientsConfirmed(true); setToOpen(false); }}>Confirm Recipients</Button>
                   </div>
                 </CollapsibleContent>
               </Card>
@@ -1095,9 +1100,13 @@ export function CampaignDetail({ campaign, onBack, onCancelScheduled }: Campaign
                   <div className="flex items-start justify-between p-5 cursor-pointer hover:bg-muted/30 transition-colors">
                     <div className="flex gap-4">
                       <div className="mt-0.5">
-                        <div className="h-6 w-6 rounded-full bg-primary flex items-center justify-center">
-                          <Check className="h-4 w-4 text-primary-foreground" />
-                        </div>
+                        {hasScheduleTime ? (
+                          <div className="h-6 w-6 rounded-full bg-primary flex items-center justify-center">
+                            <Check className="h-4 w-4 text-primary-foreground" />
+                          </div>
+                        ) : (
+                          <Circle className="h-6 w-6 text-muted-foreground" />
+                        )}
                       </div>
                       <div>
                         <h3 className="font-semibold text-base">Send time</h3>
@@ -1177,7 +1186,7 @@ export function CampaignDetail({ campaign, onBack, onCancelScheduled }: Campaign
                         </div>
                       )}
                     </div>
-                    <Button size="sm" onClick={() => setSendTimeOpen(false)}>Done</Button>
+                    <Button size="sm" onClick={() => { setSendTimeConfirmed(true); setSendTimeOpen(false); }}>Confirm Send Time</Button>
                   </div>
                 </CollapsibleContent>
               </Card>
