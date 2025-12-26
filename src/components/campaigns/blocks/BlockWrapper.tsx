@@ -102,7 +102,7 @@ export function BlockWrapper({
       </div>
 
       {/* Block content */}
-      <div className="p-2">
+      <div className={block.type === 'image' ? '' : 'p-2'}>
         {children}
       </div>
 
