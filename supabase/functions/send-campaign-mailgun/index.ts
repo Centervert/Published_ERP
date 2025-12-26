@@ -147,7 +147,9 @@ function renderBlockToHtml(block: EmailBlock, options: RenderOptions): string {
       const footerContent = escapeHtml(block.content as string || '');
       const companyAddress = (block.companyAddress as string) || '';
       const reasonText = (block.reasonText as string) || '';
-      return `<tr><td style="background-color: ${footerBg}; padding: 24px; text-align: center;"><p style="margin: 0 0 12px 0; color: ${footerText}; font-size: 14px; font-family: ${bodyFont};">${footerContent}</p>${companyAddress ? `<p style="margin: 0 0 12px 0; color: ${footerText}; font-size: 12px; font-family: ${bodyFont};">${escapeHtml(companyAddress)}</p>` : ''}${reasonText ? `<p style="margin: 0 0 12px 0; color: ${footerText}; font-size: 12px; font-style: italic; font-family: ${bodyFont};">${escapeHtml(reasonText)}</p>` : ''}${block.showUnsubscribe !== false ? `<a href="${unsubUrl}" style="color: ${footerText}; font-size: 12px; text-decoration: underline; font-family: ${bodyFont};">${escapeHtml((block.unsubscribeText as string) || 'Unsubscribe')}</a>` : ''}</td></tr>`;
+      // CAN-SPAM compliant phone number
+      const COMPANY_PHONE = '866-381-2665';
+      return `<tr><td style="background-color: ${footerBg}; padding: 24px; text-align: center;"><p style="margin: 0 0 12px 0; color: ${footerText}; font-size: 14px; font-family: ${bodyFont};">${footerContent}</p>${companyAddress ? `<p style="margin: 0 0 8px 0; color: ${footerText}; font-size: 12px; font-family: ${bodyFont};">${escapeHtml(companyAddress)}</p><p style="margin: 0 0 12px 0; color: ${footerText}; font-size: 12px; font-family: ${bodyFont};">${COMPANY_PHONE}</p>` : ''}${reasonText ? `<p style="margin: 0 0 12px 0; color: ${footerText}; font-size: 12px; font-style: italic; font-family: ${bodyFont};">${escapeHtml(reasonText)}</p>` : ''}${block.showUnsubscribe !== false ? `<a href="${unsubUrl}" style="color: ${footerText}; font-size: 12px; text-decoration: underline; font-family: ${bodyFont};">${escapeHtml((block.unsubscribeText as string) || 'Unsubscribe')}</a>` : ''}</td></tr>`;
 
     default:
       console.log(`[send-campaign-mailgun] Unknown block type: ${block.type}`);
