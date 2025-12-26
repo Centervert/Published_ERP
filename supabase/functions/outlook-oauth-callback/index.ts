@@ -1,10 +1,13 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-// Get the app URL from environment or use a default
+// Get the app URL from environment - required for production
 const getAppUrl = () => {
-  // In production, this should be set to your app's URL
-  return Deno.env.get('APP_URL') || 'https://d23f8566-3f14-446e-8064-8aae6e9ffb2b.lovableproject.com';
+  const appUrl = Deno.env.get('APP_URL');
+  if (!appUrl) {
+    console.warn('[outlook-oauth-callback] APP_URL not set, using fallback');
+  }
+  return appUrl || 'https://d23f8566-3f14-446e-8064-8aae6e9ffb2b.lovableproject.com';
 };
 
 serve(async (req) => {

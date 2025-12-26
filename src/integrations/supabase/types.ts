@@ -991,6 +991,7 @@ export type Database = {
           footer_image_url: string | null
           from_email: string
           from_name: string
+          header_image_dark_url: string | null
           header_image_url: string | null
           heading_font: string | null
           icon_url: string | null
@@ -1018,6 +1019,7 @@ export type Database = {
           footer_image_url?: string | null
           from_email: string
           from_name: string
+          header_image_dark_url?: string | null
           header_image_url?: string | null
           heading_font?: string | null
           icon_url?: string | null
@@ -1045,6 +1047,7 @@ export type Database = {
           footer_image_url?: string | null
           from_email?: string
           from_name?: string
+          header_image_dark_url?: string | null
           header_image_url?: string | null
           heading_font?: string | null
           icon_url?: string | null
