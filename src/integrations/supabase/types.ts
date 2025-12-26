@@ -205,6 +205,7 @@ export type Database = {
           footer_reason_template: string | null
           from_email: string | null
           from_name: string | null
+          header_image_dark_url: string | null
           header_image_url: string | null
           heading_font: string | null
           icon_url: string | null
@@ -235,6 +236,7 @@ export type Database = {
           footer_reason_template?: string | null
           from_email?: string | null
           from_name?: string | null
+          header_image_dark_url?: string | null
           header_image_url?: string | null
           heading_font?: string | null
           icon_url?: string | null
@@ -265,6 +267,7 @@ export type Database = {
           footer_reason_template?: string | null
           from_email?: string | null
           from_name?: string | null
+          header_image_dark_url?: string | null
           header_image_url?: string | null
           heading_font?: string | null
           icon_url?: string | null

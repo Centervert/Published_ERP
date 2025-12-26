@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AssetUpload } from './AssetUpload';
+import { DualAssetUpload } from './DualAssetUpload';
 import { ColorPicker } from './ColorPicker';
 import { GoogleFontSelector } from './GoogleFontSelector';
 import { useCompany, Company } from '@/hooks/useCompany';
@@ -73,8 +74,8 @@ export function CompanySettingsSheet({ open, onClose, company }: CompanySettings
     logo?: File;
     logo_dark?: File;
     icon?: File;
-    favicon?: File;
     header_image?: File;
+    header_image_dark?: File;
     footer_image?: File;
   }>({});
   const [clearedAssets, setClearedAssets] = useState<Set<string>>(new Set());
@@ -128,9 +129,11 @@ export function CompanySettingsSheet({ open, onClose, company }: CompanySettings
         // Assets - use new upload, or keep existing unless cleared
         logo_url: assetUrls.logo_url || (clearedAssets.has('logo') ? null : company?.logo_url) || null,
         logo_dark_url: assetUrls.logo_dark_url || (clearedAssets.has('logo_dark') ? null : company?.logo_dark_url) || null,
+        // Icon and favicon share the same file
         icon_url: assetUrls.icon_url || (clearedAssets.has('icon') ? null : company?.icon_url) || null,
-        favicon_url: assetUrls.favicon_url || (clearedAssets.has('favicon') ? null : company?.favicon_url) || null,
+        favicon_url: assetUrls.icon_url || (clearedAssets.has('icon') ? null : company?.icon_url) || null,
         header_image_url: assetUrls.header_image_url || (clearedAssets.has('header_image') ? null : company?.header_image_url) || null,
+        header_image_dark_url: assetUrls.header_image_dark_url || (clearedAssets.has('header_image_dark') ? null : (company as any)?.header_image_dark_url) || null,
         footer_image_url: assetUrls.footer_image_url || (clearedAssets.has('footer_image') ? null : company?.footer_image_url) || null,
       };
 
@@ -479,35 +482,53 @@ export function CompanySettingsSheet({ open, onClose, company }: CompanySettings
                 />
               </TabsContent>
 
-              <TabsContent value="assets" className="space-y-4 mt-4">
-                <AssetUpload
-                  label="Logo (Light Background)"
-                  value={clearedAssets.has('logo') ? null : (company?.logo_url || null)}
-                  onChange={(file) => {
+              <TabsContent value="assets" className="space-y-6 mt-4">
+                <DualAssetUpload
+                  label="Company Logo"
+                  lightValue={clearedAssets.has('logo') ? null : (company?.logo_url || null)}
+                  darkValue={clearedAssets.has('logo_dark') ? null : (company?.logo_dark_url || null)}
+                  onLightChange={(file) => {
                     setPendingAssets(prev => ({ ...prev, logo: file || undefined }));
                     setClearedAssets(prev => { const n = new Set(prev); n.delete('logo'); return n; });
                   }}
-                  onClear={() => {
-                    setPendingAssets(prev => ({ ...prev, logo: undefined }));
-                    setClearedAssets(prev => new Set(prev).add('logo'));
-                  }}
-                />
-
-                <AssetUpload
-                  label="Logo (Dark Background)"
-                  value={clearedAssets.has('logo_dark') ? null : (company?.logo_dark_url || null)}
-                  onChange={(file) => {
+                  onDarkChange={(file) => {
                     setPendingAssets(prev => ({ ...prev, logo_dark: file || undefined }));
                     setClearedAssets(prev => { const n = new Set(prev); n.delete('logo_dark'); return n; });
                   }}
-                  onClear={() => {
+                  onLightClear={() => {
+                    setPendingAssets(prev => ({ ...prev, logo: undefined }));
+                    setClearedAssets(prev => new Set(prev).add('logo'));
+                  }}
+                  onDarkClear={() => {
                     setPendingAssets(prev => ({ ...prev, logo_dark: undefined }));
                     setClearedAssets(prev => new Set(prev).add('logo_dark'));
                   }}
                 />
 
+                <DualAssetUpload
+                  label="Email Header Image"
+                  lightValue={clearedAssets.has('header_image') ? null : (company?.header_image_url || null)}
+                  darkValue={clearedAssets.has('header_image_dark') ? null : ((company as any)?.header_image_dark_url || null)}
+                  onLightChange={(file) => {
+                    setPendingAssets(prev => ({ ...prev, header_image: file || undefined }));
+                    setClearedAssets(prev => { const n = new Set(prev); n.delete('header_image'); return n; });
+                  }}
+                  onDarkChange={(file) => {
+                    setPendingAssets(prev => ({ ...prev, header_image_dark: file || undefined }));
+                    setClearedAssets(prev => { const n = new Set(prev); n.delete('header_image_dark'); return n; });
+                  }}
+                  onLightClear={() => {
+                    setPendingAssets(prev => ({ ...prev, header_image: undefined }));
+                    setClearedAssets(prev => new Set(prev).add('header_image'));
+                  }}
+                  onDarkClear={() => {
+                    setPendingAssets(prev => ({ ...prev, header_image_dark: undefined }));
+                    setClearedAssets(prev => new Set(prev).add('header_image_dark'));
+                  }}
+                />
+
                 <AssetUpload
-                  label="Icon"
+                  label="Icon / Favicon (shared)"
                   value={clearedAssets.has('icon') ? null : (company?.icon_url || null)}
                   onChange={(file) => {
                     setPendingAssets(prev => ({ ...prev, icon: file || undefined }));
@@ -516,32 +537,6 @@ export function CompanySettingsSheet({ open, onClose, company }: CompanySettings
                   onClear={() => {
                     setPendingAssets(prev => ({ ...prev, icon: undefined }));
                     setClearedAssets(prev => new Set(prev).add('icon'));
-                  }}
-                />
-
-                <AssetUpload
-                  label="Favicon"
-                  value={clearedAssets.has('favicon') ? null : (company?.favicon_url || null)}
-                  onChange={(file) => {
-                    setPendingAssets(prev => ({ ...prev, favicon: file || undefined }));
-                    setClearedAssets(prev => { const n = new Set(prev); n.delete('favicon'); return n; });
-                  }}
-                  onClear={() => {
-                    setPendingAssets(prev => ({ ...prev, favicon: undefined }));
-                    setClearedAssets(prev => new Set(prev).add('favicon'));
-                  }}
-                />
-
-                <AssetUpload
-                  label="Email Header Image"
-                  value={clearedAssets.has('header_image') ? null : (company?.header_image_url || null)}
-                  onChange={(file) => {
-                    setPendingAssets(prev => ({ ...prev, header_image: file || undefined }));
-                    setClearedAssets(prev => { const n = new Set(prev); n.delete('header_image'); return n; });
-                  }}
-                  onClear={() => {
-                    setPendingAssets(prev => ({ ...prev, header_image: undefined }));
-                    setClearedAssets(prev => new Set(prev).add('header_image'));
                   }}
                 />
 
