@@ -535,6 +535,240 @@ export type Database = {
           },
         ]
       }
+      dev_document_versions: {
+        Row: {
+          change_summary: string | null
+          content_md: string
+          created_at: string
+          created_by: string | null
+          document_id: string
+          id: string
+          is_published: boolean
+          version_number: number
+        }
+        Insert: {
+          change_summary?: string | null
+          content_md: string
+          created_at?: string
+          created_by?: string | null
+          document_id: string
+          id?: string
+          is_published?: boolean
+          version_number: number
+        }
+        Update: {
+          change_summary?: string | null
+          content_md?: string
+          created_at?: string
+          created_by?: string | null
+          document_id?: string
+          id?: string
+          is_published?: boolean
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dev_document_versions_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "dev_documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dev_documents: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          slug: string
+          status: string
+          summary: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          slug: string
+          status?: string
+          summary?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          slug?: string
+          status?: string
+          summary?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      dev_items: {
+        Row: {
+          archived_at: string | null
+          body_md: string | null
+          created_at: string
+          created_by: string | null
+          document_id: string
+          due_date: string | null
+          id: string
+          is_archived: boolean
+          item_type: string
+          owner_name: string | null
+          owner_user_id: string | null
+          phase: string | null
+          related_id: string | null
+          related_type: string | null
+          severity: string | null
+          status: string | null
+          tags: string[] | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          archived_at?: string | null
+          body_md?: string | null
+          created_at?: string
+          created_by?: string | null
+          document_id: string
+          due_date?: string | null
+          id?: string
+          is_archived?: boolean
+          item_type: string
+          owner_name?: string | null
+          owner_user_id?: string | null
+          phase?: string | null
+          related_id?: string | null
+          related_type?: string | null
+          severity?: string | null
+          status?: string | null
+          tags?: string[] | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          archived_at?: string | null
+          body_md?: string | null
+          created_at?: string
+          created_by?: string | null
+          document_id?: string
+          due_date?: string | null
+          id?: string
+          is_archived?: boolean
+          item_type?: string
+          owner_name?: string | null
+          owner_user_id?: string | null
+          phase?: string | null
+          related_id?: string | null
+          related_type?: string | null
+          severity?: string | null
+          status?: string | null
+          tags?: string[] | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dev_items_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "dev_documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dev_meeting_links: {
+        Row: {
+          created_at: string
+          id: string
+          item_id: string
+          meeting_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          item_id: string
+          meeting_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          item_id?: string
+          meeting_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dev_meeting_links_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "dev_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dev_meeting_links_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "dev_meetings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dev_meetings: {
+        Row: {
+          action_items_md: string | null
+          attendees: string[] | null
+          created_at: string
+          created_by: string | null
+          document_id: string
+          id: string
+          meeting_date: string | null
+          notes_md: string | null
+          outcomes_md: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          action_items_md?: string | null
+          attendees?: string[] | null
+          created_at?: string
+          created_by?: string | null
+          document_id: string
+          id?: string
+          meeting_date?: string | null
+          notes_md?: string | null
+          outcomes_md?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          action_items_md?: string | null
+          attendees?: string[] | null
+          created_at?: string
+          created_by?: string | null
+          document_id?: string
+          id?: string
+          meeting_date?: string | null
+          notes_md?: string | null
+          outcomes_md?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dev_meetings_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "dev_documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_events: {
         Row: {
           campaign_id: string | null

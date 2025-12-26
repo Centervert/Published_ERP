@@ -19,6 +19,7 @@ import Users from "./pages/Users";
 import MyProfile from "./pages/MyProfile";
 import Products from "./pages/Products";
 import Deals from "./pages/Deals";
+import Development from "./pages/Development";
 import Unsubscribed from "./pages/Unsubscribed";
 import NotFound from "./pages/NotFound";
 
@@ -137,6 +138,16 @@ const App = () => (
                 <ProtectedRoute>
                   <DashboardLayout>
                     <MyProfile />
+                  </DashboardLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/development"
+              element={
+                <ProtectedRoute>
+                  <DashboardLayout>
+                    <Development />
                   </DashboardLayout>
                 </ProtectedRoute>
               }
