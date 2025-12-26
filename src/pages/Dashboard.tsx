@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useContacts } from '@/hooks/useContacts';
+
 import { useCampaigns } from '@/hooks/useCampaigns';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -24,8 +24,39 @@ type TimePeriod = 7 | 30 | 60;
 
 export default function Dashboard() {
   const [timePeriod, setTimePeriod] = useState<TimePeriod>(30);
-  const { contacts, isLoading: contactsLoading } = useContacts();
   const { campaigns, isLoading: campaignsLoading } = useCampaigns();
+
+  // Get accurate contact counts using count query (not limited to 1000)
+  const { data: contactCounts, isLoading: countsLoading } = useQuery({
+    queryKey: ['contact-counts'],
+    queryFn: async () => {
+      const { count: total, error: totalError } = await supabase
+        .from('contacts')
+        .select('*', { count: 'exact', head: true });
+      
+      if (totalError) throw totalError;
+
+      const { count: active, error: activeError } = await supabase
+        .from('contacts')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'active');
+      
+      if (activeError) throw activeError;
+
+      const { count: unsubscribed, error: unsubError } = await supabase
+        .from('contacts')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'unsubscribed');
+      
+      if (unsubError) throw unsubError;
+
+      return {
+        total: total || 0,
+        active: active || 0,
+        unsubscribed: unsubscribed || 0,
+      };
+    },
+  });
 
   const { data: emailStats } = useQuery({
     queryKey: ['email-stats', timePeriod],
@@ -56,10 +87,9 @@ export default function Dashboard() {
     },
   });
 
-  const activeContacts = contacts.filter(c => c.status === 'active').length;
   const recentCampaigns = campaigns.slice(0, 5);
 
-  const isLoading = contactsLoading || campaignsLoading;
+  const isLoading = countsLoading || campaignsLoading;
 
   if (isLoading) {
     return (
@@ -201,10 +231,10 @@ export default function Dashboard() {
                   <span>Total contacts</span>
                 </div>
                 <p className="text-3xl font-light tracking-tight">
-                  {contacts.length}
+                  {contactCounts?.total?.toLocaleString() || 0}
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  {activeContacts} active
+                  {contactCounts?.active?.toLocaleString() || 0} active
                 </p>
               </div>
             </div>
@@ -299,16 +329,16 @@ export default function Dashboard() {
           <CardContent className="pt-6">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
               <div className="text-center p-4 rounded-lg bg-muted/50">
-                <p className="text-3xl font-light mb-1">{contacts.length}</p>
+                <p className="text-3xl font-light mb-1">{contactCounts?.total?.toLocaleString() || 0}</p>
                 <p className="text-sm text-muted-foreground">Total contacts</p>
               </div>
               <div className="text-center p-4 rounded-lg bg-muted/50">
-                <p className="text-3xl font-light mb-1">{activeContacts}</p>
+                <p className="text-3xl font-light mb-1">{contactCounts?.active?.toLocaleString() || 0}</p>
                 <p className="text-sm text-muted-foreground">Active subscribers</p>
               </div>
               <div className="text-center p-4 rounded-lg bg-muted/50">
                 <p className="text-3xl font-light mb-1">
-                  {contacts.filter(c => c.status === 'unsubscribed').length}
+                  {contactCounts?.unsubscribed?.toLocaleString() || 0}
                 </p>
                 <p className="text-sm text-muted-foreground">Unsubscribed</p>
               </div>
