@@ -27,7 +27,6 @@
    - [templates](#templates)
    - [campaigns](#campaigns)
    - [campaign_lists](#campaign_lists)
-   - [email_queue](#email_queue)
    - [email_events](#email_events)
 5. [Storage Buckets](#storage-buckets)
 6. [Functions](#functions)
@@ -352,34 +351,6 @@ Junction table: campaigns ↔ lists (recipient selection).
 | `list_id` | uuid | NO | - | List reference |
 
 **Primary Key:** `(campaign_id, list_id)`
-
----
-
-### email_queue
-Batch email sending queue for VPS worker.
-
-| Column | Type | Nullable | Default | Description |
-|--------|------|----------|---------|-------------|
-| `id` | uuid | NO | `gen_random_uuid()` | Primary key |
-| `campaign_id` | uuid | YES | NULL | Parent campaign |
-| `contact_id` | uuid | YES | NULL | Recipient contact |
-| `email` | text | NO | - | Recipient email |
-| `subject` | text | YES | NULL | Email subject (denormalized) |
-| `from_name` | text | YES | NULL | Sender name (denormalized) |
-| `from_email` | text | YES | NULL | Sender email (denormalized) |
-| `reply_to_email` | text | YES | NULL | Reply-to (denormalized) |
-| `html_content` | text | YES | NULL | Full HTML (denormalized) |
-| `contact_first_name` | text | YES | NULL | For personalization |
-| `contact_last_name` | text | YES | NULL | For personalization |
-| `status` | text | YES | `'pending'` | pending, sending, sent, failed |
-| `attempts` | integer | YES | `0` | Send attempt count |
-| `last_error` | text | YES | NULL | Last error message |
-| `created_at` | timestamptz | YES | `now()` | Queue timestamp |
-| `processed_at` | timestamptz | YES | NULL | Processing timestamp |
-
-**Indexes:**
-- `idx_email_queue_campaign` on `campaign_id`
-- `idx_email_queue_status` on `status`
 
 ---
 
