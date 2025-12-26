@@ -66,7 +66,8 @@ export function StaffTable({ onInvite }: StaffTableProps) {
 
   const { staff, isLoading, toggleActive, linkStaffToUser } = useStaff();
   const { users, updateUserRole } = useUsers();
-  const { hasRole: canManage, currentRole } = useHasRole(['super_admin', 'admin']);
+  const { hasRole: canManage } = useHasRole(['super_admin', 'admin']);
+  const { hasRole: canManagePortal, currentRole } = useHasRole(['super_admin']);
 
   // Get unique departments from staff
   const departments = useMemo(() => {
@@ -271,7 +272,7 @@ export function StaffTable({ onInvite }: StaffTableProps) {
                   </TableCell>
                   <TableCell className="whitespace-nowrap">
                     {staffMember.user_id && staffMember.linked_user ? (
-                      canManage ? (
+                      canManagePortal ? (
                         <Select
                           value={staffMember.linked_user.role || 'member'}
                           onValueChange={(value: AppRole) => handleRoleChange(staffMember.user_id!, value)}
@@ -293,7 +294,7 @@ export function StaffTable({ onInvite }: StaffTableProps) {
                         </span>
                       )
                     ) : (
-                      canManage ? (
+                      canManagePortal ? (
                         <Button
                           variant="ghost"
                           size="sm"
