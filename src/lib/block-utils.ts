@@ -1,16 +1,51 @@
-import type { EmailBlock, AIEmailBlock } from '@/types/email-blocks';
+import type { EmailBlock, AIEmailBlock, HeaderBlock, FooterBlock } from '@/types/email-blocks';
+
+// Default company info for footer
+const DEFAULT_COMPANY_ADDRESS = 'Author Services, LLC. 555 Winderley Pl, Maitland, FL 32751 866-381-2665';
+const DEFAULT_REASON_TEXT = 'You received this email because you are a valued Author Services customer.';
 
 // Generate a unique ID for blocks
 export function generateBlockId(): string {
   return `block_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 }
 
-// Convert AI output blocks to full blocks with IDs
-export function aiBlocksToEmailBlocks(aiBlocks: AIEmailBlock[]): EmailBlock[] {
-  return aiBlocks.map((block) => ({
-    ...block,
-    id: generateBlockId(),
-  })) as EmailBlock[];
+// Interface for imprint data used in block normalization
+interface ImprintData {
+  name?: string;
+  logo_url?: string | null;
+  primary_color?: string | null;
+}
+
+// Convert AI output blocks to full blocks with IDs and normalize with imprint data
+export function aiBlocksToEmailBlocks(aiBlocks: AIEmailBlock[], imprint?: ImprintData): EmailBlock[] {
+  return aiBlocks.map((block) => {
+    const baseBlock = {
+      ...block,
+      id: generateBlockId(),
+    };
+    
+    // Normalize header blocks - ensure logo URL is from imprint
+    if (block.type === 'header' && imprint?.logo_url) {
+      return {
+        ...baseBlock,
+        logoUrl: imprint.logo_url,
+      } as HeaderBlock;
+    }
+    
+    // Normalize footer blocks - ensure company address is correct
+    if (block.type === 'footer') {
+      const footerBlock = baseBlock as FooterBlock;
+      return {
+        ...footerBlock,
+        companyAddress: footerBlock.companyAddress || DEFAULT_COMPANY_ADDRESS,
+        reasonText: footerBlock.reasonText || DEFAULT_REASON_TEXT,
+        content: footerBlock.content || `© ${imprint?.name || 'Author Services'}. All rights reserved.`,
+        showUnsubscribe: true,
+      } as FooterBlock;
+    }
+    
+    return baseBlock;
+  }) as EmailBlock[];
 }
 
 // Create a new block with default values
