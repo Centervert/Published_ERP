@@ -33,7 +33,7 @@ export function EmailPreview({ html, isStreaming }: EmailPreviewProps) {
       <div className="flex-1 overflow-auto p-4">
         <div 
           className={`mx-auto transition-all duration-300 ${
-            view === 'desktop' ? 'max-w-[600px]' : 'max-w-[375px]'
+            view === 'desktop' ? 'w-full' : 'max-w-[375px]'
           }`}
         >
           {html ? (
