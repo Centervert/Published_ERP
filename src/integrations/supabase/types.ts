@@ -623,6 +623,7 @@ export type Database = {
           owner_name: string | null
           owner_user_id: string | null
           phase: string | null
+          priority: number | null
           related_id: string | null
           related_type: string | null
           severity: string | null
@@ -644,6 +645,7 @@ export type Database = {
           owner_name?: string | null
           owner_user_id?: string | null
           phase?: string | null
+          priority?: number | null
           related_id?: string | null
           related_type?: string | null
           severity?: string | null
@@ -665,6 +667,7 @@ export type Database = {
           owner_name?: string | null
           owner_user_id?: string | null
           phase?: string | null
+          priority?: number | null
           related_id?: string | null
           related_type?: string | null
           severity?: string | null

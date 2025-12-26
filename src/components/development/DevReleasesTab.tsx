@@ -51,6 +51,7 @@ export function DevReleasesTab({ documentId, isAdmin }: DevReleasesTabProps) {
         related_type: null,
         related_id: null,
         tags: null,
+        priority: null,
         is_archived: false,
       });
       toast.success('Release note created');

@@ -21,6 +21,7 @@ export interface DevItem {
   related_type: string | null;
   related_id: string | null;
   tags: string[] | null;
+  priority: number | null;
   is_archived: boolean;
   archived_at: string | null;
   created_by: string | null;
@@ -41,6 +42,7 @@ export function useDevItems(documentId: string | undefined, itemType?: DevItemTy
         .select('*')
         .eq('document_id', documentId)
         .eq('is_archived', false)
+        .order('priority', { ascending: false, nullsFirst: false })
         .order('created_at', { ascending: false });
       
       if (itemType) {

@@ -80,6 +80,7 @@ export function DevDecisionsTab({ documentId, isAdmin }: DevDecisionsTabProps) {
         phase: null,
         related_type: null,
         related_id: null,
+        priority: null,
         is_archived: false,
       });
       toast.success('Decision created');
