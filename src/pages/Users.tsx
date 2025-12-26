@@ -376,8 +376,8 @@ export default function Users() {
                 </Select>
                 <p className="text-xs text-muted-foreground">
                   {currentRole === 'super_admin' 
-                    ? 'As Super Admin, you can assign any role.'
-                    : 'As Admin, you can assign roles except Super Admin.'}
+                    ? 'As System Admin, you can assign any role.'
+                    : 'As Admin, you can assign roles except System Admin.'}
                 </p>
               </div>
             )}
