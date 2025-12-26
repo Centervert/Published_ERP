@@ -507,6 +507,8 @@ export type Database = {
           last_name: string | null
           notes: string | null
           phone: string | null
+          staff_ae_id: string | null
+          staff_asc_id: string | null
           status: string | null
           timezone: string | null
           updated_at: string | null
@@ -527,6 +529,8 @@ export type Database = {
           last_name?: string | null
           notes?: string | null
           phone?: string | null
+          staff_ae_id?: string | null
+          staff_asc_id?: string | null
           status?: string | null
           timezone?: string | null
           updated_at?: string | null
@@ -547,6 +551,8 @@ export type Database = {
           last_name?: string | null
           notes?: string | null
           phone?: string | null
+          staff_ae_id?: string | null
+          staff_asc_id?: string | null
           status?: string | null
           timezone?: string | null
           updated_at?: string | null
@@ -571,6 +577,20 @@ export type Database = {
             columns: ["imprint_id"]
             isOneToOne: false
             referencedRelation: "imprints"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contacts_staff_ae_id_fkey"
+            columns: ["staff_ae_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contacts_staff_asc_id_fkey"
+            columns: ["staff_asc_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
             referencedColumns: ["id"]
           },
         ]
@@ -1223,6 +1243,53 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      staff: {
+        Row: {
+          active: boolean | null
+          created_at: string | null
+          department: string | null
+          email: string
+          full_name: string
+          id: string
+          phone: string | null
+          title: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          active?: boolean | null
+          created_at?: string | null
+          department?: string | null
+          email: string
+          full_name: string
+          id?: string
+          phone?: string | null
+          title?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          active?: boolean | null
+          created_at?: string | null
+          department?: string | null
+          email?: string
+          full_name?: string
+          id?: string
+          phone?: string | null
+          title?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       tags: {
         Row: {

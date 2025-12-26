@@ -172,9 +172,17 @@ serve(async (req) => {
     // Load lookups (small data)
     const { data: imprints } = await supabase.from("imprints").select("id, name");
     const { data: users } = await supabase.from("profiles").select("id, full_name, email");
+    const { data: staffMembers } = await supabase.from("staff").select("id, full_name, email");
 
     const imprintLookup = new Map<string, string>();
     imprints?.forEach(imp => imprintLookup.set(imp.name.toLowerCase().trim(), imp.id));
+
+    const staffEmailLookup = new Map<string, string>();
+    const staffNameLookup = new Map<string, string>();
+    staffMembers?.forEach(s => {
+      if (s.email) staffEmailLookup.set(s.email.toLowerCase().trim(), s.id);
+      if (s.full_name) staffNameLookup.set(s.full_name.toLowerCase().trim(), s.id);
+    });
 
     const userNameLookup = new Map<string, string>();
     const userEmailLookup = new Map<string, string>();
@@ -265,15 +273,27 @@ serve(async (req) => {
           }
         }
 
+        // Match ASC: staff first, then profile
+        let staffAscId: string | undefined;
         let ascId: string | undefined;
         const ascNameRaw = ascNameIndex >= 0 ? row[ascNameIndex]?.trim() : '';
         const ascEmailRaw = ascEmailIndex >= 0 ? row[ascEmailIndex]?.trim()?.toLowerCase() : '';
 
-        if (ascNameIndex >= 0 && ascNameRaw && ascNameRaw.toLowerCase() !== 'unassigned') {
-          ascId = userNameLookup.get(ascNameRaw.toLowerCase().trim()) || placeholderLookup.get(ascNameRaw.toLowerCase().trim());
+        // Priority 1: Staff by email
+        if (ascEmailRaw && ascEmailRaw !== 'no owner_email') {
+          staffAscId = staffEmailLookup.get(ascEmailRaw);
         }
-        if (!ascId && ascEmailIndex >= 0 && ascEmailRaw && ascEmailRaw !== 'no owner_email') {
-          ascId = userEmailLookup.get(ascEmailRaw) || placeholderLookup.get(ascEmailRaw);
+        // Priority 2: Staff by name
+        if (!staffAscId && ascNameRaw && ascNameRaw.toLowerCase() !== 'unassigned') {
+          staffAscId = staffNameLookup.get(ascNameRaw.toLowerCase().trim());
+        }
+        // Priority 3: Profile by name (legacy)
+        if (!staffAscId && ascNameRaw && ascNameRaw.toLowerCase() !== 'unassigned') {
+          ascId = userNameLookup.get(ascNameRaw.toLowerCase().trim());
+        }
+        // Priority 4: Profile by email (legacy)
+        if (!staffAscId && !ascId && ascEmailRaw && ascEmailRaw !== 'no owner_email') {
+          ascId = userEmailLookup.get(ascEmailRaw);
         }
 
         const normalizedEmail = normalizeEmail(email);
@@ -295,9 +315,10 @@ serve(async (req) => {
         if (phoneIndex >= 0) contact.phone = normalizePhone(row[phoneIndex]) || null;
         if (imprintIndex >= 0 && imprintId) contact.imprint_id = imprintId;
 
-        // Only set ASC if provided in CSV (avoid clearing existing values)
+        // Only set ASC if provided in CSV
         if ((ascNameIndex >= 0 && ascNameRaw) || (ascEmailIndex >= 0 && ascEmailRaw)) {
-          contact.assigned_asc = ascId || null;
+          contact.staff_asc_id = staffAscId || null;
+          contact.assigned_asc = staffAscId ? null : (ascId || null);
         }
 
         if (createdAt) contact.created_at = createdAt;

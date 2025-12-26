@@ -435,7 +435,7 @@ serve(async (req) => {
           const batch = contactIdsList.slice(i, i + batchSize);
           const { data: batchContacts } = await supabase
             .from("contacts")
-            .select("id, email, first_name, last_name, imprint_id, assigned_asc")
+            .select("id, email, first_name, last_name, imprint_id, assigned_asc, assigned_asc_text, staff_asc_id")
             .in("id", batch)
             .not("status", "in", "(bounced,complained,unsubscribed)");
           
@@ -455,7 +455,7 @@ serve(async (req) => {
       while (hasMore) {
         const { data: imprintContacts } = await supabase
           .from("contacts")
-          .select("id, email, first_name, last_name, imprint_id, assigned_asc")
+          .select("id, email, first_name, last_name, imprint_id, assigned_asc, assigned_asc_text, staff_asc_id")
           .in("imprint_id", imprintIds)
           .not("status", "in", "(bounced,complained,unsubscribed)")
           .range(offset, offset + pageSize - 1);
@@ -507,18 +507,41 @@ serve(async (req) => {
       }
     }
 
-    // Collect unique ASC IDs and imprint IDs from contacts for dynamic sender name
-    const uniqueAscIds = new Set<string>();
+    // Collect unique staff ASC IDs, profile ASC IDs, and imprint IDs from contacts
+    const uniqueStaffAscIds = new Set<string>();
+    const uniqueProfileAscIds = new Set<string>();
     const uniqueImprintIds = new Set<string>();
     for (const contact of contacts) {
-      if (contact.assigned_asc) uniqueAscIds.add(contact.assigned_asc);
+      if (contact.staff_asc_id) uniqueStaffAscIds.add(contact.staff_asc_id);
+      if (contact.assigned_asc) uniqueProfileAscIds.add(contact.assigned_asc);
       if (contact.imprint_id) uniqueImprintIds.add(contact.imprint_id);
     }
 
-    // Fetch ASC profiles for sender names, emails, and phones
+    // Fetch staff members for ASC info (preferred path)
+    const staffAscInfo: Record<string, { name: string; email: string; phone: string }> = {};
+    if (uniqueStaffAscIds.size > 0) {
+      const staffIdArray = Array.from(uniqueStaffAscIds);
+      const { data: staffMembers } = await supabase
+        .from("staff")
+        .select("id, full_name, email, phone")
+        .in("id", staffIdArray);
+      
+      if (staffMembers) {
+        for (const staff of staffMembers) {
+          staffAscInfo[staff.id] = {
+            name: staff.full_name || "Author Success Coach",
+            email: staff.email || "",
+            phone: staff.phone || "",
+          };
+        }
+      }
+      console.log(`[send-campaign-mailgun] Fetched ${Object.keys(staffAscInfo).length} staff members for ASC info`);
+    }
+
+    // Fetch ASC profiles for sender names, emails, and phones (legacy fallback)
     const ascProfiles: Record<string, { name: string; email: string; phone: string }> = {};
-    if (uniqueAscIds.size > 0) {
-      const ascIdArray = Array.from(uniqueAscIds);
+    if (uniqueProfileAscIds.size > 0) {
+      const ascIdArray = Array.from(uniqueProfileAscIds);
       const { data: profiles } = await supabase
         .from("profiles")
         .select("id, full_name, email, phone")
@@ -533,7 +556,7 @@ serve(async (req) => {
           };
         }
       }
-      console.log(`[send-campaign-mailgun] Fetched ${Object.keys(ascProfiles).length} ASC profiles for dynamic sender names and contact info`);
+      console.log(`[send-campaign-mailgun] Fetched ${Object.keys(ascProfiles).length} ASC profiles (legacy) for dynamic sender names and contact info`);
     }
 
     // Fetch imprint from_names for fallback sender names
@@ -619,19 +642,35 @@ serve(async (req) => {
         // Generate unsubscribe URL for this contact
         const unsubscribeUrl = `${supabaseUrl}/functions/v1/unsubscribe?c=${campaignId}&t=${contact.id}&e=${encodeURIComponent(contact.email)}`;
         
-        // Determine dynamic sender name: ASC name > Imprint name > "Author Services"
+        // Determine dynamic sender name and ASC info: Staff > Profile > assigned_asc_text > Imprint > default
         let senderName = "Author Services";
         let ascName = "Author Success Coach";
         let ascEmail = "";
         let ascPhone = "";
         
-        if (contact.assigned_asc && ascProfiles[contact.assigned_asc]) {
+        // Priority 1: Staff ASC (preferred path)
+        if (contact.staff_asc_id && staffAscInfo[contact.staff_asc_id]) {
+          const staffAsc = staffAscInfo[contact.staff_asc_id];
+          senderName = staffAsc.name;
+          ascName = staffAsc.name;
+          ascEmail = staffAsc.email;
+          ascPhone = staffAsc.phone;
+        }
+        // Priority 2: Legacy profile ASC
+        else if (contact.assigned_asc && ascProfiles[contact.assigned_asc]) {
           const ascProfile = ascProfiles[contact.assigned_asc];
           senderName = ascProfile.name;
           ascName = ascProfile.name;
           ascEmail = ascProfile.email;
           ascPhone = ascProfile.phone;
-        } else if (contact.imprint_id && imprintFromNames[contact.imprint_id]) {
+        }
+        // Priority 3: Fallback text (name only, no contact info)
+        else if (contact.assigned_asc_text) {
+          ascName = contact.assigned_asc_text;
+          senderName = contact.assigned_asc_text;
+        }
+        // Priority 4: Imprint from_name
+        else if (contact.imprint_id && imprintFromNames[contact.imprint_id]) {
           senderName = imprintFromNames[contact.imprint_id];
         }
         
