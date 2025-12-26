@@ -17,7 +17,9 @@ interface Imprint {
   heading_font?: string;
   body_font?: string;
   logo_url?: string;
+  logo_dark_url?: string;
   header_image_url?: string;
+  header_image_dark_url?: string;
   footer_image_url?: string;
   website_url?: string;
 }
