@@ -56,7 +56,7 @@ const crmItems = [
 // Backoffice items - Development is conditionally added for System Admins only
 const getBackofficeItems = (isSystemAdmin: boolean) => {
   const items = [
-    { title: 'Users', url: '/users', icon: Users },
+    { title: 'Staff', url: '/staff', icon: Users },
     { title: 'Master SKU List', url: '/products', icon: Package },
     { title: 'Imprints', url: '/imprints', icon: Building2 },
     { title: 'Settings', url: '/settings', icon: Settings },

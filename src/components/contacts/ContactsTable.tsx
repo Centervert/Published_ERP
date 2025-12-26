@@ -2,8 +2,7 @@ import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useContacts, Contact } from '@/hooks/useContacts';
 import { usePaginatedContacts } from '@/hooks/usePaginatedContacts';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { useActiveStaff } from '@/hooks/useStaff';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -74,23 +73,13 @@ export function ContactsTable({ filterByUser }: ContactsTableProps) {
     filterByUser,
   });
 
-  // Fetch team members for displaying assigned names
-  const { data: teamMembers = [] } = useQuery({
-    queryKey: ['profiles'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, full_name, email')
-        .order('full_name');
-      if (error) throw error;
-      return data || [];
-    },
-  });
+  // Fetch staff members for displaying assigned names
+  const { data: staffMembers = [] } = useActiveStaff();
 
   // Create a map for quick lookup
-  const teamMemberMap = useMemo(() => {
-    return new Map(teamMembers.map(m => [m.id, m.full_name || m.email]));
-  }, [teamMembers]);
+  const staffMemberMap = useMemo(() => {
+    return new Map(staffMembers.map(m => [m.id, m.full_name]));
+  }, [staffMembers]);
 
   const handleRowClick = (contactId: string) => {
     navigate(`/contacts/${contactId}`);
@@ -315,13 +304,13 @@ export function ContactsTable({ filterByUser }: ContactsTableProps) {
                         {getStatusLabel(contact.status)}
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {contact.assigned_asc 
-                          ? teamMemberMap.get(contact.assigned_asc) || '--' 
+                        {contact.staff_asc_id 
+                          ? staffMemberMap.get(contact.staff_asc_id) || '--' 
                           : contact.assigned_asc_text || '--'}
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {contact.assigned_ae 
-                          ? teamMemberMap.get(contact.assigned_ae) || '--' 
+                        {contact.staff_ae_id 
+                          ? staffMemberMap.get(contact.staff_ae_id) || '--' 
                           : contact.assigned_ae_text || '--'}
                       </TableCell>
                       <TableCell className="text-muted-foreground">

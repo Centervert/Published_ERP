@@ -15,7 +15,7 @@ import Campaigns from "./pages/Campaigns";
 import Templates from "./pages/Templates";
 import Imprints from "./pages/Imprints";
 import Settings from "./pages/Settings";
-import Users from "./pages/Users";
+import Staff from "./pages/Staff";
 import MyProfile from "./pages/MyProfile";
 import Products from "./pages/Products";
 import Deals from "./pages/Deals";
@@ -107,10 +107,10 @@ const App = () => (
               }
             />
             <Route
-              path="/users"
+              path="/staff"
               element={
                 <ProtectedRoute>
-                  <Users />
+                  <Staff />
                 </ProtectedRoute>
               }
             />

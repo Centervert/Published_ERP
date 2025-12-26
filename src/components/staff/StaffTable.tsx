@@ -11,7 +11,6 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -27,28 +26,23 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Search, Loader2, Plus, MoreHorizontal, Link2, Unlink, UserCheck, UserX } from 'lucide-react';
+import { Search, Loader2, Plus, MoreHorizontal, Link2, Unlink, UserCheck, UserX, Check, Minus } from 'lucide-react';
 import { StaffForm } from './StaffForm';
-
-const DEPARTMENTS = [
-  { value: 'all', label: 'All Departments' },
-  { value: 'sales', label: 'Sales' },
-  { value: 'support', label: 'Support' },
-  { value: 'accounting', label: 'Accounting' },
-  { value: 'management', label: 'Management' },
-];
 
 export function StaffTable() {
   const [searchQuery, setSearchQuery] = useState('');
-  const [departmentFilter, setDepartmentFilter] = useState('all');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingStaff, setEditingStaff] = useState<StaffWithUser | null>(null);
   const [linkingStaff, setLinkingStaff] = useState<StaffWithUser | null>(null);
 
-  const { staff, isLoading, toggleActive, linkStaffToUser, deleteStaff } = useStaff(
-    departmentFilter === 'all' ? undefined : departmentFilter
-  );
+  const { staff, isLoading, toggleActive, linkStaffToUser } = useStaff();
   const { users } = useUsers();
   const { hasRole: canManage } = useHasRole(['super_admin', 'admin']);
 
@@ -105,18 +99,6 @@ export function StaffTable() {
             className="pl-9"
           />
         </div>
-        <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Filter by department" />
-          </SelectTrigger>
-          <SelectContent>
-            {DEPARTMENTS.map((dept) => (
-              <SelectItem key={dept.value} value={dept.value}>
-                {dept.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
         {canManage && (
           <Button onClick={() => setIsFormOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
@@ -134,20 +116,18 @@ export function StaffTable() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Phone</TableHead>
-                <TableHead>Title</TableHead>
-                <TableHead>Department</TableHead>
-                <TableHead>Linked User</TableHead>
-                <TableHead>Status</TableHead>
+                <TableHead className="whitespace-nowrap">Name</TableHead>
+                <TableHead className="whitespace-nowrap">Email</TableHead>
+                <TableHead className="whitespace-nowrap">Phone</TableHead>
+                <TableHead className="whitespace-nowrap">Title</TableHead>
+                <TableHead className="whitespace-nowrap">Portal</TableHead>
                 {canManage && <TableHead className="w-[50px]"></TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredStaff.map((staffMember) => (
                 <TableRow key={staffMember.id}>
-                  <TableCell>
+                  <TableCell className="whitespace-nowrap">
                     <div className="flex items-center gap-3">
                       <Avatar className="h-8 w-8">
                         <AvatarFallback className="bg-primary/10 text-primary text-xs">
@@ -157,39 +137,41 @@ export function StaffTable() {
                       <span className="font-medium">{staffMember.full_name}</span>
                     </div>
                   </TableCell>
-                  <TableCell className="text-muted-foreground">
+                  <TableCell className="text-muted-foreground whitespace-nowrap">
                     {staffMember.email}
                   </TableCell>
-                  <TableCell className="text-muted-foreground">
+                  <TableCell className="text-muted-foreground whitespace-nowrap">
                     {staffMember.phone || '—'}
                   </TableCell>
-                  <TableCell className="text-muted-foreground">
+                  <TableCell className="text-muted-foreground whitespace-nowrap">
                     {staffMember.title || '—'}
                   </TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className="capitalize">
-                      {staffMember.department || 'sales'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {staffMember.linked_user ? (
-                      <div className="flex items-center gap-2">
-                        <Link2 className="h-3 w-3 text-green-500" />
-                        <span className="text-sm">
-                          {staffMember.linked_user.full_name || staffMember.linked_user.email}
-                        </span>
-                      </div>
-                    ) : (
-                      <span className="text-muted-foreground text-sm">Not linked</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={staffMember.active ? 'default' : 'secondary'}>
-                      {staffMember.active ? 'Active' : 'Inactive'}
-                    </Badge>
+                  <TableCell className="whitespace-nowrap">
+                    <TooltipProvider delayDuration={0}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="inline-flex">
+                            {staffMember.user_id ? (
+                              staffMember.active !== false ? (
+                                <Check className="h-4 w-4 text-green-500" />
+                              ) : (
+                                <Minus className="h-4 w-4 text-amber-500" />
+                              )
+                            ) : (
+                              <Minus className="h-4 w-4 text-muted-foreground" />
+                            )}
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent side="top">
+                          {staffMember.user_id 
+                            ? (staffMember.active !== false ? 'Active portal user' : 'Inactive portal user')
+                            : 'No portal access'}
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </TableCell>
                   {canManage && (
-                    <TableCell>
+                    <TableCell className="whitespace-nowrap">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -200,7 +182,7 @@ export function StaffTable() {
                           <DropdownMenuItem onClick={() => handleEdit(staffMember)}>
                             Edit
                           </DropdownMenuItem>
-                          {staffMember.linked_user ? (
+                          {staffMember.user_id ? (
                             <DropdownMenuItem onClick={() => handleUnlinkUser(staffMember.id)}>
                               <Unlink className="h-4 w-4 mr-2" />
                               Unlink User
@@ -238,7 +220,7 @@ export function StaffTable() {
               ))}
               {filteredStaff.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={canManage ? 8 : 7} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={canManage ? 6 : 5} className="text-center py-8 text-muted-foreground">
                     No staff members found
                   </TableCell>
                 </TableRow>
