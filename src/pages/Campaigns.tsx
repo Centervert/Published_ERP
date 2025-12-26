@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useCampaigns, Campaign } from '@/hooks/useCampaigns';
 import { useLists } from '@/hooks/useContacts';
 import { useImprints } from '@/hooks/useImprints';
@@ -68,6 +69,7 @@ const statusColors: Record<string, string> = {
 };
 
 export default function Campaigns() {
+  const location = useLocation();
   const { campaigns, isLoading, createCampaign, deleteCampaign, sendCampaign, scheduleCampaign, cancelScheduledCampaign } = useCampaigns();
   const { lists } = useLists();
   const { imprints } = useImprints();
@@ -81,6 +83,15 @@ export default function Campaigns() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'name'>('newest');
+  
+  // Reset viewing state when navigating to this page via sidebar
+  useEffect(() => {
+    // When the location changes and we're on /campaigns, reset the detail view
+    if (location.pathname === '/campaigns') {
+      setViewingCampaign(null);
+      setViewingAnalytics(false);
+    }
+  }, [location.key]); // Use location.key to detect navigation events
   
   // Delete confirmation state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);

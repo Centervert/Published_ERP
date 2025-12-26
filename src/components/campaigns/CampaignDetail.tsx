@@ -1431,6 +1431,7 @@ export function CampaignDetail({ campaign, onBack, onCancelScheduled }: Campaign
                 logo_dark_url: company.logo_dark_url || null,
                 icon_url: company.icon_url || null,
                 header_image_url: company.header_image_url || null,
+                header_image_dark_url: company.header_image_dark_url || null,
                 footer_image_url: company.footer_image_url || null,
                 brand_voice: company.brand_voice || null,
                 tagline: company.tagline || null,

@@ -177,6 +177,8 @@ export function EmailBuilder({
           name: imprint.name,
           logo_url: imprint.logo_url,
           logo_dark_url: imprint.logo_dark_url,
+          header_image_url: imprint.header_image_url,
+          header_image_dark_url: imprint.header_image_dark_url,
           primary_color: imprint.primary_color,
         } : undefined);
       }
