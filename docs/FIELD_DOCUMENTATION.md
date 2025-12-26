@@ -23,7 +23,7 @@ The Author Services Platform is a comprehensive CRM and marketing automation sys
 - **Backend**: Supabase (Lovable Cloud)
 - **Database**: PostgreSQL
 - **Authentication**: Supabase Auth
-- **Email Sending**: Microsoft Graph API (Outlook) + Resend
+- **Email Sending**: Mailgun (batch sending, scheduling, tracking)
 - **Edge Functions**: Deno (Supabase Edge Functions)
 
 ---
@@ -310,32 +310,8 @@ Many-to-many relationship between campaigns and lists.
 
 ### Email Tracking Tables
 
-#### `email_queue`
-Queue for outgoing campaign emails.
-
-| Column | Type | Nullable | Default | Description |
-|--------|------|----------|---------|-------------|
-| `id` | uuid | No | gen_random_uuid() | Primary key |
-| `campaign_id` | uuid | Yes | - | FK to campaigns |
-| `contact_id` | uuid | Yes | - | FK to contacts |
-| `email` | text | No | - | Recipient email |
-| `contact_first_name` | text | Yes | - | Recipient first name |
-| `contact_last_name` | text | Yes | - | Recipient last name |
-| `subject` | text | Yes | - | Email subject |
-| `html_content` | text | Yes | - | Personalized HTML content |
-| `from_name` | text | Yes | - | Sender name |
-| `from_email` | text | Yes | - | Sender email |
-| `reply_to_email` | text | Yes | - | Reply-to email |
-| `status` | text | Yes | 'pending' | Status: 'pending', 'sent', 'failed' |
-| `attempts` | integer | Yes | 0 | Send attempt count |
-| `last_error` | text | Yes | - | Last error message |
-| `processed_at` | timestamptz | Yes | - | When email was processed |
-| `created_at` | timestamptz | Yes | now() | Record creation timestamp |
-
----
-
 #### `email_events`
-Tracking events for sent emails (opens, clicks, etc.).
+Tracking events for sent emails (opens, clicks, etc.). Events are logged by Mailgun webhooks.
 
 | Column | Type | Nullable | Default | Description |
 |--------|------|----------|---------|-------------|
@@ -343,7 +319,7 @@ Tracking events for sent emails (opens, clicks, etc.).
 | `campaign_id` | uuid | Yes | - | FK to campaigns |
 | `contact_id` | uuid | Yes | - | FK to contacts |
 | `email` | text | No | - | Recipient email |
-| `event_type` | text | No | - | Type: 'sent', 'delivered', 'opened', 'clicked', 'unsubscribed' |
+| `event_type` | text | No | - | Type: 'sent', 'delivered', 'opened', 'clicked', 'bounced', 'complained', 'unsubscribed' |
 | `link_url` | text | Yes | - | Clicked URL (for click events) |
 | `ip_address` | text | Yes | - | IP address |
 | `user_agent` | text | Yes | - | User agent string |
@@ -398,26 +374,29 @@ Tracking events for sent emails (opens, clicks, etc.).
 
 #### Block Types
 - Header (with logo)
+- Greeting (time-based personalized greeting)
 - Heading (H1, H2, H3)
 - Text (paragraph with formatting)
 - Image (with alt text and link)
 - Button (with customizable colors)
+- ASC Contact (personalized Author Success Coach contact block)
 - Divider (customizable style and color)
 - Spacer (adjustable height)
 - Columns (multi-column layouts)
 - Footer (with unsubscribe link)
 
 #### Campaign Sending
-- **All Contacts Option**: Send to entire contact database
-- **List-Based Sending**: Send to specific contact lists
+- **Mailgun Integration**: Direct API integration for batch sending
+- **Personalization**: Dynamic sender name, recipient variables
+- **Scheduling**: Schedule campaigns for future delivery
 - **Reply-To Email**: Configurable reply-to address
-- **VPS Email Worker**: External worker for high-volume sending via Resend
 
-#### Email Tracking
-- Open tracking (pixel)
-- Click tracking (link wrapping)
+#### Email Tracking (via Mailgun)
+- Open tracking (native Mailgun tracking)
+- Click tracking (native Mailgun tracking)
+- Bounce and complaint handling
 - Unsubscribe handling
-- Bot detection
+- Real-time webhook events
 
 ---
 

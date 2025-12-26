@@ -72,6 +72,14 @@ function renderBlockToHtml(block: EmailBlock, options: RenderOptions): string {
       const bgColor = (block.backgroundColor as string) || '#ffffff';
       return `<tr><td style="background-color: ${bgColor}; padding: ${block.padding || 20}px; text-align: center;">${logoUrl ? `<img src="${escapeHtml(logoUrl)}" alt="Logo" style="max-height: 60px; width: auto;" />` : ''}</td></tr>`;
 
+    case 'greeting':
+      // Greeting block: shows time-based greeting with personalized name
+      // %recipient.greeting% is populated at send time (Good morning/afternoon/evening)
+      const greetingStyle = (block.style as string) || 'formal';
+      const fallbackName = (block.fallbackName as string) || 'there';
+      const greetingPrefix = greetingStyle === 'casual' ? 'Hey' : '%recipient.greeting%';
+      return `<tr><td style="padding: 10px 20px;"><p style="margin: 0; color: ${textColor}; font-size: 16px; line-height: 1.6; font-family: ${bodyFont};">${greetingPrefix}, <span style="font-weight: 500;">%recipient.first_name|default:${fallbackName}%</span></p></td></tr>`;
+
     case 'text':
       // Use Mailgun personalization tokens
       let content = block.content as string;
@@ -104,6 +112,32 @@ function renderBlockToHtml(block: EmailBlock, options: RenderOptions): string {
     case 'spacer':
       return `<tr><td style="height: ${block.height}px; line-height: ${block.height}px; font-size: 1px;">&nbsp;</td></tr>`;
 
+    case 'columns':
+      // Render columns block with nested blocks
+      const columns = (block.columns as { width: string; blocks: EmailBlock[] }[]) || [];
+      const gap = (block.gap as number) || 16;
+      const columnsHtml = columns.map((col, index) => {
+        const colBlocksHtml = col.blocks.map(b => renderBlockToHtml(b, options)).join('');
+        const paddingLeft = index === 0 ? 0 : gap / 2;
+        const paddingRight = index === columns.length - 1 ? 0 : gap / 2;
+        return `<td style="width: ${col.width}; vertical-align: top; padding-left: ${paddingLeft}px; padding-right: ${paddingRight}px;"><table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">${colBlocksHtml}</table></td>`;
+      }).join('');
+      return `<tr><td style="padding: 10px 20px;"><table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"><tr>${columnsHtml}</tr></table></td></tr>`;
+
+    case 'asc_contact':
+      // ASC Contact block: personalized call-to-action with coach info
+      const ascBgColor = (block.backgroundColor as string) || '#f0f9ff';
+      const ascTextColor = (block.textColor as string) || '#1e40af';
+      const ascButtonColor = (block.buttonColor as string) || primaryColor;
+      const headingText = (block.headingText as string) || 'Contact your Author Success Coach today!';
+      const showEmail = block.showEmail !== false;
+      const showPhone = block.showPhone !== false;
+      
+      const emailDisplay = showEmail ? `<p style="margin: 0 0 12px 0; color: ${ascTextColor}; font-size: 14px;">✉️ %recipient.asc_email%</p>` : '';
+      const phoneButton = showPhone ? `<a href="tel:%recipient.asc_phone%" style="display: inline-block; background-color: ${ascButtonColor}; color: #ffffff; text-decoration: none; padding: 10px 20px; border-radius: 4px; font-weight: 500; font-size: 14px;">📞 Call %recipient.asc_phone%</a>` : '';
+      
+      return `<tr><td style="padding: 10px 20px;"><table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: ${ascBgColor}; border-radius: 8px;"><tr><td style="padding: 24px; text-align: center;"><h3 style="margin: 0 0 16px 0; color: ${ascTextColor}; font-size: 18px; font-weight: 600;">${escapeHtml(headingText)}</h3><p style="margin: 0 0 12px 0; color: ${ascTextColor}; font-size: 16px; font-weight: 500;">👤 %recipient.asc_name%</p>${emailDisplay}<div>${phoneButton}</div></td></tr></table></td></tr>`;
+
     case 'footer':
       const footerBg = (block.backgroundColor as string) || '#f9fafb';
       const footerText = (block.textColor as string) || '#6b7280';
@@ -111,9 +145,12 @@ function renderBlockToHtml(block: EmailBlock, options: RenderOptions): string {
       const unsubUrl = '%recipient.unsubscribe_url%';
       // Escape footer content to prevent XSS
       const footerContent = escapeHtml(block.content as string || '');
-      return `<tr><td style="background-color: ${footerBg}; padding: 20px; text-align: center;"><p style="margin: 0 0 10px 0; color: ${footerText}; font-size: 14px; font-family: ${bodyFont};">${footerContent}</p>${block.showUnsubscribe !== false ? `<a href="${unsubUrl}" style="color: ${footerText}; font-size: 12px; text-decoration: underline; font-family: ${bodyFont};">${escapeHtml((block.unsubscribeText as string) || 'Unsubscribe')}</a>` : ''}</td></tr>`;
+      const companyAddress = (block.companyAddress as string) || '';
+      const reasonText = (block.reasonText as string) || '';
+      return `<tr><td style="background-color: ${footerBg}; padding: 24px; text-align: center;"><p style="margin: 0 0 12px 0; color: ${footerText}; font-size: 14px; font-family: ${bodyFont};">${footerContent}</p>${companyAddress ? `<p style="margin: 0 0 12px 0; color: ${footerText}; font-size: 12px; font-family: ${bodyFont};">${escapeHtml(companyAddress)}</p>` : ''}${reasonText ? `<p style="margin: 0 0 12px 0; color: ${footerText}; font-size: 12px; font-style: italic; font-family: ${bodyFont};">${escapeHtml(reasonText)}</p>` : ''}${block.showUnsubscribe !== false ? `<a href="${unsubUrl}" style="color: ${footerText}; font-size: 12px; text-decoration: underline; font-family: ${bodyFont};">${escapeHtml((block.unsubscribeText as string) || 'Unsubscribe')}</a>` : ''}</td></tr>`;
 
     default:
+      console.log(`[send-campaign-mailgun] Unknown block type: ${block.type}`);
       return '';
   }
 }
@@ -165,6 +202,14 @@ function renderBlocksToPlainText(blocks: EmailBlock[]): string {
   
   for (const block of blocks) {
     switch (block.type) {
+      case 'greeting':
+        const greetingStyle = (block.style as string) || 'formal';
+        const fallbackName = (block.fallbackName as string) || 'there';
+        const greetingPrefix = greetingStyle === 'casual' ? 'Hey' : '%recipient.greeting%';
+        lines.push(`${greetingPrefix}, %recipient.first_name|default:${fallbackName}%`);
+        lines.push('');
+        break;
+        
       case 'text':
         // Strip HTML tags and convert personalization tokens
         let content = (block.content as string || '')
@@ -198,6 +243,15 @@ function renderBlocksToPlainText(blocks: EmailBlock[]): string {
         lines.push('');
         break;
         
+      case 'asc_contact':
+        const headingText = (block.headingText as string) || 'Contact your Author Success Coach today!';
+        lines.push(headingText);
+        lines.push('%recipient.asc_name%');
+        if (block.showEmail !== false) lines.push('%recipient.asc_email%');
+        if (block.showPhone !== false) lines.push('Call: %recipient.asc_phone%');
+        lines.push('');
+        break;
+        
       case 'divider':
         lines.push('-------------------------------------------');
         break;
@@ -206,11 +260,22 @@ function renderBlocksToPlainText(blocks: EmailBlock[]): string {
         lines.push('');
         break;
         
+      case 'columns':
+        // For plain text, just render column blocks sequentially
+        const columns = (block.columns as { width: string; blocks: EmailBlock[] }[]) || [];
+        for (const col of columns) {
+          const colText = renderBlocksToPlainText(col.blocks);
+          if (colText) lines.push(colText);
+        }
+        break;
+        
       case 'footer':
         lines.push('');
         lines.push('-------------------------------------------');
         const footerContent = (block.content as string || '').replace(/<[^>]*>/g, '').trim();
         if (footerContent) lines.push(footerContent);
+        const companyAddress = (block.companyAddress as string) || '';
+        if (companyAddress) lines.push(companyAddress);
         if (block.showUnsubscribe !== false) {
           lines.push('');
           lines.push('Unsubscribe: %recipient.unsubscribe_url%');
@@ -409,23 +474,25 @@ serve(async (req) => {
       if (contact.imprint_id) uniqueImprintIds.add(contact.imprint_id);
     }
 
-    // Fetch ASC profiles for sender names
-    const ascProfiles: Record<string, string> = {};
+    // Fetch ASC profiles for sender names, emails, and phones
+    const ascProfiles: Record<string, { name: string; email: string; phone: string }> = {};
     if (uniqueAscIds.size > 0) {
       const ascIdArray = Array.from(uniqueAscIds);
       const { data: profiles } = await supabase
         .from("profiles")
-        .select("id, full_name")
+        .select("id, full_name, email, phone")
         .in("id", ascIdArray);
       
       if (profiles) {
         for (const profile of profiles) {
-          if (profile.full_name) {
-            ascProfiles[profile.id] = profile.full_name;
-          }
+          ascProfiles[profile.id] = {
+            name: profile.full_name || "Author Success Coach",
+            email: profile.email || "",
+            phone: profile.phone || "",
+          };
         }
       }
-      console.log(`[send-campaign-mailgun] Fetched ${Object.keys(ascProfiles).length} ASC profiles for dynamic sender names`);
+      console.log(`[send-campaign-mailgun] Fetched ${Object.keys(ascProfiles).length} ASC profiles for dynamic sender names and contact info`);
     }
 
     // Fetch imprint from_names for fallback sender names
@@ -465,17 +532,20 @@ serve(async (req) => {
       .replace(/\{\{UNSUBSCRIBE_URL\}\}/gi, '%recipient.unsubscribe_url%')
       .replace(/\{\{unsubscribe_url\}\}/gi, '%recipient.unsubscribe_url%');
 
+    // CAN-SPAM compliant address (unified across system)
+    const COMPANY_ADDRESS = "Author Services, 2727 Paces Ferry Road SE, Building Two, Suite 250, Atlanta, GA 30339";
+    
     // Ensure footer has physical address for CAN-SPAM compliance
     if (!htmlTemplate.includes('Author Services') && !htmlTemplate.includes('physical address')) {
       htmlTemplate = htmlTemplate.replace(
         '</body>',
-        '<p style="font-size:11px;color:#999;text-align:center;margin-top:20px;">Author Services, 2727 Paces Ferry Road SE, Building Two, Suite 250, Atlanta, GA 30339</p></body>'
+        `<p style="font-size:11px;color:#999;text-align:center;margin-top:20px;">${COMPANY_ADDRESS}</p></body>`
       );
     }
 
     // Add CAN-SPAM address to plain text if not present
     if (plainTextTemplate && !plainTextTemplate.includes('Author Services')) {
-      plainTextTemplate += '\n\n---\nAuthor Services, 2727 Paces Ferry Road SE, Building Two, Suite 250, Atlanta, GA 30339';
+      plainTextTemplate += `\n\n---\n${COMPANY_ADDRESS}`;
     }
 
     // Hardcoded email and reply-to (no custom reply-to until mail forwarding is set up)
@@ -503,11 +573,25 @@ serve(async (req) => {
         
         // Determine dynamic sender name: ASC name > Imprint name > "Author Services"
         let senderName = "Author Services";
+        let ascName = "Author Success Coach";
+        let ascEmail = "";
+        let ascPhone = "";
+        
         if (contact.assigned_asc && ascProfiles[contact.assigned_asc]) {
-          senderName = ascProfiles[contact.assigned_asc];
+          const ascProfile = ascProfiles[contact.assigned_asc];
+          senderName = ascProfile.name;
+          ascName = ascProfile.name;
+          ascEmail = ascProfile.email;
+          ascPhone = ascProfile.phone;
         } else if (contact.imprint_id && imprintFromNames[contact.imprint_id]) {
           senderName = imprintFromNames[contact.imprint_id];
         }
+        
+        // Generate time-based greeting (based on current time, ideally would use recipient timezone)
+        const hour = new Date().getUTCHours();
+        let greeting = "Good morning";
+        if (hour >= 17 || hour < 5) greeting = "Good evening";
+        else if (hour >= 12) greeting = "Good afternoon";
         
         recipientVariables[contact.email] = {
           first_name: contact.first_name || "there",
@@ -516,6 +600,10 @@ serve(async (req) => {
           contact_id: contact.id,
           unsubscribe_url: unsubscribeUrl,
           sender_name: senderName,
+          greeting: greeting,
+          asc_name: ascName,
+          asc_email: ascEmail,
+          asc_phone: ascPhone,
         };
         
         // Prepare sent event for logging
@@ -595,12 +683,23 @@ serve(async (req) => {
         
         for (const email of additionalEmails) {
           const unsubscribeUrl = `${supabaseUrl}/functions/v1/unsubscribe?c=${campaignId}&e=${encodeURIComponent(email)}`;
+          
+          // Generate time-based greeting
+          const hour = new Date().getUTCHours();
+          let greeting = "Good morning";
+          if (hour >= 17 || hour < 5) greeting = "Good evening";
+          else if (hour >= 12) greeting = "Good afternoon";
+          
           recipientVariables[email] = {
             first_name: "there",
             last_name: "",
             email: email,
             unsubscribe_url: unsubscribeUrl,
             sender_name: "Author Services", // Additional recipients use default
+            greeting: greeting,
+            asc_name: "Author Success Coach",
+            asc_email: "",
+            asc_phone: "",
           };
           
           sentEvents.push({

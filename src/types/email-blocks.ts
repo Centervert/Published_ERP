@@ -132,7 +132,7 @@ export const DEFAULT_BLOCK_STYLES: Record<EmailBlock['type'], Partial<EmailBlock
   divider: { color: '#e5e7eb', thickness: 1, style: 'solid' },
   spacer: { height: 24 },
   columns: { gap: 16 },
-  footer: { backgroundColor: '#f9fafb', textColor: '#6b7280', showUnsubscribe: true, unsubscribeText: 'Unsubscribe', companyAddress: 'Author Services, LLC. 555 Winderley Pl, Maitland, FL 32751 866-381-2665', reasonText: 'You received this email because you are a valued Author Services customer.' },
+  footer: { backgroundColor: '#f9fafb', textColor: '#6b7280', showUnsubscribe: true, unsubscribeText: 'Unsubscribe', companyAddress: 'Author Services, 2727 Paces Ferry Road SE, Building Two, Suite 250, Atlanta, GA 30339', reasonText: 'You received this email because you are a valued Author Services customer.' },
   greeting: { style: 'formal', fallbackName: 'there' },
   asc_contact: { headingText: 'Contact your Author Success Coach today!', showEmail: true, showPhone: true, backgroundColor: '#f0f9ff', textColor: '#1e40af', buttonColor: '#2563eb' },
 };

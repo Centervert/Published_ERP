@@ -178,19 +178,21 @@ Sends a personal email through the user's connected Outlook account.
 
 ## Campaign Management
 
-### Send Campaign
+### Send Campaign via Mailgun
 
-Queues a marketing campaign for sending to selected lists.
+Sends a marketing campaign directly via Mailgun batch sending.
 
-**Endpoint:** `POST /functions/v1/send-campaign`
+**Endpoint:** `POST /functions/v1/send-campaign-mailgun`
 
-**Authentication:** JWT Bearer Token
+**Authentication:** JWT Bearer Token OR Worker API Key (`x-worker-key` header)
 
 **Request Body:**
 ```json
 {
   "campaignId": "string (required) - UUID of the campaign",
-  "listIds": "array (required) - Array of list UUIDs (empty for all contacts)"
+  "listIds": "array (required) - Array of list UUIDs",
+  "imprintIds": "array (optional) - Array of imprint UUIDs for additional contacts",
+  "additionalRecipients": "array (optional) - Array of additional email addresses"
 }
 ```
 
@@ -198,116 +200,45 @@ Queues a marketing campaign for sending to selected lists.
 ```json
 {
   "success": true,
-  "queued": 150,
-  "message": "Emails queued for sending. VPS worker will process them."
+  "sent": 150
 }
 ```
 
 **Error Responses:**
 | Status | Description |
 |--------|-------------|
-| 500 | Campaign not found, already sent, or no contacts |
+| 401 | Unauthorized - invalid or missing authentication |
+| 500 | Campaign not found, already sent, no contacts, or Mailgun error |
 
 **Process:**
-1. Validates campaign is in "draft" status
+1. Validates campaign is in "draft", "sending", or "scheduled" status
 2. Updates campaign status to "sending"
-3. Fetches contacts from selected lists (or all active contacts)
-4. Renders blocks to HTML if `blocks_json` exists
-5. Personalizes content with contact data
-6. Adds tracking pixel and wraps links
-7. Adds unsubscribe link
-8. Inserts all emails into `email_queue` table
+3. Fetches contacts from selected lists and imprints (union)
+4. Filters out bounced, complained, and unsubscribed contacts
+5. Renders blocks to HTML with imprint styling
+6. Builds recipient variables for personalization (name, greeting, ASC info)
+7. Sends emails in batches to Mailgun (max 1000 per request)
+8. Logs "sent" events to `email_events` table
+9. Updates campaign status to "sent" or "scheduled"
+
+**Personalization Variables:**
+- `%recipient.first_name%` - Contact's first name
+- `%recipient.last_name%` - Contact's last name
+- `%recipient.email%` - Contact's email
+- `%recipient.greeting%` - Time-based greeting (Good morning/afternoon/evening)
+- `%recipient.sender_name%` - Dynamic sender name (ASC name or imprint name)
+- `%recipient.asc_name%` - Author Success Coach name
+- `%recipient.asc_email%` - Author Success Coach email
+- `%recipient.asc_phone%` - Author Success Coach phone
+- `%recipient.unsubscribe_url%` - Personalized unsubscribe link
 
 ---
 
-### Get Pending Emails
+### Process Scheduled Campaigns
 
-Fetches queued emails for the VPS worker to process.
+Cron job endpoint to process scheduled campaigns that are due.
 
-**Endpoint:** `POST /functions/v1/get-pending-emails`
-
-**Authentication:** Worker API Key (`x-worker-key` header)
-
-**Request Body:**
-```json
-{
-  "limit": "number (optional, default: 10) - Max emails to fetch"
-}
-```
-
-**Success Response:**
-```json
-{
-  "emails": [
-    {
-      "id": "uuid",
-      "campaign_id": "uuid",
-      "contact_id": "uuid",
-      "email": "recipient@example.com",
-      "subject": "string",
-      "html_content": "string",
-      "from_name": "string",
-      "from_email": "string",
-      "reply_to_email": "string | null",
-      "contact_first_name": "string | null",
-      "contact_last_name": "string | null",
-      "status": "pending",
-      "attempts": 0
-    }
-  ]
-}
-```
-
-**Error Responses:**
-| Status | Description |
-|--------|-------------|
-| 401 | Invalid worker key |
-| 500 | Database error |
-
----
-
-### Update Email Status
-
-Updates the status of a queued email after processing.
-
-**Endpoint:** `POST /functions/v1/update-email-status`
-
-**Authentication:** Worker API Key (`x-worker-key` header)
-
-**Request Body:**
-```json
-{
-  "emailId": "string (required) - UUID of the email_queue record",
-  "status": "string (required) - 'processing', 'sent', or 'failed'",
-  "error": "string (optional) - Error message if failed",
-  "logEvent": "boolean (optional) - Whether to log to email_events",
-  "campaignId": "string (optional) - Required if logEvent is true",
-  "contactId": "string (optional) - Required if logEvent is true",
-  "email": "string (optional) - Required if logEvent is true"
-}
-```
-
-**Success Response:**
-```json
-{
-  "success": true
-}
-```
-
-**Error Responses:**
-| Status | Description |
-|--------|-------------|
-| 400 | Missing emailId or status |
-| 401 | Invalid worker key |
-| 500 | Database error |
-
----
-
-### Check Campaign Completion
-
-Checks if all emails for a campaign have been processed and marks it as complete.
-
-**Endpoint:** `POST /functions/v1/check-campaign-completion`
+**Endpoint:** `POST /functions/v1/process-scheduled-campaigns`
 
 **Authentication:** Worker API Key (`x-worker-key` header)
 
@@ -316,20 +247,12 @@ Checks if all emails for a campaign have been processed and marks it as complete
 **Success Response:**
 ```json
 {
-  "completedCampaigns": ["uuid1", "uuid2"]
+  "processed": 2,
+  "campaigns": [
+    { "id": "uuid", "name": "Campaign Name", "status": "sent" }
+  ]
 }
 ```
-
-**Error Responses:**
-| Status | Description |
-|--------|-------------|
-| 401 | Invalid worker key |
-| 500 | Database error |
-
-**Process:**
-1. Finds all campaigns with status "sending"
-2. Checks if any emails are still "pending" or "processing"
-3. If all processed, updates campaign status to "sent" with `sent_at` timestamp
 
 ---
 
