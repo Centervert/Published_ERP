@@ -26,6 +26,8 @@ interface BlockEditorProps {
   className?: string;
   logoUrl?: string;
   logoDarkUrl?: string;
+  headerImageUrl?: string;
+  headerImageDarkUrl?: string;
 }
 
 const BLOCK_TYPES = [
@@ -41,7 +43,7 @@ const BLOCK_TYPES = [
   { type: 'footer', label: 'Footer', icon: FileText },
 ] as const;
 
-export function BlockEditor({ blocks: initialBlocks, onChange, className, logoUrl, logoDarkUrl }: BlockEditorProps) {
+export function BlockEditor({ blocks: initialBlocks, onChange, className, logoUrl, logoDarkUrl, headerImageUrl, headerImageDarkUrl }: BlockEditorProps) {
   const {
     blocks,
     selectedBlockId,
@@ -123,7 +125,7 @@ export function BlockEditor({ blocks: initialBlocks, onChange, className, logoUr
   const renderBlockContent = (block: EmailBlock) => {
     switch (block.type) {
       case 'header':
-        return <HeaderBlock block={block} isEditing logoUrl={logoUrl} logoDarkUrl={logoDarkUrl} />;
+        return <HeaderBlock block={block} isEditing logoUrl={logoUrl} logoDarkUrl={logoDarkUrl} headerImageUrl={headerImageUrl} headerImageDarkUrl={headerImageDarkUrl} />;
       case 'greeting':
         return <GreetingBlock block={block} isEditing />;
       case 'text':

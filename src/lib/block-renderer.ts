@@ -26,6 +26,8 @@ export interface RenderOptions {
     bodyFont?: string;
     logoUrl?: string;
     logoDarkUrl?: string;
+    headerImageUrl?: string;
+    headerImageDarkUrl?: string;
     websiteUrl?: string;
   };
   trackingPixelUrl?: string;
@@ -45,18 +47,29 @@ function escapeHtml(text: string): string {
 
 function renderHeader(block: HeaderBlock, options: RenderOptions): string {
   const bgColor = block.backgroundColor || options.imprint?.backgroundColor || '#ffffff';
-  // Use smart logo selection based on background color
-  const logoUrl = block.logoUrl || getLogoForBackground(
-    bgColor, 
-    options.imprint?.logoUrl, 
-    options.imprint?.logoDarkUrl
-  );
+  
+  // Prefer header images over logos, with smart selection based on background color
+  let headerImage: string | undefined;
+  if (options.imprint?.headerImageUrl || options.imprint?.headerImageDarkUrl) {
+    headerImage = block.logoUrl || getLogoForBackground(
+      bgColor, 
+      options.imprint?.headerImageUrl, 
+      options.imprint?.headerImageDarkUrl
+    );
+  } else {
+    headerImage = block.logoUrl || getLogoForBackground(
+      bgColor, 
+      options.imprint?.logoUrl, 
+      options.imprint?.logoDarkUrl
+    );
+  }
+  
   const padding = block.padding || 20;
 
   return `
     <tr>
       <td style="background-color: ${bgColor}; padding: ${padding}px; text-align: center;">
-        ${logoUrl ? `<img src="${escapeHtml(logoUrl)}" alt="Logo" style="max-height: 60px; width: auto;" />` : ''}
+        ${headerImage ? `<img src="${escapeHtml(headerImage)}" alt="Logo" style="max-height: 80px; width: auto;" />` : ''}
       </td>
     </tr>
   `;

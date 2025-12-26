@@ -27,6 +27,9 @@ interface RenderOptions {
     headingFont?: string;
     bodyFont?: string;
     logoUrl?: string;
+    logoDarkUrl?: string;
+    headerImageUrl?: string;
+    headerImageDarkUrl?: string;
   };
 }
 
@@ -60,6 +63,31 @@ function escapeHtml(text: string): string {
     .replace(/'/g, '&#039;');
 }
 
+// Determine if a hex color is dark based on luminance (same logic as frontend)
+function isDarkColor(hexColor: string): boolean {
+  if (!hexColor) return false;
+  const hex = hexColor.replace('#', '');
+  const fullHex = hex.length === 3 
+    ? hex.split('').map(c => c + c).join('') 
+    : hex;
+  const r = parseInt(fullHex.substring(0, 2), 16);
+  const g = parseInt(fullHex.substring(2, 4), 16);
+  const b = parseInt(fullHex.substring(4, 6), 16);
+  if (isNaN(r) || isNaN(g) || isNaN(b)) return false;
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return luminance < 0.5;
+}
+
+// Get appropriate asset for background color (dark logo for dark bg, light logo for light bg)
+function getAssetForBackground(bgColor: string, lightAsset?: string, darkAsset?: string): string | undefined {
+  if (!lightAsset && !darkAsset) return undefined;
+  const bgIsDark = isDarkColor(bgColor || '#ffffff');
+  if (bgIsDark) {
+    return darkAsset || lightAsset || undefined;
+  }
+  return lightAsset || undefined;
+}
+
 function renderBlockToHtml(block: EmailBlock, options: RenderOptions): string {
   const bodyFont = getWebSafeFont(options.imprint?.bodyFont);
   const headingFont = getWebSafeFont(options.imprint?.headingFont);
@@ -68,9 +96,17 @@ function renderBlockToHtml(block: EmailBlock, options: RenderOptions): string {
 
   switch (block.type) {
     case 'header':
-      const logoUrl = (block.logoUrl as string) || options.imprint?.logoUrl;
       const bgColor = (block.backgroundColor as string) || '#ffffff';
-      return `<tr><td style="background-color: ${bgColor}; padding: ${block.padding || 20}px; text-align: center;">${logoUrl ? `<img src="${escapeHtml(logoUrl)}" alt="Logo" style="max-height: 60px; width: auto;" />` : ''}</td></tr>`;
+      // Prefer header images over logos, with smart selection based on background color
+      let headerImage: string | undefined = block.logoUrl as string | undefined;
+      if (!headerImage) {
+        if (options.imprint?.headerImageUrl || options.imprint?.headerImageDarkUrl) {
+          headerImage = getAssetForBackground(bgColor, options.imprint.headerImageUrl, options.imprint.headerImageDarkUrl);
+        } else {
+          headerImage = getAssetForBackground(bgColor, options.imprint?.logoUrl, options.imprint?.logoDarkUrl);
+        }
+      }
+      return `<tr><td style="background-color: ${bgColor}; padding: ${block.padding || 20}px; text-align: center;">${headerImage ? `<img src="${escapeHtml(headerImage)}" alt="Header" style="max-height: 80px; width: auto;" />` : ''}</td></tr>`;
 
     case 'greeting':
       // Greeting block: shows time-based greeting with personalized name
@@ -449,7 +485,7 @@ serve(async (req) => {
     if (imprintIds && imprintIds.length > 0) {
       const { data: imprint } = await supabase
         .from("imprints")
-        .select("primary_color, background_color, text_color, heading_font, body_font, logo_url")
+        .select("primary_color, background_color, text_color, heading_font, body_font, logo_url, logo_dark_url, header_image_url")
         .eq("id", imprintIds[0])
         .single();
       
@@ -462,6 +498,8 @@ serve(async (req) => {
             headingFont: imprint.heading_font || undefined,
             bodyFont: imprint.body_font || undefined,
             logoUrl: imprint.logo_url || undefined,
+            logoDarkUrl: imprint.logo_dark_url || undefined,
+            headerImageUrl: imprint.header_image_url || undefined,
           }
         };
         console.log(`[send-campaign-mailgun] Applying imprint styling from: ${imprintIds[0]}`);

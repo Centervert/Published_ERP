@@ -68,6 +68,8 @@ export function EmailBuilder({
           bodyFont: imprint.body_font || undefined,
           logoUrl: imprint.logo_url || undefined,
           logoDarkUrl: imprint.logo_dark_url || undefined,
+          headerImageUrl: imprint.header_image_url || undefined,
+          headerImageDarkUrl: imprint.header_image_dark_url || undefined,
           websiteUrl: imprint.website_url || undefined,
         },
       });
@@ -747,6 +749,8 @@ export function EmailBuilder({
               className="flex-1"
               logoUrl={imprint?.logo_url || undefined}
               logoDarkUrl={imprint?.logo_dark_url || undefined}
+              headerImageUrl={imprint?.header_image_url || undefined}
+              headerImageDarkUrl={imprint?.header_image_dark_url || undefined}
             />
           )}
         </div>
