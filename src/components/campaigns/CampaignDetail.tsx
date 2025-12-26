@@ -900,13 +900,23 @@ export function CampaignDetail({ campaign, onBack, onCancelScheduled }: Campaign
                     
                     <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
                       <div className="flex items-center gap-2">
-                        <Label className="text-muted-foreground">Sender Address</Label>
-                        <Badge variant="outline" className="text-xs">Fixed</Badge>
+                        <Label className="text-muted-foreground">Sender Configuration</Label>
+                        <Badge variant="secondary" className="text-xs">Dynamic</Badge>
                       </div>
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">From Name:</span>
-                          <span className="font-medium">{imprints.find(i => i.id === selectedImprintId)?.from_name || 'Author Services'}</span>
+                      <div className="space-y-3">
+                        <div>
+                          <div className="flex justify-between text-sm mb-1">
+                            <span className="text-muted-foreground">From Name:</span>
+                            <span className="font-medium text-primary">Personalized per recipient</span>
+                          </div>
+                          <div className="text-xs text-muted-foreground bg-muted/50 rounded p-2 space-y-1">
+                            <p className="font-medium">Priority order:</p>
+                            <ol className="list-decimal list-inside space-y-0.5">
+                              <li>Assigned ASC's full name (if contact has an ASC)</li>
+                              <li>Contact's imprint name (if assigned to an imprint)</li>
+                              <li>Default: "Author Services"</li>
+                            </ol>
+                          </div>
                         </div>
                         <div className="flex justify-between text-sm">
                           <span className="text-muted-foreground">From Email:</span>
@@ -918,7 +928,7 @@ export function CampaignDetail({ campaign, onBack, onCancelScheduled }: Campaign
                         </div>
                       </div>
                       <p className="text-xs text-muted-foreground pt-2 border-t">
-                        Custom sender addresses will be available once mail forwarding is configured.
+                        Custom reply-to addresses will be available once mail forwarding is configured.
                       </p>
                     </div>
                   </div>

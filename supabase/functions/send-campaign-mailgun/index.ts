@@ -332,7 +332,7 @@ serve(async (req) => {
           const batch = contactIdsList.slice(i, i + batchSize);
           const { data: batchContacts } = await supabase
             .from("contacts")
-            .select("id, email, first_name, last_name, imprint_id")
+            .select("id, email, first_name, last_name, imprint_id, assigned_asc")
             .in("id", batch)
             .not("status", "in", "(bounced,complained,unsubscribed)");
           
@@ -352,7 +352,7 @@ serve(async (req) => {
       while (hasMore) {
         const { data: imprintContacts } = await supabase
           .from("contacts")
-          .select("id, email, first_name, last_name, imprint_id")
+          .select("id, email, first_name, last_name, imprint_id, assigned_asc")
           .in("imprint_id", imprintIds)
           .not("status", "in", "(bounced,complained,unsubscribed)")
           .range(offset, offset + pageSize - 1);
@@ -401,6 +401,52 @@ serve(async (req) => {
       }
     }
 
+    // Collect unique ASC IDs and imprint IDs from contacts for dynamic sender name
+    const uniqueAscIds = new Set<string>();
+    const uniqueImprintIds = new Set<string>();
+    for (const contact of contacts) {
+      if (contact.assigned_asc) uniqueAscIds.add(contact.assigned_asc);
+      if (contact.imprint_id) uniqueImprintIds.add(contact.imprint_id);
+    }
+
+    // Fetch ASC profiles for sender names
+    const ascProfiles: Record<string, string> = {};
+    if (uniqueAscIds.size > 0) {
+      const ascIdArray = Array.from(uniqueAscIds);
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, full_name")
+        .in("id", ascIdArray);
+      
+      if (profiles) {
+        for (const profile of profiles) {
+          if (profile.full_name) {
+            ascProfiles[profile.id] = profile.full_name;
+          }
+        }
+      }
+      console.log(`[send-campaign-mailgun] Fetched ${Object.keys(ascProfiles).length} ASC profiles for dynamic sender names`);
+    }
+
+    // Fetch imprint from_names for fallback sender names
+    const imprintFromNames: Record<string, string> = {};
+    if (uniqueImprintIds.size > 0) {
+      const imprintIdArray = Array.from(uniqueImprintIds);
+      const { data: imprintsData } = await supabase
+        .from("imprints")
+        .select("id, from_name")
+        .in("id", imprintIdArray);
+      
+      if (imprintsData) {
+        for (const imp of imprintsData) {
+          if (imp.from_name) {
+            imprintFromNames[imp.id] = imp.from_name;
+          }
+        }
+      }
+      console.log(`[send-campaign-mailgun] Fetched ${Object.keys(imprintFromNames).length} imprint from_names for fallback sender names`);
+    }
+
     // Render HTML from blocks with imprint styling
     let htmlTemplate = campaign.html_content;
     let plainTextTemplate = '';
@@ -432,9 +478,8 @@ serve(async (req) => {
       plainTextTemplate += '\n\n---\nAuthor Services, 2727 Paces Ferry Road SE, Building Two, Suite 250, Atlanta, GA 30339';
     }
 
-    // Hardcoded sender and reply-to (no custom reply-to until mail forwarding is set up)
+    // Hardcoded email and reply-to (no custom reply-to until mail forwarding is set up)
     const fromEmail = "noreply@newauthor.authorservices.com";
-    const fromName = campaign.from_name || "Author Services";
     const replyTo = "noreply@newauthor.authorservices.com";
 
     // Build recipient batches (max 1000 per Mailgun API call)
@@ -456,12 +501,21 @@ serve(async (req) => {
         // Generate unsubscribe URL for this contact
         const unsubscribeUrl = `${supabaseUrl}/functions/v1/unsubscribe?c=${campaignId}&t=${contact.id}&e=${encodeURIComponent(contact.email)}`;
         
+        // Determine dynamic sender name: ASC name > Imprint name > "Author Services"
+        let senderName = "Author Services";
+        if (contact.assigned_asc && ascProfiles[contact.assigned_asc]) {
+          senderName = ascProfiles[contact.assigned_asc];
+        } else if (contact.imprint_id && imprintFromNames[contact.imprint_id]) {
+          senderName = imprintFromNames[contact.imprint_id];
+        }
+        
         recipientVariables[contact.email] = {
           first_name: contact.first_name || "there",
           last_name: contact.last_name || "",
           email: contact.email,
           contact_id: contact.id,
           unsubscribe_url: unsubscribeUrl,
+          sender_name: senderName,
         };
         
         // Prepare sent event for logging
@@ -473,9 +527,9 @@ serve(async (req) => {
         });
       }
       
-      // Build form data for Mailgun
+      // Build form data for Mailgun - use recipient variable for dynamic sender name
       const formData = new FormData();
-      formData.append("from", `${fromName} <${fromEmail}>`);
+      formData.append("from", `%recipient.sender_name% <${fromEmail}>`);
       formData.append("to", recipientEmails.join(","));
       formData.append("subject", campaign.subject);
       formData.append("html", htmlTemplate);
@@ -546,6 +600,7 @@ serve(async (req) => {
             last_name: "",
             email: email,
             unsubscribe_url: unsubscribeUrl,
+            sender_name: "Author Services", // Additional recipients use default
           };
           
           sentEvents.push({
@@ -556,7 +611,7 @@ serve(async (req) => {
         }
         
         const formData = new FormData();
-        formData.append("from", `${fromName} <${fromEmail}>`);
+        formData.append("from", `%recipient.sender_name% <${fromEmail}>`);
         formData.append("to", additionalEmails.join(","));
         formData.append("subject", campaign.subject);
         formData.append("html", htmlTemplate);
