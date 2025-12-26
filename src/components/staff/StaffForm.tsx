@@ -23,6 +23,9 @@ const DEPARTMENTS = [
   { value: 'support', label: 'Support' },
   { value: 'accounting', label: 'Accounting' },
   { value: 'management', label: 'Management' },
+  { value: 'information_technology', label: 'Information Technology' },
+  { value: 'operations', label: 'Operations' },
+  { value: 'executive', label: 'Executive' },
 ];
 
 interface StaffFormProps {

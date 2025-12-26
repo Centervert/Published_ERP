@@ -13,6 +13,8 @@ export interface PaginatedContact {
   assigned_ae: string | null;
   assigned_asc_text: string | null;
   assigned_ae_text: string | null;
+  staff_asc_id: string | null;
+  staff_ae_id: string | null;
   created_at: string;
   imprint?: {
     id: string;
@@ -55,6 +57,8 @@ export function usePaginatedContacts({
           assigned_ae,
           assigned_asc_text,
           assigned_ae_text,
+          staff_asc_id,
+          staff_ae_id,
           created_at,
           imprint:imprints(id, name)
         `, { count: 'exact' });

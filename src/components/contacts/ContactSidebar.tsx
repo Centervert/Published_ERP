@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { Contact, useUpdateContact, useContactLinks } from '@/hooks/useContacts';
 import { useImprints } from '@/hooks/useImprints';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { useActiveStaff } from '@/hooks/useStaff';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -83,18 +82,8 @@ export function ContactSidebar({ contact, onBack, onSelectTab }: ContactSidebarP
   const updateContact = useUpdateContact();
   const { links, addLink, deleteLink } = useContactLinks(contact.id);
   
-  // Fetch team members for ASC/AE assignment
-  const { data: teamMembers = [] } = useQuery({
-    queryKey: ['profiles'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, full_name, email')
-        .order('full_name');
-      if (error) throw error;
-      return data || [];
-    },
-  });
+  // Fetch staff members for ASC/AE assignment
+  const { data: staffMembers = [] } = useActiveStaff();
   
   const [linksOpen, setLinksOpen] = useState(false);
   const [assignmentOpen, setAssignmentOpen] = useState(false);
@@ -304,15 +293,15 @@ export function ContactSidebar({ contact, onBack, onSelectTab }: ContactSidebarP
                   <SelectTrigger className="h-6 w-auto border-0 bg-transparent p-0 text-sm focus:ring-0 [&>svg]:h-3 [&>svg]:w-3">
                     <span className="text-sm">
                       {formData.assigned_asc && formData.assigned_asc !== 'none'
-                        ? teamMembers.find(m => m.id === formData.assigned_asc)?.full_name || teamMembers.find(m => m.id === formData.assigned_asc)?.email || '--'
+                        ? staffMembers.find(m => m.id === formData.assigned_asc)?.full_name || '--'
                         : '--'}
                     </span>
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">Unassigned</SelectItem>
-                    {teamMembers.map(member => (
+                    {staffMembers.map(member => (
                       <SelectItem key={member.id} value={member.id}>
-                        {member.full_name || member.email}
+                        {member.full_name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -331,9 +320,9 @@ export function ContactSidebar({ contact, onBack, onSelectTab }: ContactSidebarP
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">Unassigned</SelectItem>
-                    {teamMembers.map(member => (
+                    {staffMembers.map(member => (
                       <SelectItem key={member.id} value={member.id}>
-                        {member.full_name || member.email}
+                        {member.full_name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -354,15 +343,15 @@ export function ContactSidebar({ contact, onBack, onSelectTab }: ContactSidebarP
                   <SelectTrigger className="h-6 w-auto border-0 bg-transparent p-0 text-sm focus:ring-0 [&>svg]:h-3 [&>svg]:w-3">
                     <span className="text-sm">
                       {formData.assigned_ae && formData.assigned_ae !== 'none'
-                        ? teamMembers.find(m => m.id === formData.assigned_ae)?.full_name || teamMembers.find(m => m.id === formData.assigned_ae)?.email || '--'
+                        ? staffMembers.find(m => m.id === formData.assigned_ae)?.full_name || '--'
                         : '--'}
                     </span>
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">Unassigned</SelectItem>
-                    {teamMembers.map(member => (
+                    {staffMembers.map(member => (
                       <SelectItem key={member.id} value={member.id}>
-                        {member.full_name || member.email}
+                        {member.full_name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -381,9 +370,9 @@ export function ContactSidebar({ contact, onBack, onSelectTab }: ContactSidebarP
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">Unassigned</SelectItem>
-                    {teamMembers.map(member => (
+                    {staffMembers.map(member => (
                       <SelectItem key={member.id} value={member.id}>
-                        {member.full_name || member.email}
+                        {member.full_name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -665,9 +654,9 @@ export function ContactSidebar({ contact, onBack, onSelectTab }: ContactSidebarP
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Unassigned</SelectItem>
-                  {teamMembers.map(member => (
+                  {staffMembers.map(member => (
                     <SelectItem key={member.id} value={member.id}>
-                      {member.full_name || member.email}
+                      {member.full_name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -683,9 +672,9 @@ export function ContactSidebar({ contact, onBack, onSelectTab }: ContactSidebarP
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Unassigned</SelectItem>
-                  {teamMembers.map(member => (
+                  {staffMembers.map(member => (
                     <SelectItem key={member.id} value={member.id}>
-                      {member.full_name || member.email}
+                      {member.full_name}
                     </SelectItem>
                   ))}
                 </SelectContent>
