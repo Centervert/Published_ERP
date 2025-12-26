@@ -27,6 +27,8 @@ export interface Contact {
   assigned_ae: string | null;
   assigned_asc_text: string | null;
   assigned_ae_text: string | null;
+  staff_asc_id: string | null;
+  staff_ae_id: string | null;
   created_at: string;
   updated_at: string;
   imprint?: {

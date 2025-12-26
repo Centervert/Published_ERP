@@ -199,45 +199,8 @@ serve(async (req) => {
     const errors: { row: number; error: string }[] = [];
     const unmatchedImprints = new Set<string>();
     const jobWarnings: string[] = [];
-    const placeholderLookup = new Map<string, string>();
-    const ascToCreate = new Set<string>();
-
-    // First pass: collect ASC identifiers to create (process in chunks)
-    for (let i = 1; i < lines.length; i++) {
-      const row = parseCSVLine(lines[i]);
-      let ascName = ascNameIndex >= 0 ? row[ascNameIndex]?.trim() : undefined;
-      let ascEmail = ascEmailIndex >= 0 ? row[ascEmailIndex]?.trim()?.toLowerCase() : undefined;
-      
-      if ((ascName && ascName.toLowerCase() !== 'unassigned') || (ascEmail && ascEmail !== 'no owner_email')) {
-        const existingByName = ascName ? userNameLookup.get(ascName.toLowerCase().trim()) : undefined;
-        const existingByEmail = ascEmail ? userEmailLookup.get(ascEmail) : undefined;
-        
-        if (!existingByName && !existingByEmail) {
-          const key = ascEmail || ascName?.toLowerCase().trim();
-          if (key) ascToCreate.add(key);
-        }
-      }
-    }
-
-    // Create placeholder profiles in batch
-    if (ascToCreate.size > 0 && ascToCreate.size < 1000) {
-      const placeholders = Array.from(ascToCreate).map(key => ({
-        id: crypto.randomUUID(),
-        email: key.includes('@') ? key : `placeholder-${key.replace(/[^a-z0-9]/gi, '-')}@placeholder.local`,
-        full_name: key,
-        active: false,
-      }));
-
-      placeholders.forEach(p => placeholderLookup.set(p.full_name.toLowerCase(), p.id));
-
-      const { error: insertError } = await supabase.from('profiles').insert(placeholders);
-      if (insertError) {
-        console.error('Placeholder error:', insertError);
-        jobWarnings.push(`Could not create placeholders: ${insertError.message}`);
-      } else {
-        jobWarnings.push(`Created ${placeholders.length} placeholder team member(s)`);
-      }
-    }
+    // Track unmatched ASC names for warning
+    const unmatchedAscNames = new Set<string>();
 
     // Second pass: process contacts in batches
     for (let i = 1; i < lines.length; i += batchSize) {
@@ -273,9 +236,9 @@ serve(async (req) => {
           }
         }
 
-        // Match ASC: staff first, then profile
+        // Match ASC: staff table only (no more profile fallback)
         let staffAscId: string | undefined;
-        let ascId: string | undefined;
+        let ascTextFallback: string | undefined;
         const ascNameRaw = ascNameIndex >= 0 ? row[ascNameIndex]?.trim() : '';
         const ascEmailRaw = ascEmailIndex >= 0 ? row[ascEmailIndex]?.trim()?.toLowerCase() : '';
 
@@ -287,13 +250,16 @@ serve(async (req) => {
         if (!staffAscId && ascNameRaw && ascNameRaw.toLowerCase() !== 'unassigned') {
           staffAscId = staffNameLookup.get(ascNameRaw.toLowerCase().trim());
         }
-        // Priority 3: Profile by name (legacy)
-        if (!staffAscId && ascNameRaw && ascNameRaw.toLowerCase() !== 'unassigned') {
-          ascId = userNameLookup.get(ascNameRaw.toLowerCase().trim());
-        }
-        // Priority 4: Profile by email (legacy)
-        if (!staffAscId && !ascId && ascEmailRaw && ascEmailRaw !== 'no owner_email') {
-          ascId = userEmailLookup.get(ascEmailRaw);
+        
+        // If no staff match found, store text as fallback (but don't create placeholders)
+        if (!staffAscId && (ascNameRaw || ascEmailRaw)) {
+          if (ascNameRaw && ascNameRaw.toLowerCase() !== 'unassigned') {
+            ascTextFallback = ascEmailRaw ? `${ascNameRaw} <${ascEmailRaw}>` : ascNameRaw;
+            unmatchedAscNames.add(ascNameRaw);
+          } else if (ascEmailRaw && ascEmailRaw !== 'no owner_email') {
+            ascTextFallback = ascEmailRaw;
+            unmatchedAscNames.add(ascEmailRaw);
+          }
         }
 
         const normalizedEmail = normalizeEmail(email);
@@ -315,10 +281,16 @@ serve(async (req) => {
         if (phoneIndex >= 0) contact.phone = normalizePhone(row[phoneIndex]) || null;
         if (imprintIndex >= 0 && imprintId) contact.imprint_id = imprintId;
 
-        // Only set ASC if provided in CSV
+        // Only set ASC if provided in CSV - use staff_asc_id, fall back to text
         if ((ascNameIndex >= 0 && ascNameRaw) || (ascEmailIndex >= 0 && ascEmailRaw)) {
-          contact.staff_asc_id = staffAscId || null;
-          contact.assigned_asc = staffAscId ? null : (ascId || null);
+          if (staffAscId) {
+            contact.staff_asc_id = staffAscId;
+            // Keep assigned_asc_text as backup during migration period
+            contact.assigned_asc_text = ascTextFallback || null;
+          } else {
+            contact.staff_asc_id = null;
+            contact.assigned_asc_text = ascTextFallback || null;
+          }
         }
 
         if (createdAt) contact.created_at = createdAt;
@@ -382,6 +354,10 @@ serve(async (req) => {
 
     if (unmatchedImprints.size > 0) {
       jobWarnings.push(`Unmatched imprints: ${Array.from(unmatchedImprints).slice(0, 5).join(', ')}${unmatchedImprints.size > 5 ? '...' : ''}`);
+    }
+    
+    if (unmatchedAscNames.size > 0) {
+      jobWarnings.push(`Unmatched ASC names (stored as text): ${Array.from(unmatchedAscNames).slice(0, 5).join(', ')}${unmatchedAscNames.size > 5 ? ` (+${unmatchedAscNames.size - 5} more)` : ''}`);
     }
 
     await supabase

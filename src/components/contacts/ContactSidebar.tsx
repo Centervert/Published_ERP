@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Contact, useUpdateContact, useContactLinks } from '@/hooks/useContacts';
 import { useImprints } from '@/hooks/useImprints';
-import { useActiveStaff } from '@/hooks/useStaff';
+import { useActiveStaff, useStaffById } from '@/hooks/useStaff';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -92,6 +92,9 @@ export function ContactSidebar({ contact, onBack, onSelectTab }: ContactSidebarP
   const [timezoneInput, setTimezoneInput] = useState('');
   const [dealDialogOpen, setDealDialogOpen] = useState(false);
   
+  // Lookup staff by ID for display (includes inactive staff)
+  const { staff: currentAsc } = useStaffById(contact.staff_asc_id);
+
   const [formData, setFormData] = useState({
     first_name: contact.first_name || '',
     last_name: contact.last_name || '',
@@ -103,7 +106,8 @@ export function ContactSidebar({ contact, onBack, onSelectTab }: ContactSidebarP
     imprint_id: contact.imprint_id || 'none',
     status: contact.status || 'active',
     notes: contact.notes || '',
-    assigned_asc: contact.assigned_asc || 'none',
+    staff_asc_id: contact.staff_asc_id || 'none',
+    // AE fields left unchanged - not part of this migration
     assigned_ae: contact.assigned_ae || 'none',
   });
 
@@ -138,12 +142,12 @@ export function ContactSidebar({ contact, onBack, onSelectTab }: ContactSidebarP
         contact_type: contact.contact_type,
         status: contact.status,
         notes: contact.notes,
-        assigned_asc: contact.assigned_asc,
+        staff_asc_id: contact.staff_asc_id,
         assigned_ae: contact.assigned_ae,
       },
       ...formData,
       imprint_id: formData.imprint_id === 'none' ? null : formData.imprint_id,
-      assigned_asc: formData.assigned_asc === 'none' ? null : formData.assigned_asc,
+      staff_asc_id: formData.staff_asc_id === 'none' ? null : formData.staff_asc_id,
       assigned_ae: formData.assigned_ae === 'none' ? null : formData.assigned_ae,
     });
     setHasChanges(false);
@@ -281,19 +285,20 @@ export function ContactSidebar({ contact, onBack, onSelectTab }: ContactSidebarP
             </div>
           </div>
 
-          {/* ASC */}
+          {/* ASC - Using staff_asc_id (new foreign key) */}
           <div className="flex items-center min-h-[28px]">
             <span className="text-xs text-muted-foreground w-16 flex-shrink-0">A.S.C.</span>
             <div className="flex-1 flex justify-end">
-              {contact.assigned_asc ? (
+              {/* Show dropdown if staff_asc_id is set or no legacy text exists */}
+              {contact.staff_asc_id || !contact.assigned_asc_text ? (
                 <Select 
-                  value={formData.assigned_asc || 'none'} 
-                  onValueChange={(v) => handleChange('assigned_asc', v === 'none' ? null : v)}
+                  value={formData.staff_asc_id || 'none'} 
+                  onValueChange={(v) => handleChange('staff_asc_id', v === 'none' ? null : v)}
                 >
                   <SelectTrigger className="h-6 w-auto border-0 bg-transparent p-0 text-sm focus:ring-0 [&>svg]:h-3 [&>svg]:w-3">
                     <span className="text-sm">
-                      {formData.assigned_asc && formData.assigned_asc !== 'none'
-                        ? staffMembers.find(m => m.id === formData.assigned_asc)?.full_name || '--'
+                      {formData.staff_asc_id && formData.staff_asc_id !== 'none'
+                        ? (currentAsc?.full_name || staffMembers.find(m => m.id === formData.staff_asc_id)?.full_name || '--')
                         : '--'}
                     </span>
                   </SelectTrigger>
@@ -306,20 +311,19 @@ export function ContactSidebar({ contact, onBack, onSelectTab }: ContactSidebarP
                     ))}
                   </SelectContent>
                 </Select>
-              ) : contact.assigned_asc_text ? (
-                <span className="text-sm text-muted-foreground italic" title="Imported - no matching team member">
-                  {contact.assigned_asc_text}
-                </span>
               ) : (
+                // Show legacy text with ability to assign proper staff member
                 <Select 
                   value="none" 
-                  onValueChange={(v) => handleChange('assigned_asc', v === 'none' ? null : v)}
+                  onValueChange={(v) => handleChange('staff_asc_id', v === 'none' ? null : v)}
                 >
                   <SelectTrigger className="h-6 w-auto border-0 bg-transparent p-0 text-sm focus:ring-0 [&>svg]:h-3 [&>svg]:w-3">
-                    <span className="text-sm">--</span>
+                    <span className="text-sm text-muted-foreground italic" title="Legacy import - select to link to staff">
+                      {contact.assigned_asc_text}
+                    </span>
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">Unassigned</SelectItem>
+                    <SelectItem value="none">Keep as "{contact.assigned_asc_text}"</SelectItem>
                     {staffMembers.map(member => (
                       <SelectItem key={member.id} value={member.id}>
                         {member.full_name}
@@ -645,10 +649,10 @@ export function ContactSidebar({ contact, onBack, onSelectTab }: ContactSidebarP
               </Select>
             </div>
 
-            {/* Assigned ASC */}
+            {/* Assigned ASC - using staff_asc_id */}
             <div>
               <Label className="text-xs text-muted-foreground">Assigned A.S.C.</Label>
-              <Select value={formData.assigned_asc} onValueChange={(v) => handleChange('assigned_asc', v)}>
+              <Select value={formData.staff_asc_id} onValueChange={(v) => handleChange('staff_asc_id', v)}>
                 <SelectTrigger className="h-8 mt-1">
                   <SelectValue placeholder="Select team member" />
                 </SelectTrigger>
