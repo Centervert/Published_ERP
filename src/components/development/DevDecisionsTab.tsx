@@ -216,7 +216,14 @@ export function DevDecisionsTab({ documentId, isAdmin }: DevDecisionsTabProps) {
                       />
                     </TableCell>
                   )}
-                  <TableCell className="font-medium">{decision.title}</TableCell>
+                  <TableCell className="font-medium">
+                    <div className="flex items-center gap-2">
+                      {decision.title}
+                      {(decision.priority ?? 0) > 0 && (
+                        <span className="text-xs font-medium text-primary">Priority</span>
+                      )}
+                    </div>
+                  </TableCell>
                   <TableCell>
                     <StatusBadge status={decision.status} />
                   </TableCell>
