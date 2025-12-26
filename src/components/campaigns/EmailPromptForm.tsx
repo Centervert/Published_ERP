@@ -272,14 +272,28 @@ export function EmailPromptForm({ onSubmit, isLoading }: EmailPromptFormProps) {
               </p>
             </Label>
           </div>
-          <div className="flex items-start space-x-3 rounded-lg border p-3 cursor-pointer hover:bg-muted/50 transition-colors">
-            <RadioGroupItem value="custom" id="cta-custom" className="mt-0.5" />
-            <Label htmlFor="cta-custom" className="cursor-pointer flex-1">
-              <span className="font-medium">Custom button</span>
-              <p className="text-xs text-muted-foreground">
-                Standard button with your own text and link
-              </p>
-            </Label>
+          <div className={`rounded-lg border transition-colors ${ctaType === 'custom' ? 'border-primary bg-primary/5' : 'hover:bg-muted/50'}`}>
+            <div className="flex items-start space-x-3 p-3 cursor-pointer">
+              <RadioGroupItem value="custom" id="cta-custom" className="mt-0.5" />
+              <Label htmlFor="cta-custom" className="cursor-pointer flex-1">
+                <span className="font-medium">Custom button</span>
+                <p className="text-xs text-muted-foreground">
+                  Standard button with your own text and link
+                </p>
+              </Label>
+            </div>
+            {ctaType === 'custom' && (
+              <div className="px-3 pb-3 pt-0 ml-7">
+                <Input
+                  id="cta"
+                  placeholder="e.g., Shop Now, Learn More, Register Today"
+                  value={callToAction}
+                  onChange={(e) => setCallToAction(e.target.value)}
+                  className="bg-background"
+                  autoFocus
+                />
+              </div>
+            )}
           </div>
           <div className="flex items-start space-x-3 rounded-lg border p-3 cursor-pointer hover:bg-muted/50 transition-colors">
             <RadioGroupItem value="none" id="cta-none" className="mt-0.5" />
@@ -288,17 +302,6 @@ export function EmailPromptForm({ onSubmit, isLoading }: EmailPromptFormProps) {
             </Label>
           </div>
         </RadioGroup>
-        
-        {ctaType === 'custom' && (
-          <div className="pl-6">
-            <Input
-              id="cta"
-              placeholder="e.g., Shop Now, Learn More, Register Today"
-              value={callToAction}
-              onChange={(e) => setCallToAction(e.target.value)}
-            />
-          </div>
-        )}
       </div>
 
       <div className="space-y-2">
