@@ -3,6 +3,7 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Table,
   TableBody,
@@ -39,6 +40,7 @@ import { useUsers, ROLE_DISPLAY_NAMES, AppRole, useHasRole } from '@/hooks/useUs
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { z } from 'zod';
+import { StaffTable } from '@/components/staff/StaffTable';
 
 const ROLE_OPTIONS: AppRole[] = ['super_admin', 'admin', 'asc', 'ae', 'marketing', 'member'];
 
@@ -56,6 +58,7 @@ const getRoleBadgeVariant = (role: AppRole): 'default' | 'secondary' | 'outline'
 };
 
 export default function Users() {
+  const [activeTab, setActiveTab] = useState('users');
   const [searchQuery, setSearchQuery] = useState('');
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
@@ -213,12 +216,12 @@ export default function Users() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-semibold text-foreground">Users</h1>
+            <h1 className="text-2xl font-semibold text-foreground">Users & Staff</h1>
             <p className="text-muted-foreground mt-1">
-              Manage internal team members and their roles
+              Manage internal team members, user accounts, and roles
             </p>
           </div>
-          {canManageRoles && (
+          {canManageRoles && activeTab === 'users' && (
             <Button onClick={() => setIsInviteDialogOpen(true)}>
               <UserPlus className="h-4 w-4 mr-2" />
               Invite User
@@ -226,80 +229,93 @@ export default function Users() {
           )}
         </div>
 
-        <div className="flex items-center gap-4">
-          <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search users..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9"
-            />
-          </div>
-        </div>
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList>
+            <TabsTrigger value="users">User Accounts</TabsTrigger>
+            <TabsTrigger value="staff">Staff Directory</TabsTrigger>
+          </TabsList>
 
-        <div className="border rounded-lg bg-card">
-          {isLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          <TabsContent value="users" className="mt-4">
+            <div className="flex items-center gap-4 mb-4">
+              <div className="relative flex-1 max-w-sm">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search users..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
             </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Phone</TableHead>
-                  <TableHead>Title</TableHead>
-                  <TableHead>Role</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredUsers.map((user) => (
-                  <TableRow
-                    key={user.id}
-                    className="cursor-pointer hover:bg-muted/50"
-                    onClick={() => handleOpenSheet(user.id)}
-                  >
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <Avatar className="h-8 w-8">
-                          <AvatarFallback className="bg-primary/10 text-primary text-xs">
-                            {getInitials(user.full_name)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span className="font-medium">
-                          {user.full_name || 'No name'}
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {user.email}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {user.phone || '—'}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {user.title || '—'}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={getRoleBadgeVariant(user.role)}>
-                        {ROLE_DISPLAY_NAMES[user.role]}
-                      </Badge>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {filteredUsers.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                      No users found
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          )}
-        </div>
+
+            <div className="border rounded-lg bg-card">
+              {isLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Phone</TableHead>
+                      <TableHead>Title</TableHead>
+                      <TableHead>Role</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredUsers.map((user) => (
+                      <TableRow
+                        key={user.id}
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={() => handleOpenSheet(user.id)}
+                      >
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-8 w-8">
+                              <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                                {getInitials(user.full_name)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="font-medium">
+                              {user.full_name || 'No name'}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {user.email}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {user.phone || '—'}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {user.title || '—'}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={getRoleBadgeVariant(user.role)}>
+                            {ROLE_DISPLAY_NAMES[user.role]}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {filteredUsers.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                          No users found
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              )}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="staff" className="mt-4">
+            <StaffTable />
+          </TabsContent>
+        </Tabs>
       </div>
 
       {/* Edit User Sheet */}

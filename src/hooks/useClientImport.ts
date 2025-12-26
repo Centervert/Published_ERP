@@ -143,7 +143,12 @@ export function useClientImport() {
     const { data: imprints } = await supabase.from('imprints').select('id, name');
     const imprintMap = new Map((imprints || []).map(i => [i.name.toLowerCase(), i.id]));
 
-    // Fetch existing users
+    // Fetch staff members for ASC matching (preferred)
+    const { data: staffMembers } = await supabase.from('staff').select('id, email, full_name');
+    const staffEmailMap = new Map((staffMembers || []).map(s => [s.email.toLowerCase(), s.id]));
+    const staffNameMap = new Map((staffMembers || []).map(s => [s.full_name?.toLowerCase() || '', s.id]));
+
+    // Fetch existing users (legacy fallback)
     const { data: existingUsers } = await supabase.from('profiles').select('id, email, full_name');
     const userEmailMap = new Map((existingUsers || []).map(u => [u.email.toLowerCase(), u.id]));
     const userNameMap = new Map((existingUsers || []).map(u => [u.full_name?.toLowerCase() || '', u.id]));
@@ -193,20 +198,31 @@ export function useClientImport() {
             }
           }
 
-          // Match ASC (hybrid: try profile match, fallback to text)
+          // Match ASC (hybrid: try staff first, then profile, fallback to text)
+          let staffAscId: string | null = null;
           let ascId: string | null = null;
           let ascText: string | null = null;
           const ascEmail = ascEmailIdx >= 0 ? row[ascEmailIdx]?.trim().toLowerCase() : '';
           const ascName = ascNameIdx >= 0 ? row[ascNameIdx]?.trim() : '';
 
+          // Priority 1: Match staff by email
           if (ascEmail && ascEmail !== 'no owner_email') {
+            staffAscId = staffEmailMap.get(ascEmail) || null;
+          }
+          // Priority 2: Match staff by name
+          if (!staffAscId && ascName && ascName.toLowerCase() !== 'unassigned') {
+            staffAscId = staffNameMap.get(ascName.toLowerCase()) || null;
+          }
+          // Priority 3: Legacy profile match by email
+          if (!staffAscId && ascEmail && ascEmail !== 'no owner_email') {
             ascId = userEmailMap.get(ascEmail) || null;
           }
-          if (!ascId && ascName && ascName.toLowerCase() !== 'unassigned') {
+          // Priority 4: Legacy profile match by name
+          if (!staffAscId && !ascId && ascName && ascName.toLowerCase() !== 'unassigned') {
             ascId = userNameMap.get(ascName.toLowerCase()) || null;
           }
-          // If no profile match, build fallback text
-          if (!ascId && (ascEmail || ascName)) {
+          // Priority 5: Fallback text
+          if (!staffAscId && !ascId && (ascEmail || ascName)) {
             ascText = buildFallbackText(ascName, ascEmail);
             if (ascText && !unmatchedAsc.includes(ascText)) unmatchedAsc.push(ascText);
           }
@@ -224,10 +240,11 @@ export function useClientImport() {
 
           if (imprintIdx >= 0 && imprintId) contact.imprint_id = imprintId;
 
-          // Hybrid ASC: store profile id if matched, otherwise store fallback text
+          // Hybrid ASC: store staff_asc_id if matched, else profile id, else fallback text
           if ((ascEmailIdx >= 0 && ascEmail) || (ascNameIdx >= 0 && ascName)) {
-            contact.assigned_asc = ascId;
-            contact.assigned_asc_text = ascId ? null : ascText;
+            contact.staff_asc_id = staffAscId;
+            contact.assigned_asc = staffAscId ? null : ascId;
+            contact.assigned_asc_text = (staffAscId || ascId) ? null : ascText;
           }
 
           if (createdAt) contact.created_at = createdAt;
