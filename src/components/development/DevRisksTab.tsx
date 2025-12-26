@@ -84,6 +84,7 @@ export function DevRisksTab({ documentId, isAdmin }: DevRisksTabProps) {
         related_type: null,
         related_id: null,
         tags: null,
+        priority: null,
         is_archived: false,
       });
       toast.success(`${newRisk.item_type === 'blocker' ? 'Blocker' : 'Risk'} created`);
