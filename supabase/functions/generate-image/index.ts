@@ -82,13 +82,32 @@ serve(async (req) => {
     }
 
     const data = await response.json();
-    console.log("AI response received");
+    console.log("AI response received:", JSON.stringify(data, null, 2));
 
-    const imageData = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+    // Try multiple paths to find the image - Gemini may return in different structures
+    let imageData = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+    
+    // Alternative: check if images are at the top level of the message
+    if (!imageData && data.choices?.[0]?.message?.images?.[0]?.url) {
+      imageData = data.choices[0].message.images[0].url;
+    }
+    
+    // Alternative: check inline_data format
+    if (!imageData && data.choices?.[0]?.message?.content) {
+      const content = data.choices[0].message.content;
+      if (Array.isArray(content)) {
+        const imagePart = content.find((part: any) => part.type === "image" || part.inline_data);
+        if (imagePart?.inline_data?.data) {
+          imageData = `data:${imagePart.inline_data.mime_type || 'image/png'};base64,${imagePart.inline_data.data}`;
+        }
+      }
+    }
+    
     const textContent = data.choices?.[0]?.message?.content || "";
 
     if (!imageData) {
-      throw new Error("No image was generated");
+      console.error("No image found in response structure:", JSON.stringify(data.choices?.[0]?.message, null, 2));
+      throw new Error("No image was generated. The AI model may have refused the request or encountered an issue.");
     }
 
     // Upload to Supabase Storage
