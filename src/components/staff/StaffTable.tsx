@@ -26,14 +26,10 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Search, Loader2, Plus, MoreHorizontal, Link2, Unlink, UserCheck, UserX, Check, Minus } from 'lucide-react';
+import { Search, Loader2, Plus, MoreHorizontal, Link2, Unlink, UserCheck, UserX } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { ROLE_DISPLAY_NAMES } from '@/hooks/useUsers';
 import { StaffForm } from './StaffForm';
 
 export function StaffTable() {
@@ -147,28 +143,16 @@ export function StaffTable() {
                     {staffMember.title || '—'}
                   </TableCell>
                   <TableCell className="whitespace-nowrap">
-                    <TooltipProvider delayDuration={0}>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <span className="inline-flex">
-                            {staffMember.user_id ? (
-                              staffMember.active !== false ? (
-                                <Check className="h-4 w-4 text-green-500" />
-                              ) : (
-                                <Minus className="h-4 w-4 text-amber-500" />
-                              )
-                            ) : (
-                              <Minus className="h-4 w-4 text-muted-foreground" />
-                            )}
-                          </span>
-                        </TooltipTrigger>
-                        <TooltipContent side="top">
-                          {staffMember.user_id 
-                            ? (staffMember.active !== false ? 'Active portal user' : 'Inactive portal user')
-                            : 'No portal access'}
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
+                    {staffMember.user_id && staffMember.linked_user?.role ? (
+                      <Badge 
+                        variant={staffMember.active !== false ? "default" : "secondary"}
+                        className={staffMember.active !== false ? "" : "opacity-60"}
+                      >
+                        {ROLE_DISPLAY_NAMES[staffMember.linked_user.role as keyof typeof ROLE_DISPLAY_NAMES] || staffMember.linked_user.role}
+                      </Badge>
+                    ) : (
+                      <span className="text-muted-foreground text-sm">None</span>
+                    )}
                   </TableCell>
                   {canManage && (
                     <TableCell className="whitespace-nowrap">
