@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
@@ -39,7 +40,7 @@ import {
 import { useDecisions, DevItem, DevItemStatus } from '@/hooks/useDevItems';
 import { StatusBadge } from './StatusBadge';
 import { MarkdownRenderer } from './MarkdownRenderer';
-import { Plus, Search, Filter, Trash2, ArrowUp, ArrowDown } from 'lucide-react';
+import { Plus, Search, Filter, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 
@@ -114,12 +115,12 @@ export function DevDecisionsTab({ documentId, isAdmin }: DevDecisionsTabProps) {
     }
   };
 
-  const handleUpdatePriority = async (id: string, priority: number) => {
+  const handleTogglePriority = async (id: string, currentPriority: number | null) => {
+    const newPriority = (currentPriority ?? 0) > 0 ? 0 : 1;
     try {
-      await updateItem.mutateAsync({ id, priority });
-      toast.success('Priority updated');
+      await updateItem.mutateAsync({ id, priority: newPriority });
       if (selectedDecision?.id === id) {
-        setSelectedDecision({ ...selectedDecision, priority });
+        setSelectedDecision({ ...selectedDecision, priority: newPriority });
       }
     } catch (error) {
       toast.error('Failed to update priority');
@@ -140,10 +141,6 @@ export function DevDecisionsTab({ documentId, isAdmin }: DevDecisionsTabProps) {
     }
   };
 
-  const adjustPriority = async (decision: DevItem, delta: number) => {
-    const newPriority = Math.max(0, (decision.priority || 0) + delta);
-    await handleUpdatePriority(decision.id, newPriority);
-  };
 
   return (
     <div className="space-y-4">
@@ -161,11 +158,12 @@ export function DevDecisionsTab({ documentId, isAdmin }: DevDecisionsTabProps) {
       <div className="flex flex-wrap gap-3">
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
+          <input
+            type="text"
             placeholder="Search decisions..."
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            className="pl-9"
+            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring pl-9"
           />
         </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -211,34 +209,11 @@ export function DevDecisionsTab({ documentId, isAdmin }: DevDecisionsTabProps) {
                   onClick={() => setSelectedDecision(decision)}
                 >
                   {isAdmin && (
-                    <TableCell onClick={e => e.stopPropagation()}>
-                      <div className="flex items-center gap-1">
-                        <Input
-                          type="number"
-                          min={0}
-                          value={decision.priority || 0}
-                          onChange={e => handleUpdatePriority(decision.id, parseInt(e.target.value) || 0)}
-                          className="w-14 h-7 text-center text-xs"
-                        />
-                        <div className="flex flex-col">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-4 w-4"
-                            onClick={() => adjustPriority(decision, 1)}
-                          >
-                            <ArrowUp className="h-3 w-3" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-4 w-4"
-                            onClick={() => adjustPriority(decision, -1)}
-                          >
-                            <ArrowDown className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </div>
+                    <TableCell onClick={e => e.stopPropagation()} className="text-center">
+                      <Checkbox
+                        checked={(decision.priority ?? 0) > 0}
+                        onCheckedChange={() => handleTogglePriority(decision.id, decision.priority)}
+                      />
                     </TableCell>
                   )}
                   <TableCell className="font-medium">{decision.title}</TableCell>
@@ -320,14 +295,14 @@ export function DevDecisionsTab({ documentId, isAdmin }: DevDecisionsTabProps) {
 
                 {isAdmin && (
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground">Priority:</span>
-                    <Input
-                      type="number"
-                      min={0}
-                      value={selectedDecision.priority || 0}
-                      onChange={e => handleUpdatePriority(selectedDecision.id, parseInt(e.target.value) || 0)}
-                      className="w-20 h-8"
+                    <Checkbox
+                      id="priority-checkbox"
+                      checked={(selectedDecision.priority ?? 0) > 0}
+                      onCheckedChange={() => handleTogglePriority(selectedDecision.id, selectedDecision.priority)}
                     />
+                    <label htmlFor="priority-checkbox" className="text-sm text-muted-foreground cursor-pointer">
+                      Priority Decision
+                    </label>
                   </div>
                 )}
               </div>
