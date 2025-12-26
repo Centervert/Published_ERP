@@ -271,15 +271,17 @@ function renderAscContact(block: AscContactBlock, options: RenderOptions): strin
   const ascEmail = options.isPreview ? 'tyler@authorservices.com' : '%recipient.asc_email%';
   const ascPhone = options.isPreview ? '(555) 123-4567' : '%recipient.asc_phone%';
   
-  const emailButton = showEmail ? `
-    <a href="mailto:${ascEmail}" style="display: inline-block; background-color: ${buttonColor}; color: #ffffff; text-decoration: none; padding: 10px 20px; border-radius: 4px; font-weight: 500; font-size: 14px; margin: 4px;">
-      ✉ Email
-    </a>
+  // Email as plain text to avoid spam filters (mailto: links can trigger filters)
+  const emailDisplay = showEmail ? `
+    <p style="margin: 0 0 12px 0; color: ${textColor}; font-size: 14px;">
+      ✉️ ${ascEmail}
+    </p>
   ` : '';
   
+  // Phone as clickable button - tel: links are safe for deliverability
   const phoneButton = showPhone ? `
-    <a href="tel:${ascPhone}" style="display: inline-block; background-color: ${buttonColor}; color: #ffffff; text-decoration: none; padding: 10px 20px; border-radius: 4px; font-weight: 500; font-size: 14px; margin: 4px;">
-      📞 ${ascPhone}
+    <a href="tel:${ascPhone}" style="display: inline-block; background-color: ${buttonColor}; color: #ffffff; text-decoration: none; padding: 10px 20px; border-radius: 4px; font-weight: 500; font-size: 14px;">
+      📞 Call ${ascPhone}
     </a>
   ` : '';
 
@@ -292,11 +294,11 @@ function renderAscContact(block: AscContactBlock, options: RenderOptions): strin
               <h3 style="margin: 0 0 16px 0; color: ${textColor}; font-size: 18px; font-weight: 600;">
                 ${escapeHtml(headingText)}
               </h3>
-              <p style="margin: 0 0 16px 0; color: ${textColor}; font-size: 16px; font-weight: 500;">
+              <p style="margin: 0 0 12px 0; color: ${textColor}; font-size: 16px; font-weight: 500;">
                 👤 ${ascName}
               </p>
+              ${emailDisplay}
               <div>
-                ${emailButton}
                 ${phoneButton}
               </div>
             </td>
