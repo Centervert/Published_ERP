@@ -534,20 +534,27 @@ serve(async (req) => {
       .replace(/\{\{UNSUBSCRIBE_URL\}\}/gi, '%recipient.unsubscribe_url%')
       .replace(/\{\{unsubscribe_url\}\}/gi, '%recipient.unsubscribe_url%');
 
-    // CAN-SPAM compliant address (unified across system)
-    const COMPANY_ADDRESS = "Author Services, 555 Winderley Pl Suite 225, Maitland, FL 32751";
+    // Fetch company data for CAN-SPAM compliance
+    const { data: companyData } = await supabase
+      .from("company")
+      .select("name, legal_address, phone")
+      .single();
+    
+    const companyName = companyData?.name || "Author Services";
+    const companyAddress = companyData?.legal_address || "Author Services, 555 Winderley Pl Suite 225, Maitland, FL 32751";
+    const companyPhone = companyData?.phone || "866-381-2665";
     
     // Ensure footer has physical address for CAN-SPAM compliance
-    if (!htmlTemplate.includes('Author Services') && !htmlTemplate.includes('physical address')) {
+    if (!htmlTemplate.includes(companyName) && !htmlTemplate.includes('physical address')) {
       htmlTemplate = htmlTemplate.replace(
         '</body>',
-        `<p style="font-size:11px;color:#999;text-align:center;margin-top:20px;">${COMPANY_ADDRESS}</p></body>`
+        `<p style="font-size:11px;color:#999;text-align:center;margin-top:20px;">${companyAddress}</p></body>`
       );
     }
 
     // Add CAN-SPAM address to plain text if not present
-    if (plainTextTemplate && !plainTextTemplate.includes('Author Services')) {
-      plainTextTemplate += `\n\n---\n${COMPANY_ADDRESS}`;
+    if (plainTextTemplate && !plainTextTemplate.includes(companyName)) {
+      plainTextTemplate += `\n\n---\n${companyAddress}`;
     }
 
     // Hardcoded email and reply-to (no custom reply-to until mail forwarding is set up)
