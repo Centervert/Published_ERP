@@ -25,21 +25,27 @@ serve(async (req) => {
       throw new Error('LOVABLE_API_KEY is not configured');
     }
 
-    const systemPrompt = `You are an email marketing expert. Generate a compelling, concise email subject line.
-Rules:
+    const systemPrompt = `You are an email marketing expert. Generate both a campaign name and email subject line.
+
+Rules for SUBJECT LINE:
 - Keep it under 60 characters
 - Make it attention-grabbing but not clickbait
 - Match the specified tone
-- Don't use ALL CAPS
-- Don't use excessive punctuation
-- Return ONLY the subject line, nothing else`;
+- Don't use ALL CAPS or excessive punctuation
 
-    const userPrompt = `Generate an email subject line for:
+Rules for CAMPAIGN NAME:
+- Keep it under 50 characters
+- Make it descriptive and easy to identify internally
+- Include key topic/theme
+- Good for organizing and finding later
+
+Return a JSON object with exactly this format:
+{"subject": "your subject line here", "campaignName": "your campaign name here"}`;
+
+    const userPrompt = `Generate an email subject line and internal campaign name for:
 Type: ${emailType || 'general'}
 Tone: ${tone || 'professional'}
-Content: ${description}
-
-Subject line:`;
+Content: ${description}`;
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -53,7 +59,7 @@ Subject line:`;
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }
         ],
-        max_tokens: 100,
+        max_tokens: 200,
       }),
     });
 
@@ -74,12 +80,31 @@ Subject line:`;
     }
 
     const data = await response.json();
-    const subject = data.choices?.[0]?.message?.content?.trim() || '';
+    const rawContent = data.choices?.[0]?.message?.content?.trim() || '';
+    
+    // Parse the JSON response
+    let subject = '';
+    let campaignName = '';
+    
+    try {
+      // Try to extract JSON from the response
+      const jsonMatch = rawContent.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        subject = parsed.subject || '';
+        campaignName = parsed.campaignName || '';
+      }
+    } catch (parseError) {
+      // Fallback: treat entire response as subject line (backward compatibility)
+      console.log('Failed to parse JSON, using raw content as subject');
+      subject = rawContent.replace(/^["']|["']$/g, '');
+    }
 
     console.log('Generated subject:', subject);
+    console.log('Generated campaign name:', campaignName);
 
     return new Response(
-      JSON.stringify({ subject }),
+      JSON.stringify({ subject, campaignName }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
