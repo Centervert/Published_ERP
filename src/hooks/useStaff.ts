@@ -213,3 +213,28 @@ export function useActiveStaff() {
     },
   });
 }
+
+// Hook to lookup a single staff member by ID (includes inactive staff for display purposes)
+export function useStaffById(staffId: string | null | undefined) {
+  const { data: staff, isLoading } = useQuery({
+    queryKey: ['staff', 'by-id', staffId],
+    queryFn: async (): Promise<Staff | null> => {
+      if (!staffId) return null;
+      
+      const { data, error } = await supabase
+        .from('staff')
+        .select('*')
+        .eq('id', staffId)
+        .single();
+      
+      if (error) {
+        console.error('Error fetching staff by ID:', error);
+        return null;
+      }
+      return data;
+    },
+    enabled: !!staffId,
+  });
+
+  return { staff: staff || null, isLoading };
+}
