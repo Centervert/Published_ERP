@@ -1,7 +1,7 @@
 import type { EmailBlock, AIEmailBlock, HeaderBlock, FooterBlock } from '@/types/email-blocks';
 
-// Default company info for footer
-const DEFAULT_COMPANY_ADDRESS = 'Author Services, LLC. 555 Winderley Pl, Maitland, FL 32751 866-381-2665';
+// CAN-SPAM compliant company address (unified across system)
+const COMPANY_ADDRESS = 'Author Services, 2727 Paces Ferry Road SE, Building Two, Suite 250, Atlanta, GA 30339';
 const DEFAULT_REASON_TEXT = 'You received this email because you are a valued Author Services customer.';
 
 // Generate a unique ID for blocks
@@ -37,7 +37,7 @@ export function aiBlocksToEmailBlocks(aiBlocks: AIEmailBlock[], imprint?: Imprin
       const footerBlock = baseBlock as FooterBlock;
       return {
         ...footerBlock,
-        companyAddress: footerBlock.companyAddress || DEFAULT_COMPANY_ADDRESS,
+        companyAddress: footerBlock.companyAddress || COMPANY_ADDRESS,
         reasonText: footerBlock.reasonText || DEFAULT_REASON_TEXT,
         content: footerBlock.content || `© ${imprint?.name || 'Author Services'}. All rights reserved.`,
         showUnsubscribe: true,
