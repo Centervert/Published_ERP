@@ -40,74 +40,94 @@ serve(async (req) => {
 
     // Build the full prompt with style guidance
     const styleGuide = style && stylePrompts[style] ? stylePrompts[style] : stylePrompts.photorealistic;
-    const fullPrompt = `${styleGuide} Generate a professional email-friendly image: ${prompt}. The image should be clean, high-quality, and suitable for embedding in marketing emails. The image should be 600px wide (standard email width).`;
+    const fullPrompt = `${styleGuide} Generate a professional email-friendly image: ${prompt}. The image should be clean, high-quality, and suitable for embedding in marketing emails.`;
 
     console.log("Generating image with prompt:", fullPrompt);
 
-    // Call Lovable AI image generation model
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash-image-preview",
-        messages: [
-          {
-            role: "user",
-            content: fullPrompt,
-          },
-        ],
-        modalities: ["image", "text"],
-      }),
-    });
+    // Retry logic - sometimes the model returns text without an image
+    const maxRetries = 3;
+    let imageData: string | undefined;
+    let lastError: string | undefined;
 
-    if (!response.ok) {
-      if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again in a moment." }), {
-          status: 429,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      console.log(`Image generation attempt ${attempt}/${maxRetries}`);
+      
+      // Call Lovable AI image generation model
+      const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash-image-preview",
+          messages: [
+            {
+              role: "user",
+              content: `Generate an image: ${fullPrompt}`,
+            },
+          ],
+          modalities: ["image", "text"],
+        }),
+      });
+
+      if (!response.ok) {
+        if (response.status === 429) {
+          return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again in a moment." }), {
+            status: 429,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        if (response.status === 402) {
+          return new Response(JSON.stringify({ error: "AI usage limit reached. Please add credits to continue." }), {
+            status: 402,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        const errorText = await response.text();
+        console.error("AI gateway error:", response.status, errorText);
+        throw new Error(`AI gateway error: ${response.status}`);
       }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "AI usage limit reached. Please add credits to continue." }), {
-          status: 402,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+
+      const data = await response.json();
+      console.log(`Attempt ${attempt} response:`, JSON.stringify(data, null, 2));
+
+      // Try multiple paths to find the image - Gemini may return in different structures
+      imageData = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+      
+      // Alternative: check if images are at the top level of the message
+      if (!imageData && data.choices?.[0]?.message?.images?.[0]?.url) {
+        imageData = data.choices[0].message.images[0].url;
       }
-      const errorText = await response.text();
-      console.error("AI gateway error:", response.status, errorText);
-      throw new Error(`AI gateway error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    console.log("AI response received:", JSON.stringify(data, null, 2));
-
-    // Try multiple paths to find the image - Gemini may return in different structures
-    let imageData = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-    
-    // Alternative: check if images are at the top level of the message
-    if (!imageData && data.choices?.[0]?.message?.images?.[0]?.url) {
-      imageData = data.choices[0].message.images[0].url;
-    }
-    
-    // Alternative: check inline_data format
-    if (!imageData && data.choices?.[0]?.message?.content) {
-      const content = data.choices[0].message.content;
-      if (Array.isArray(content)) {
-        const imagePart = content.find((part: any) => part.type === "image" || part.inline_data);
-        if (imagePart?.inline_data?.data) {
-          imageData = `data:${imagePart.inline_data.mime_type || 'image/png'};base64,${imagePart.inline_data.data}`;
+      
+      // Alternative: check inline_data format
+      if (!imageData && data.choices?.[0]?.message?.content) {
+        const content = data.choices[0].message.content;
+        if (Array.isArray(content)) {
+          const imagePart = content.find((part: any) => part.type === "image" || part.inline_data);
+          if (imagePart?.inline_data?.data) {
+            imageData = `data:${imagePart.inline_data.mime_type || 'image/png'};base64,${imagePart.inline_data.data}`;
+          }
         }
       }
+
+      if (imageData) {
+        console.log(`Image found on attempt ${attempt}`);
+        break;
+      }
+
+      lastError = `Attempt ${attempt}: No image in response`;
+      console.warn(lastError, JSON.stringify(data.choices?.[0]?.message, null, 2));
+      
+      // Wait a bit before retrying
+      if (attempt < maxRetries) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
     }
-    
-    const textContent = data.choices?.[0]?.message?.content || "";
 
     if (!imageData) {
-      console.error("No image found in response structure:", JSON.stringify(data.choices?.[0]?.message, null, 2));
-      throw new Error("No image was generated. The AI model may have refused the request or encountered an issue.");
+      console.error("All attempts failed to generate image");
+      throw new Error("Failed to generate image after multiple attempts. Please try a different prompt or try again later.");
     }
 
     // Upload to Supabase Storage
@@ -152,7 +172,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         imageUrl: publicUrlData.publicUrl,
-        description: textContent,
+        description: "",
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
