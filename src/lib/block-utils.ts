@@ -1,8 +1,10 @@
 import type { EmailBlock, AIEmailBlock, HeaderBlock, FooterBlock } from '@/types/email-blocks';
+import { getLogoForBackground } from '@/lib/color-utils';
 
-// CAN-SPAM compliant company address (unified across system)
+// CAN-SPAM compliant company address (unified across system) - HARDCODED
 const COMPANY_ADDRESS = 'Author Services, 2727 Paces Ferry Road SE, Building Two, Suite 250, Atlanta, GA 30339';
 const DEFAULT_REASON_TEXT = 'You received this email because you are a valued Author Services customer.';
+const DEFAULT_COPYRIGHT = '© Author Services. All rights reserved.';
 
 // Generate a unique ID for blocks
 export function generateBlockId(): string {
@@ -13,6 +15,7 @@ export function generateBlockId(): string {
 interface ImprintData {
   name?: string;
   logo_url?: string | null;
+  logo_dark_url?: string | null;
   primary_color?: string | null;
 }
 
@@ -24,23 +27,31 @@ export function aiBlocksToEmailBlocks(aiBlocks: AIEmailBlock[], imprint?: Imprin
       id: generateBlockId(),
     };
     
-    // Normalize header blocks - ensure logo URL is from imprint
-    if (block.type === 'header' && imprint?.logo_url) {
+    // Normalize header blocks - choose logo based on background color
+    if (block.type === 'header') {
+      const headerBlock = baseBlock as HeaderBlock;
+      const bgColor = headerBlock.backgroundColor || '#ffffff';
+      const logoUrl = getLogoForBackground(bgColor, imprint?.logo_url, imprint?.logo_dark_url);
+      
       return {
-        ...baseBlock,
-        logoUrl: imprint.logo_url,
+        ...headerBlock,
+        logoUrl: logoUrl,
       } as HeaderBlock;
     }
     
-    // Normalize footer blocks - ensure company address is correct
+    // Normalize footer blocks - ALWAYS override with hardcoded CAN-SPAM compliant values
     if (block.type === 'footer') {
-      const footerBlock = baseBlock as FooterBlock;
+      const footerBlock = block as unknown as FooterBlock;
       return {
-        ...footerBlock,
-        companyAddress: footerBlock.companyAddress || COMPANY_ADDRESS,
-        reasonText: footerBlock.reasonText || DEFAULT_REASON_TEXT,
-        content: footerBlock.content || `© ${imprint?.name || 'Author Services'}. All rights reserved.`,
+        id: baseBlock.id,
+        type: 'footer',
+        content: `© ${imprint?.name || 'Author Services'}. All rights reserved.`,
+        companyAddress: COMPANY_ADDRESS,
+        reasonText: DEFAULT_REASON_TEXT,
         showUnsubscribe: true,
+        unsubscribeText: 'Unsubscribe',
+        backgroundColor: footerBlock.backgroundColor || '#f9fafb',
+        textColor: footerBlock.textColor || '#6b7280',
       } as FooterBlock;
     }
     

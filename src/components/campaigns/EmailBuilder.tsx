@@ -67,6 +67,7 @@ export function EmailBuilder({
           headingFont: imprint.heading_font || undefined,
           bodyFont: imprint.body_font || undefined,
           logoUrl: imprint.logo_url || undefined,
+          logoDarkUrl: imprint.logo_dark_url || undefined,
           websiteUrl: imprint.website_url || undefined,
         },
       });
@@ -171,10 +172,11 @@ export function EmailBuilder({
 
       const parsed = JSON.parse(cleanJson);
       if (parsed.blocks && Array.isArray(parsed.blocks)) {
-        // Pass imprint data for block normalization
+        // Pass imprint data for block normalization (including dark logo)
         return aiBlocksToEmailBlocks(parsed.blocks, imprint ? {
           name: imprint.name,
           logo_url: imprint.logo_url,
+          logo_dark_url: imprint.logo_dark_url,
           primary_color: imprint.primary_color,
         } : undefined);
       }
@@ -616,6 +618,7 @@ export function EmailBuilder({
         side="right" 
         className="w-full sm:max-w-full p-0 flex flex-col"
         style={{ maxWidth: '100vw' }}
+        hideCloseButton
       >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b">
@@ -697,6 +700,8 @@ export function EmailBuilder({
               blocks={blocks}
               onChange={handleBlocksChange}
               className="flex-1"
+              logoUrl={imprint?.logo_url || undefined}
+              logoDarkUrl={imprint?.logo_dark_url || undefined}
             />
           )}
         </div>

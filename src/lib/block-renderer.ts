@@ -13,6 +13,7 @@ import type {
   GreetingBlock,
   AscContactBlock,
 } from '@/types/email-blocks';
+import { getLogoForBackground } from '@/lib/color-utils';
 
 export interface RenderOptions {
   imprint?: {
@@ -24,6 +25,7 @@ export interface RenderOptions {
     headingFont?: string;
     bodyFont?: string;
     logoUrl?: string;
+    logoDarkUrl?: string;
     websiteUrl?: string;
   };
   trackingPixelUrl?: string;
@@ -43,7 +45,12 @@ function escapeHtml(text: string): string {
 
 function renderHeader(block: HeaderBlock, options: RenderOptions): string {
   const bgColor = block.backgroundColor || options.imprint?.backgroundColor || '#ffffff';
-  const logoUrl = block.logoUrl || options.imprint?.logoUrl;
+  // Use smart logo selection based on background color
+  const logoUrl = block.logoUrl || getLogoForBackground(
+    bgColor, 
+    options.imprint?.logoUrl, 
+    options.imprint?.logoDarkUrl
+  );
   const padding = block.padding || 20;
 
   return `
