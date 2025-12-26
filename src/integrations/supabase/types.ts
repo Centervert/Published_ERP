@@ -194,10 +194,19 @@ export type Database = {
       }
       company: {
         Row: {
+          accent_color: string | null
+          background_color: string | null
+          body_font: string | null
+          brand_voice: string | null
           created_at: string | null
           favicon_url: string | null
           footer_copyright_template: string | null
+          footer_image_url: string | null
           footer_reason_template: string | null
+          from_email: string | null
+          from_name: string | null
+          header_image_url: string | null
+          heading_font: string | null
           icon_url: string | null
           id: string
           legal_address: string | null
@@ -205,15 +214,29 @@ export type Database = {
           logo_url: string | null
           name: string
           phone: string | null
+          primary_color: string | null
+          reply_to_email: string | null
+          secondary_color: string | null
           slug: string
+          tagline: string | null
+          text_color: string | null
           updated_at: string | null
           website_url: string | null
         }
         Insert: {
+          accent_color?: string | null
+          background_color?: string | null
+          body_font?: string | null
+          brand_voice?: string | null
           created_at?: string | null
           favicon_url?: string | null
           footer_copyright_template?: string | null
+          footer_image_url?: string | null
           footer_reason_template?: string | null
+          from_email?: string | null
+          from_name?: string | null
+          header_image_url?: string | null
+          heading_font?: string | null
           icon_url?: string | null
           id?: string
           legal_address?: string | null
@@ -221,15 +244,29 @@ export type Database = {
           logo_url?: string | null
           name: string
           phone?: string | null
+          primary_color?: string | null
+          reply_to_email?: string | null
+          secondary_color?: string | null
           slug: string
+          tagline?: string | null
+          text_color?: string | null
           updated_at?: string | null
           website_url?: string | null
         }
         Update: {
+          accent_color?: string | null
+          background_color?: string | null
+          body_font?: string | null
+          brand_voice?: string | null
           created_at?: string | null
           favicon_url?: string | null
           footer_copyright_template?: string | null
+          footer_image_url?: string | null
           footer_reason_template?: string | null
+          from_email?: string | null
+          from_name?: string | null
+          header_image_url?: string | null
+          heading_font?: string | null
           icon_url?: string | null
           id?: string
           legal_address?: string | null
@@ -237,7 +274,12 @@ export type Database = {
           logo_url?: string | null
           name?: string
           phone?: string | null
+          primary_color?: string | null
+          reply_to_email?: string | null
+          secondary_color?: string | null
           slug?: string
+          tagline?: string | null
+          text_color?: string | null
           updated_at?: string | null
           website_url?: string | null
         }

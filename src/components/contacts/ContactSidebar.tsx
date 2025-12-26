@@ -700,8 +700,8 @@ export function ContactSidebar({ contact, onBack, onSelectTab }: ContactSidebarP
                   <SelectValue placeholder="Select imprint" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">Author Services (Default)</SelectItem>
-                  {imprints.filter(imprint => imprint.name.toLowerCase() !== 'author services').map(imprint => (
+                  <SelectItem value="none">None (Non-Author)</SelectItem>
+                  {imprints.map(imprint => (
                     <SelectItem key={imprint.id} value={imprint.id}>{imprint.name}</SelectItem>
                   ))}
                 </SelectContent>

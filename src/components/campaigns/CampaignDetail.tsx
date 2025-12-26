@@ -3,6 +3,7 @@ import { Campaign, useCampaignStats, useCampaigns } from '@/hooks/useCampaigns';
 import { useLists } from '@/hooks/useContacts';
 import type { EmailBlock } from '@/types/email-blocks';
 import { useImprints } from '@/hooks/useImprints';
+import { useCompany } from '@/hooks/useCompany';
 import { useRecipientCounts } from '@/hooks/useRecipientCounts';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -76,6 +77,7 @@ export function CampaignDetail({ campaign, onBack, onCancelScheduled }: Campaign
   const { data: stats, isLoading: statsLoading } = useCampaignStats(campaign.id);
   const { lists } = useLists();
   const { imprints } = useImprints();
+  const { company } = useCompany();
   const { imprintCounts, listCounts, totalCount } = useRecipientCounts();
   const { sendCampaign, updateCampaign, scheduleCampaign } = useCampaigns();
   
@@ -97,7 +99,8 @@ export function CampaignDetail({ campaign, onBack, onCancelScheduled }: Campaign
   const [selectedListIds, setSelectedListIds] = useState<string[]>([]);
   const [selectedImprintIds, setSelectedImprintIds] = useState<string[]>([]);
   // Initialize selectedImprintId from imprints list once loaded
-  const [selectedImprintId, setSelectedImprintId] = useState<string>('');
+  // 'parent' means Parent Company (Author Services), otherwise it's an imprint ID
+  const [selectedImprintId, setSelectedImprintId] = useState<string>('parent');
   const [fromName, setFromName] = useState(campaign.from_name);
   const [fromEmail, setFromEmail] = useState(campaign.from_email);
   // Reply-to is disabled until mail forwarding is set up
@@ -105,20 +108,14 @@ export function CampaignDetail({ campaign, onBack, onCancelScheduled }: Campaign
   // const [routeRepliesToAsc, setRouteRepliesToAsc] = useState(false);
   const [subject, setSubject] = useState(campaign.subject);
   
-  // Auto-select first imprint if none selected and set from values
+  // Auto-select Parent Company and set from values
   useEffect(() => {
-    if (!selectedImprintId && imprints.length > 0) {
-      // Default to Author Services imprint (only one available for now)
-      const authorServicesImprint = imprints.find(i => 
-        i.slug === 'author-services' || i.name.toLowerCase() === 'author services'
-      );
-      const selectedImprint = authorServicesImprint || imprints[0];
-      setSelectedImprintId(selectedImprint.id);
-      // Also set from values so hasFrom becomes true
-      setFromName(selectedImprint.from_name);
-      setFromEmail(selectedImprint.from_email);
+    if (selectedImprintId === 'parent' && company) {
+      // Use Parent Company (Author Services) as default sender
+      setFromName(company.from_name || company.name || 'Author Services');
+      setFromEmail(company.from_email || 'noreply@newauthor.authorservices.com');
     }
-  }, [imprints, selectedImprintId, campaign.from_email]);
+  }, [company, selectedImprintId]);
   const [campaignName, setCampaignName] = useState(campaign.name);
   
   // Send time state
@@ -132,14 +129,18 @@ export function CampaignDetail({ campaign, onBack, onCancelScheduled }: Campaign
   const [additionalRecipients, setAdditionalRecipients] = useState<string[]>([]);
   const [newRecipientEmail, setNewRecipientEmail] = useState('');
   const [showAdditionalRecipients, setShowAdditionalRecipients] = useState(false);
-  // Handle imprint selection
-  const handleImprintChange = (imprintId: string) => {
-    setSelectedImprintId(imprintId);
-    const imprint = imprints.find(i => i.id === imprintId);
-    if (imprint) {
-      setFromName(imprint.from_name);
-      setFromEmail(imprint.from_email);
-      // Reply-to is disabled until mail forwarding is set up
+  // Handle imprint/sender selection
+  const handleImprintChange = (value: string) => {
+    setSelectedImprintId(value);
+    if (value === 'parent' && company) {
+      setFromName(company.from_name || company.name || 'Author Services');
+      setFromEmail(company.from_email || 'noreply@newauthor.authorservices.com');
+    } else {
+      const imprint = imprints.find(i => i.id === value);
+      if (imprint) {
+        setFromName(imprint.from_name);
+        setFromEmail(imprint.from_email);
+      }
     }
   };
 
@@ -898,45 +899,58 @@ export function CampaignDetail({ campaign, onBack, onCancelScheduled }: Campaign
                 <div className="px-5 pb-5 pt-0 border-t">
                   <div className="space-y-4 py-4">
                     <div className="space-y-2">
-                      <Label>Imprint</Label>
+                      <Label>Sender</Label>
                       <Select value={selectedImprintId} onValueChange={handleImprintChange}>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select an imprint" />
+                          <SelectValue placeholder="Select a sender" />
                         </SelectTrigger>
                         <SelectContent>
-                          {imprints.map((imprint) => {
-                            const isAuthorServices = imprint.slug === 'author-services' || imprint.name.toLowerCase() === 'author services';
-                            return (
-                              <SelectItem 
-                                key={imprint.id} 
-                                value={imprint.id}
-                                disabled={!isAuthorServices}
-                              >
-                                <div className="flex items-center gap-2 w-full">
-                                  {imprint.logo_url ? (
-                                    <img src={imprint.logo_url} alt="" className="h-4 w-4 object-contain" />
-                                  ) : (
-                                    <div 
-                                      className="h-4 w-4 rounded text-[8px] text-white flex items-center justify-center font-bold"
-                                      style={{ backgroundColor: imprint.primary_color }}
-                                    >
-                                      {imprint.name.charAt(0)}
-                                    </div>
-                                  )}
-                                  <span className={!isAuthorServices ? 'text-muted-foreground' : ''}>
-                                    {imprint.name}
-                                  </span>
-                                  {!isAuthorServices && (
-                                    <span className="ml-auto text-xs text-muted-foreground italic">Coming Soon</span>
-                                  )}
+                          {/* Parent Company - Always first and enabled */}
+                          <SelectItem value="parent">
+                            <div className="flex items-center gap-2 w-full">
+                              {company?.logo_url ? (
+                                <img src={company.logo_url} alt="" className="h-4 w-4 object-contain" />
+                              ) : (
+                                <div 
+                                  className="h-4 w-4 rounded text-[8px] text-white flex items-center justify-center font-bold"
+                                  style={{ backgroundColor: company?.primary_color || '#1a1a2e' }}
+                                >
+                                  A
                                 </div>
-                              </SelectItem>
-                            );
-                          })}
+                              )}
+                              <span>Parent Company ({company?.name || 'Author Services'})</span>
+                            </div>
+                          </SelectItem>
+                          
+                          {/* Imprints - Coming Soon */}
+                          {imprints.map((imprint) => (
+                            <SelectItem 
+                              key={imprint.id} 
+                              value={imprint.id}
+                              disabled={true}
+                            >
+                              <div className="flex items-center gap-2 w-full">
+                                {imprint.logo_url ? (
+                                  <img src={imprint.logo_url} alt="" className="h-4 w-4 object-contain" />
+                                ) : (
+                                  <div 
+                                    className="h-4 w-4 rounded text-[8px] text-white flex items-center justify-center font-bold"
+                                    style={{ backgroundColor: imprint.primary_color }}
+                                  >
+                                    {imprint.name.charAt(0)}
+                                  </div>
+                                )}
+                                <span className="text-muted-foreground">
+                                  {imprint.name}
+                                </span>
+                                <span className="ml-auto text-xs text-muted-foreground italic">Coming Soon</span>
+                              </div>
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                       <p className="text-xs text-muted-foreground">
-                        Select an imprint to apply its branding to this campaign.
+                        Select a sender to apply branding to this campaign.
                       </p>
                     </div>
                     

@@ -15,6 +15,21 @@ export interface Company {
   favicon_url: string | null;
   footer_copyright_template: string | null;
   footer_reason_template: string | null;
+  // Branding fields (migrated from imprints)
+  primary_color: string | null;
+  secondary_color: string | null;
+  accent_color: string | null;
+  background_color: string | null;
+  text_color: string | null;
+  heading_font: string | null;
+  body_font: string | null;
+  brand_voice: string | null;
+  tagline: string | null;
+  from_name: string | null;
+  from_email: string | null;
+  reply_to_email: string | null;
+  header_image_url: string | null;
+  footer_image_url: string | null;
   created_at: string;
   updated_at: string;
 }
