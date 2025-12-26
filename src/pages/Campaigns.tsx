@@ -86,7 +86,7 @@ export default function Campaigns() {
   const handleQuickCreate = async () => {
     // Create a draft campaign with defaults and immediately open builder
     const newCampaign = await createCampaign.mutateAsync({
-      name: `Campaign ${format(new Date(), 'MMM d, yyyy')}`,
+      name: `New Campaign ${format(new Date(), 'MMM d, yyyy')}`,
       subject: '',
       from_name: '',
       from_email: 'xulon@updates.authorservices.com',
