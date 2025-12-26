@@ -194,6 +194,9 @@ function renderFooter(block: FooterBlock, options: RenderOptions): string {
   const bgColor = block.backgroundColor || options.imprint?.backgroundColor || '#f9fafb';
   const textColor = block.textColor || '#6b7280';
   const unsubscribeUrl = options.unsubscribeUrl || '{{unsubscribe_url}}';
+  
+  // CAN-SPAM compliant contact info
+  const COMPANY_PHONE = '866-381-2665';
 
   return `
     <tr>
@@ -202,8 +205,11 @@ function renderFooter(block: FooterBlock, options: RenderOptions): string {
           ${block.content}
         </p>
         ${block.companyAddress ? `
-          <p style="margin: 0 0 12px 0; color: ${textColor}; font-size: 12px;">
+          <p style="margin: 0 0 8px 0; color: ${textColor}; font-size: 12px;">
             ${escapeHtml(block.companyAddress)}
+          </p>
+          <p style="margin: 0 0 12px 0; color: ${textColor}; font-size: 12px;">
+            ${COMPANY_PHONE}
           </p>
         ` : ''}
         ${block.reasonText ? `
