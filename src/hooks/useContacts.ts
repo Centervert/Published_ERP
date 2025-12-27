@@ -460,6 +460,27 @@ export function useUpdateContact() {
   });
 }
 
+// Standalone hook for deleting contacts (used when you don't need to fetch all contacts)
+export function useDeleteContact() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('contacts').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['contacts'] });
+      queryClient.invalidateQueries({ queryKey: ['contacts-paginated'] });
+      toast({ title: 'Contact deleted' });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error deleting contact', description: error.message, variant: 'destructive' });
+    },
+  });
+}
+
 // Hook for managing contact links
 export function useContactLinks(contactId: string) {
   const { toast } = useToast();
