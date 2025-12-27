@@ -43,6 +43,9 @@ export function usePaginatedContacts({
   const contactsQuery = useQuery({
     queryKey: ['contacts-paginated', page, pageSize, search, statusFilter, typeFilter, filterByUser],
     queryFn: async () => {
+      const normalizedSearch = (search ?? '').trim();
+      const countMode: 'exact' | 'planned' = normalizedSearch ? 'planned' : 'exact';
+
       let query = supabase
         .from('contacts')
         .select(`
@@ -61,11 +64,29 @@ export function usePaginatedContacts({
           staff_ae_id,
           created_at,
           imprint:imprints(id, name)
-        `, { count: 'exact' });
+        `, { count: countMode });
 
       // Apply filters
-      if (search) {
-        query = query.or(`email.ilike.%${search}%,first_name.ilike.%${search}%,last_name.ilike.%${search}%,phone.ilike.%${search}%`);
+      if (normalizedSearch) {
+        if (normalizedSearch.includes('@')) {
+          // Email lookup: fast prefix match to avoid expensive full-table substring scans
+          query = query.ilike('email', `${normalizedSearch}%`);
+        } else {
+          const parts = normalizedSearch.split(/\s+/).filter(Boolean);
+
+          // If user typed "First Last", treat it as a combined search
+          if (parts.length >= 2) {
+            const first = parts[0];
+            const last = parts.slice(1).join(' ');
+            query = query.ilike('first_name', `${first}%`).ilike('last_name', `${last}%`);
+          } else {
+            const term = parts[0] ?? normalizedSearch;
+            // Prefix search across common fields
+            query = query.or(
+              `email.ilike.${term}%,first_name.ilike.${term}%,last_name.ilike.${term}%`
+            );
+          }
+        }
       }
 
       if (statusFilter !== 'all') {
