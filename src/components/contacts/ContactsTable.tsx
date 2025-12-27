@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useContacts, Contact } from '@/hooks/useContacts';
 import { usePaginatedContacts } from '@/hooks/usePaginatedContacts';
+import { useDeleteContact } from '@/hooks/useContacts';
 import { useActiveStaff } from '@/hooks/useStaff';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -44,7 +44,7 @@ const ITEMS_PER_PAGE = 25;
 
 export function ContactsTable({ filterByUser }: ContactsTableProps) {
   const navigate = useNavigate();
-  const { deleteContact } = useContacts();
+  const deleteContact = useDeleteContact();
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -103,7 +103,7 @@ export function ContactsTable({ filterByUser }: ContactsTableProps) {
     setSelectedIds(newSelected);
   };
 
-  const handleDelete = async (contact: Contact | { id: string; email: string }) => {
+  const handleDelete = async (contact: { id: string; email: string }) => {
     if (confirm(`Delete ${contact.email}?`)) {
       await deleteContact.mutateAsync(contact.id);
     }
