@@ -44,7 +44,9 @@ export function usePaginatedContacts({
     queryKey: ['contacts-paginated', page, pageSize, search, statusFilter, typeFilter, filterByUser],
     queryFn: async () => {
       const normalizedSearch = (search ?? '').trim();
-      const countMode: 'exact' | 'planned' = normalizedSearch ? 'planned' : 'exact';
+      // Always use 'planned' for fast count estimates on large tables (423k+ rows)
+      // 'exact' count causes full table scans taking 2-3 seconds
+      const countMode: 'exact' | 'planned' = 'planned';
 
       let query = supabase
         .from('contacts')
