@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { usePaginatedContacts } from '@/hooks/usePaginatedContacts';
 import { useDeleteContact } from '@/hooks/useContacts';
@@ -53,15 +53,14 @@ export function ContactsTable({ filterByUser }: ContactsTableProps) {
   const [currentPage, setCurrentPage] = useState(1);
 
   // Debounce search input
-  const handleSearchChange = (value: string) => {
-    setSearch(value);
-    // Simple debounce
-    const timeout = setTimeout(() => {
-      setDebouncedSearch(value);
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      setDebouncedSearch(search.trim());
       setCurrentPage(1);
     }, 300);
-    return () => clearTimeout(timeout);
-  };
+
+    return () => window.clearTimeout(timeout);
+  }, [search]);
 
   // Use server-side pagination
   const { contacts, totalCount, totalPages, isLoading, isFetching } = usePaginatedContacts({
@@ -205,7 +204,7 @@ export function ContactsTable({ filterByUser }: ContactsTableProps) {
         <Input
           placeholder="Search name, phone, email"
           value={search}
-          onChange={(e) => handleSearchChange(e.target.value)}
+          onChange={(e) => setSearch(e.target.value)}
           className="pl-9 h-10"
         />
       </div>
