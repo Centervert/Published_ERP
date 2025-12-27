@@ -52,12 +52,12 @@ export function ContactsTable({ filterByUser }: ContactsTableProps) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Debounce search input
+  // Debounce search input (150ms for snappy response with trigram indexes)
   useEffect(() => {
     const timeout = window.setTimeout(() => {
       setDebouncedSearch(search.trim());
       setCurrentPage(1);
-    }, 300);
+    }, 150);
 
     return () => window.clearTimeout(timeout);
   }, [search]);

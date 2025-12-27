@@ -507,6 +507,8 @@ export type Database = {
           last_name: string | null
           notes: string | null
           phone: string | null
+          phone_normalized: string | null
+          search_name: string | null
           staff_ae_id: string | null
           staff_asc_id: string | null
           status: string | null
@@ -529,6 +531,8 @@ export type Database = {
           last_name?: string | null
           notes?: string | null
           phone?: string | null
+          phone_normalized?: string | null
+          search_name?: string | null
           staff_ae_id?: string | null
           staff_asc_id?: string | null
           status?: string | null
@@ -551,6 +555,8 @@ export type Database = {
           last_name?: string | null
           notes?: string | null
           phone?: string | null
+          phone_normalized?: string | null
+          search_name?: string | null
           staff_ae_id?: string | null
           staff_asc_id?: string | null
           status?: string | null
@@ -1428,6 +1434,8 @@ export type Database = {
         }
         Returns: boolean
       }
+      show_limit: { Args: never; Returns: number }
+      show_trgm: { Args: { "": string }; Returns: string[] }
     }
     Enums: {
       app_role: "admin" | "member" | "super_admin" | "asc" | "ae" | "marketing"
