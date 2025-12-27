@@ -3,14 +3,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useDevDocument, useDevDocuments } from '@/hooks/useDevDocuments';
 import { useCurrentUserRole } from '@/hooks/useUsers';
 import { DevOverviewTab } from '@/components/development/DevOverviewTab';
-import { DevRoadmapTab } from '@/components/development/DevRoadmapTab';
+import { DevFeaturesTab } from '@/components/development/DevFeaturesTab';
 import { DevDecisionsTab } from '@/components/development/DevDecisionsTab';
 import { DevRisksTab } from '@/components/development/DevRisksTab';
 import { DevMeetingsTab } from '@/components/development/DevMeetingsTab';
 import { DevReleasesTab } from '@/components/development/DevReleasesTab';
 import { DevDocsTab } from '@/components/development/DevDocsTab';
 import { DevTicketsTab } from '@/components/development/DevTicketsTab';
-import { LayoutDashboard, Map, FileCheck, AlertTriangle, Users, Rocket, FileText, ClipboardList, Loader2 } from 'lucide-react';
+import { LayoutDashboard, Layers, FileCheck, AlertTriangle, Users, Rocket, FileText, ClipboardList, Loader2 } from 'lucide-react';
 
 export default function Development() {
   const [activeTab, setActiveTab] = useState('overview');
@@ -63,9 +63,9 @@ export default function Development() {
             <LayoutDashboard className="h-4 w-4" />
             Overview
           </TabsTrigger>
-          <TabsTrigger value="roadmap" className="gap-2">
-            <Map className="h-4 w-4" />
-            Roadmap
+          <TabsTrigger value="features" className="gap-2">
+            <Layers className="h-4 w-4" />
+            Features
           </TabsTrigger>
           <TabsTrigger value="decisions" className="gap-2">
             <FileCheck className="h-4 w-4" />
@@ -96,8 +96,8 @@ export default function Development() {
         <TabsContent value="overview">
           <DevOverviewTab documentId={documentId} />
         </TabsContent>
-        <TabsContent value="roadmap">
-          <DevRoadmapTab documentId={documentId} isAdmin={isSystemAdmin} />
+        <TabsContent value="features">
+          <DevFeaturesTab documentId={documentId} isAdmin={isSystemAdmin} />
         </TabsContent>
         <TabsContent value="decisions">
           <DevDecisionsTab documentId={documentId} isAdmin={isSystemAdmin} />
