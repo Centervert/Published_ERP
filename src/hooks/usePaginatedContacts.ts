@@ -66,26 +66,20 @@ export function usePaginatedContacts({
           imprint:imprints(id, name)
         `, { count: countMode });
 
-      // Apply filters
+      // Apply filters using optimized trigram-indexed columns
       if (normalizedSearch) {
         if (normalizedSearch.includes('@')) {
-          // Email lookup: fast prefix match to avoid expensive full-table substring scans
+          // Email lookup: prefix match (fast with trigram index)
           query = query.ilike('email', `${normalizedSearch}%`);
-        } else {
-          const parts = normalizedSearch.split(/\s+/).filter(Boolean);
-
-          // If user typed "First Last", treat it as a combined search
-          if (parts.length >= 2) {
-            const first = parts[0];
-            const last = parts.slice(1).join(' ');
-            query = query.ilike('first_name', `${first}%`).ilike('last_name', `${last}%`);
-          } else {
-            const term = parts[0] ?? normalizedSearch;
-            // Prefix search across common fields
-            query = query.or(
-              `email.ilike.${term}%,first_name.ilike.${term}%,last_name.ilike.${term}%`
-            );
+        } else if (/\d/.test(normalizedSearch)) {
+          // Phone search: contains digits, search normalized phone column
+          const digits = normalizedSearch.replace(/\D/g, '');
+          if (digits.length > 0) {
+            query = query.ilike('phone_normalized', `%${digits}%`);
           }
+        } else {
+          // Name search: use combined search_name column (eliminates OR conditions)
+          query = query.ilike('search_name', `%${normalizedSearch.toLowerCase()}%`);
         }
       }
 
