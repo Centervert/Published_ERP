@@ -1,5 +1,6 @@
-import { useState, useMemo } from 'react';
-import { useLists, useListContacts, useContacts, List } from '@/hooks/useContacts';
+import { useState, useMemo, useEffect } from 'react';
+import { useLists, useListContacts, List } from '@/hooks/useContacts';
+import { useContactSearch } from '@/hooks/useContactSearch';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -35,37 +36,40 @@ interface ListDetailSheetProps {
 export function ListDetailSheet({ list, open, onOpenChange }: ListDetailSheetProps) {
   const { updateList } = useLists();
   const { contacts: listContacts, isLoading: loadingContacts, removeContactFromList, addContactToList } = useListContacts(list?.id || null);
-  const { contacts: allContacts } = useContacts();
   
   const [name, setName] = useState(list?.name || '');
   const [description, setDescription] = useState(list?.description || '');
   const [addContactOpen, setAddContactOpen] = useState(false);
   const [searchValue, setSearchValue] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+
+  // Debounce search input for the contact search
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setDebouncedSearch(searchValue);
+    }, 200);
+    return () => clearTimeout(timeout);
+  }, [searchValue]);
+
+  // Use lightweight search hook instead of loading all contacts
+  const listContactIds = useMemo(() => listContacts.map(c => c.id), [listContacts]);
+  const { data: searchResults = [], isLoading: searchLoading } = useContactSearch({
+    search: debouncedSearch,
+    excludeIds: listContactIds,
+    limit: 50,
+    enabled: addContactOpen && debouncedSearch.length > 0,
+  });
 
   // Reset form when list changes
-  useState(() => {
+  useEffect(() => {
     if (list) {
       setName(list.name);
       setDescription(list.description || '');
     }
-  });
+  }, [list]);
 
-  // Get contacts not already in the list
-  const availableContacts = useMemo(() => {
-    const listContactIds = new Set(listContacts.map(c => c.id));
-    return allContacts.filter(c => !listContactIds.has(c.id));
-  }, [allContacts, listContacts]);
-
-  // Filter available contacts by search
-  const filteredContacts = useMemo(() => {
-    if (!searchValue.trim()) return availableContacts.slice(0, 50);
-    const lower = searchValue.toLowerCase();
-    return availableContacts.filter(c => 
-      c.email.toLowerCase().includes(lower) ||
-      (c.first_name && c.first_name.toLowerCase().includes(lower)) ||
-      (c.last_name && c.last_name.toLowerCase().includes(lower))
-    ).slice(0, 50);
-  }, [availableContacts, searchValue]);
+  // Use search results directly (already filtered by excludeIds)
+  const filteredContacts = searchResults;
 
   const handleSave = async () => {
     if (!list || !name.trim()) return;
@@ -153,7 +157,9 @@ export function ListDetailSheet({ list, open, onOpenChange }: ListDetailSheetPro
                       onValueChange={setSearchValue}
                     />
                     <CommandList>
-                      <CommandEmpty>No contacts found</CommandEmpty>
+                      <CommandEmpty>
+                        {searchLoading ? 'Searching...' : debouncedSearch.length === 0 ? 'Type to search contacts' : 'No contacts found'}
+                      </CommandEmpty>
                       <CommandGroup>
                         {filteredContacts.map((contact) => (
                           <CommandItem
