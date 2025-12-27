@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
-export type DevItemType = 'decision' | 'risk' | 'blocker' | 'milestone' | 'scope' | 'link' | 'release' | 'ticket';
+export type DevItemType = 'decision' | 'risk' | 'blocker' | 'milestone' | 'scope' | 'link' | 'release' | 'ticket' | 'feature';
 export type DevItemStatus = 'proposed' | 'accepted' | 'deprecated' | 'open' | 'mitigating' | 'closed';
 export type DevItemSeverity = 'low' | 'medium' | 'high' | 'critical';
 
@@ -148,4 +148,8 @@ export function useReleases(documentId: string | undefined) {
 
 export function useTickets(documentId: string | undefined) {
   return useDevItems(documentId, 'ticket');
+}
+
+export function useFeatures(documentId: string | undefined) {
+  return useDevItems(documentId, 'feature');
 }
