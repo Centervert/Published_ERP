@@ -33,6 +33,18 @@ interface RenderOptions {
   };
 }
 
+// Email validation function to filter out invalid emails
+function isValidEmail(email: string): boolean {
+  if (!email || typeof email !== 'string') return false;
+  // Reject emails with commas or semicolons (multiple emails in one field)
+  if (email.includes(',') || email.includes(';')) return false;
+  // Reject emails with spaces
+  if (email.includes(' ')) return false;
+  // Basic email format validation
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email.trim());
+}
+
 // Web-safe font stacks (no Google Fonts import for email clients)
 const WEB_SAFE_FONTS: Record<string, string> = {
   'Arial': 'Arial, Helvetica, sans-serif',
@@ -470,14 +482,31 @@ serve(async (req) => {
       }
     }
 
-    console.log(`[send-campaign-mailgun] Total unique contacts: ${contacts.length}`);
+    console.log(`[send-campaign-mailgun] Total unique contacts before validation: ${contacts.length}`);
 
-    if (contacts.length === 0 && (!additionalRecipients || additionalRecipients.length === 0)) {
+    // Filter out invalid emails BEFORE batching
+    const skippedEmails: string[] = [];
+    const validContacts = contacts.filter(contact => {
+      if (!isValidEmail(contact.email)) {
+        console.log(`[send-campaign-mailgun] Skipping invalid email: ${contact.email} (contact_id: ${contact.id})`);
+        skippedEmails.push(contact.email);
+        return false;
+      }
+      return true;
+    });
+
+    if (skippedEmails.length > 0) {
+      console.log(`[send-campaign-mailgun] Skipped ${skippedEmails.length} invalid emails`);
+    }
+
+    console.log(`[send-campaign-mailgun] Valid contacts after filtering: ${validContacts.length}`);
+
+    if (validContacts.length === 0 && (!additionalRecipients || additionalRecipients.length === 0)) {
       await supabase
         .from("campaigns")
         .update({ status: "failed" })
         .eq("id", campaignId);
-      throw new Error("No contacts found in selected lists/imprints");
+      throw new Error("No valid contacts found in selected lists/imprints");
     }
 
     // Fetch imprint for styling (use the first imprint if multiple, or fetch based on campaign)
@@ -511,7 +540,7 @@ serve(async (req) => {
     const uniqueStaffAscIds = new Set<string>();
     const uniqueProfileAscIds = new Set<string>();
     const uniqueImprintIds = new Set<string>();
-    for (const contact of contacts) {
+    for (const contact of validContacts) {
       if (contact.staff_asc_id) uniqueStaffAscIds.add(contact.staff_asc_id);
       if (contact.assigned_asc) uniqueProfileAscIds.add(contact.assigned_asc);
       if (contact.imprint_id) uniqueImprintIds.add(contact.imprint_id);
@@ -626,202 +655,127 @@ serve(async (req) => {
     // Build recipient batches (max 1000 per Mailgun API call)
     const BATCH_SIZE = 1000;
     let totalSent = 0;
+    let totalSkipped = skippedEmails.length;
     const sentEvents: any[] = [];
+    const failedBatches: { batch: number; error: string; count: number }[] = [];
 
-    for (let batchStart = 0; batchStart < contacts.length; batchStart += BATCH_SIZE) {
-      const batchEnd = Math.min(batchStart + BATCH_SIZE, contacts.length);
-      const batchContacts = contacts.slice(batchStart, batchEnd);
+    for (let batchStart = 0; batchStart < validContacts.length; batchStart += BATCH_SIZE) {
+      const batchEnd = Math.min(batchStart + BATCH_SIZE, validContacts.length);
+      const batchContacts = validContacts.slice(batchStart, batchEnd);
+      const batchNumber = Math.floor(batchStart / BATCH_SIZE) + 1;
+      const totalBatches = Math.ceil(validContacts.length / BATCH_SIZE);
       
-      // Build recipient list and recipient-variables
-      const recipientEmails: string[] = [];
-      const recipientVariables: Record<string, any> = {};
-      
-      for (const contact of batchContacts) {
-        recipientEmails.push(contact.email);
-        
-        // Generate unsubscribe URL for this contact
-        const unsubscribeUrl = `${supabaseUrl}/functions/v1/unsubscribe?c=${campaignId}&t=${contact.id}&e=${encodeURIComponent(contact.email)}`;
-        
-        // Determine dynamic sender name and ASC info: Staff > Profile > assigned_asc_text > Imprint > default
-        let senderName = "Author Services";
-        let ascName = "Author Success Coach";
-        let ascEmail = "";
-        let ascPhone = "";
-        
-        // Priority 1: Staff ASC (preferred path)
-        if (contact.staff_asc_id && staffAscInfo[contact.staff_asc_id]) {
-          const staffAsc = staffAscInfo[contact.staff_asc_id];
-          senderName = staffAsc.name;
-          ascName = staffAsc.name;
-          ascEmail = staffAsc.email;
-          ascPhone = staffAsc.phone;
-        }
-        // Priority 2: Legacy profile ASC
-        else if (contact.assigned_asc && ascProfiles[contact.assigned_asc]) {
-          const ascProfile = ascProfiles[contact.assigned_asc];
-          senderName = ascProfile.name;
-          ascName = ascProfile.name;
-          ascEmail = ascProfile.email;
-          ascPhone = ascProfile.phone;
-        }
-        // Priority 3: Fallback text (name only, no contact info)
-        else if (contact.assigned_asc_text) {
-          ascName = contact.assigned_asc_text;
-          senderName = contact.assigned_asc_text;
-        }
-        // Priority 4: Imprint from_name
-        else if (contact.imprint_id && imprintFromNames[contact.imprint_id]) {
-          senderName = imprintFromNames[contact.imprint_id];
-        }
-        
-        // Generate time-based greeting (based on current time, ideally would use recipient timezone)
-        const hour = new Date().getUTCHours();
-        let greeting = "Good morning";
-        if (hour >= 17 || hour < 5) greeting = "Good evening";
-        else if (hour >= 12) greeting = "Good afternoon";
-        
-        recipientVariables[contact.email] = {
-          first_name: contact.first_name || "there",
-          last_name: contact.last_name || "",
-          email: contact.email,
-          contact_id: contact.id,
-          unsubscribe_url: unsubscribeUrl,
-          sender_name: senderName,
-          greeting: greeting,
-          asc_name: ascName,
-          asc_email: ascEmail,
-          asc_phone: ascPhone,
-        };
-        
-        // Prepare sent event for logging
-        sentEvents.push({
-          campaign_id: campaignId,
-          contact_id: contact.id,
-          email: contact.email,
-          event_type: "sent",
-        });
-      }
-      
-      // Build form data for Mailgun - use recipient variable for dynamic sender name
-      const formData = new FormData();
-      formData.append("from", `%recipient.sender_name% <${fromEmail}>`);
-      formData.append("to", recipientEmails.join(","));
-      formData.append("subject", campaign.subject);
-      formData.append("html", htmlTemplate);
-      
-      // Add plain text version for better deliverability
-      if (plainTextTemplate) {
-        formData.append("text", plainTextTemplate);
-      }
-      
-      formData.append("recipient-variables", JSON.stringify(recipientVariables));
-      
-      // Tracking
-      formData.append("o:tracking", "yes");
-      formData.append("o:tracking-opens", "yes");
-      formData.append("o:tracking-clicks", "htmlonly");
-      
-      // Custom variables for webhook correlation
-      formData.append("v:campaign_id", campaignId);
-      
-      // Headers - hardcoded reply-to
-      formData.append("h:Reply-To", replyTo);
-      formData.append("h:List-Unsubscribe", `<%recipient.unsubscribe_url%>`);
-      formData.append("h:List-Unsubscribe-Post", "List-Unsubscribe=One-Click");
-      
-      // If campaign is scheduled, use Mailgun's scheduling
-      if (campaign.scheduled_at) {
-        const scheduledDate = new Date(campaign.scheduled_at);
-        if (scheduledDate > new Date()) {
-          formData.append("o:deliverytime", formatRFC2822(scheduledDate));
-          console.log(`[send-campaign-mailgun] Scheduling batch for: ${scheduledDate.toISOString()}`);
-        }
-      }
-
-      // Send to Mailgun
-      console.log(`[send-campaign-mailgun] Sending batch ${batchStart / BATCH_SIZE + 1} with ${recipientEmails.length} recipients`);
-      
-      const mailgunResponse = await fetch(`${mailgunBaseUrl}/${mailgunDomain}/messages`, {
-        method: "POST",
-        headers: {
-          "Authorization": `Basic ${btoa(`api:${mailgunApiKey}`)}`,
-        },
-        body: formData,
-      });
-
-      if (!mailgunResponse.ok) {
-        const errorText = await mailgunResponse.text();
-        console.error(`[send-campaign-mailgun] Mailgun error: ${errorText}`);
-        throw new Error(`Mailgun API error: ${mailgunResponse.status} - ${errorText}`);
-      }
-
-      const mailgunResult = await mailgunResponse.json();
-      console.log(`[send-campaign-mailgun] Batch sent successfully:`, mailgunResult);
-      
-      totalSent += recipientEmails.length;
-    }
-
-    // Add additional recipients if any
-    if (additionalRecipients && additionalRecipients.length > 0) {
-      const additionalEmails = additionalRecipients.filter(e => !seenEmails.has(e.toLowerCase()));
-      
-      if (additionalEmails.length > 0) {
+      try {
+        // Build recipient list and recipient-variables
+        const recipientEmails: string[] = [];
         const recipientVariables: Record<string, any> = {};
+        const batchSentEvents: any[] = [];
         
-        for (const email of additionalEmails) {
-          const unsubscribeUrl = `${supabaseUrl}/functions/v1/unsubscribe?c=${campaignId}&e=${encodeURIComponent(email)}`;
+        for (const contact of batchContacts) {
+          recipientEmails.push(contact.email);
           
-          // Generate time-based greeting
+          // Generate unsubscribe URL for this contact
+          const unsubscribeUrl = `${supabaseUrl}/functions/v1/unsubscribe?c=${campaignId}&t=${contact.id}&e=${encodeURIComponent(contact.email)}`;
+          
+          // Determine dynamic sender name and ASC info: Staff > Profile > assigned_asc_text > Imprint > default
+          let senderName = "Author Services";
+          let ascName = "Author Success Coach";
+          let ascEmail = "";
+          let ascPhone = "";
+          
+          // Priority 1: Staff ASC (preferred path)
+          if (contact.staff_asc_id && staffAscInfo[contact.staff_asc_id]) {
+            const staffAsc = staffAscInfo[contact.staff_asc_id];
+            senderName = staffAsc.name;
+            ascName = staffAsc.name;
+            ascEmail = staffAsc.email;
+            ascPhone = staffAsc.phone;
+          }
+          // Priority 2: Legacy profile ASC
+          else if (contact.assigned_asc && ascProfiles[contact.assigned_asc]) {
+            const ascProfile = ascProfiles[contact.assigned_asc];
+            senderName = ascProfile.name;
+            ascName = ascProfile.name;
+            ascEmail = ascProfile.email;
+            ascPhone = ascProfile.phone;
+          }
+          // Priority 3: Fallback text (name only, no contact info)
+          else if (contact.assigned_asc_text) {
+            ascName = contact.assigned_asc_text;
+            senderName = contact.assigned_asc_text;
+          }
+          // Priority 4: Imprint from_name
+          else if (contact.imprint_id && imprintFromNames[contact.imprint_id]) {
+            senderName = imprintFromNames[contact.imprint_id];
+          }
+          
+          // Generate time-based greeting (based on current time, ideally would use recipient timezone)
           const hour = new Date().getUTCHours();
           let greeting = "Good morning";
           if (hour >= 17 || hour < 5) greeting = "Good evening";
           else if (hour >= 12) greeting = "Good afternoon";
           
-          recipientVariables[email] = {
-            first_name: "there",
-            last_name: "",
-            email: email,
+          recipientVariables[contact.email] = {
+            first_name: contact.first_name || "there",
+            last_name: contact.last_name || "",
+            email: contact.email,
+            contact_id: contact.id,
             unsubscribe_url: unsubscribeUrl,
-            sender_name: "Author Services", // Additional recipients use default
+            sender_name: senderName,
             greeting: greeting,
-            asc_name: "Author Success Coach",
-            asc_email: "",
-            asc_phone: "",
+            asc_name: ascName,
+            asc_email: ascEmail,
+            asc_phone: ascPhone,
           };
           
-          sentEvents.push({
+          // Prepare sent event for logging
+          batchSentEvents.push({
             campaign_id: campaignId,
-            email: email,
+            contact_id: contact.id,
+            email: contact.email,
             event_type: "sent",
           });
         }
         
+        // Build form data for Mailgun - use recipient variable for dynamic sender name
         const formData = new FormData();
         formData.append("from", `%recipient.sender_name% <${fromEmail}>`);
-        formData.append("to", additionalEmails.join(","));
+        formData.append("to", recipientEmails.join(","));
         formData.append("subject", campaign.subject);
         formData.append("html", htmlTemplate);
         
+        // Add plain text version for better deliverability
         if (plainTextTemplate) {
           formData.append("text", plainTextTemplate);
         }
         
         formData.append("recipient-variables", JSON.stringify(recipientVariables));
+        
+        // Tracking
         formData.append("o:tracking", "yes");
         formData.append("o:tracking-opens", "yes");
         formData.append("o:tracking-clicks", "htmlonly");
+        
+        // Custom variables for webhook correlation
         formData.append("v:campaign_id", campaignId);
+        
+        // Headers - hardcoded reply-to
         formData.append("h:Reply-To", replyTo);
         formData.append("h:List-Unsubscribe", `<%recipient.unsubscribe_url%>`);
         formData.append("h:List-Unsubscribe-Post", "List-Unsubscribe=One-Click");
         
+        // If campaign is scheduled, use Mailgun's scheduling
         if (campaign.scheduled_at) {
           const scheduledDate = new Date(campaign.scheduled_at);
           if (scheduledDate > new Date()) {
             formData.append("o:deliverytime", formatRFC2822(scheduledDate));
+            console.log(`[send-campaign-mailgun] Scheduling batch for: ${scheduledDate.toISOString()}`);
           }
         }
 
+        // Send to Mailgun
+        console.log(`[send-campaign-mailgun] Sending batch ${batchNumber}/${totalBatches} with ${recipientEmails.length} recipients`);
+        
         const mailgunResponse = await fetch(`${mailgunBaseUrl}/${mailgunDomain}/messages`, {
           method: "POST",
           headers: {
@@ -832,9 +786,125 @@ serve(async (req) => {
 
         if (!mailgunResponse.ok) {
           const errorText = await mailgunResponse.text();
-          console.error(`[send-campaign-mailgun] Additional recipients error: ${errorText}`);
-        } else {
-          totalSent += additionalEmails.length;
+          console.error(`[send-campaign-mailgun] Batch ${batchNumber} Mailgun error: ${errorText}`);
+          failedBatches.push({ 
+            batch: batchNumber, 
+            error: `Mailgun API error: ${mailgunResponse.status} - ${errorText}`,
+            count: recipientEmails.length
+          });
+          // Continue to next batch instead of throwing
+          continue;
+        }
+
+        const mailgunResult = await mailgunResponse.json();
+        console.log(`[send-campaign-mailgun] Batch ${batchNumber}/${totalBatches} sent successfully:`, mailgunResult);
+        
+        // Only add sent events for successful batches
+        sentEvents.push(...batchSentEvents);
+        totalSent += recipientEmails.length;
+        
+      } catch (batchError) {
+        const errorMessage = batchError instanceof Error ? batchError.message : "Unknown error";
+        console.error(`[send-campaign-mailgun] Batch ${batchNumber} failed with exception:`, batchError);
+        failedBatches.push({ 
+          batch: batchNumber, 
+          error: errorMessage,
+          count: batchContacts.length
+        });
+        // Continue to next batch
+      }
+    }
+
+    // Add additional recipients if any
+    if (additionalRecipients && additionalRecipients.length > 0) {
+      // Filter out invalid additional emails
+      const validAdditionalEmails = additionalRecipients.filter(email => {
+        const emailLower = email.toLowerCase();
+        if (seenEmails.has(emailLower)) return false;
+        if (!isValidEmail(email)) {
+          console.log(`[send-campaign-mailgun] Skipping invalid additional email: ${email}`);
+          return false;
+        }
+        return true;
+      });
+      
+      if (validAdditionalEmails.length > 0) {
+        try {
+          const recipientVariables: Record<string, any> = {};
+          
+          for (const email of validAdditionalEmails) {
+            const unsubscribeUrl = `${supabaseUrl}/functions/v1/unsubscribe?c=${campaignId}&e=${encodeURIComponent(email)}`;
+            
+            // Generate time-based greeting
+            const hour = new Date().getUTCHours();
+            let greeting = "Good morning";
+            if (hour >= 17 || hour < 5) greeting = "Good evening";
+            else if (hour >= 12) greeting = "Good afternoon";
+            
+            recipientVariables[email] = {
+              first_name: "there",
+              last_name: "",
+              email: email,
+              unsubscribe_url: unsubscribeUrl,
+              sender_name: "Author Services", // Additional recipients use default
+              greeting: greeting,
+              asc_name: "Author Success Coach",
+              asc_email: "",
+              asc_phone: "",
+            };
+            
+            sentEvents.push({
+              campaign_id: campaignId,
+              email: email,
+              event_type: "sent",
+            });
+          }
+          
+          const formData = new FormData();
+          formData.append("from", `%recipient.sender_name% <${fromEmail}>`);
+          formData.append("to", validAdditionalEmails.join(","));
+          formData.append("subject", campaign.subject);
+          formData.append("html", htmlTemplate);
+          
+          if (plainTextTemplate) {
+            formData.append("text", plainTextTemplate);
+          }
+          
+          formData.append("recipient-variables", JSON.stringify(recipientVariables));
+          formData.append("o:tracking", "yes");
+          formData.append("o:tracking-opens", "yes");
+          formData.append("o:tracking-clicks", "htmlonly");
+          formData.append("v:campaign_id", campaignId);
+          formData.append("h:Reply-To", replyTo);
+          formData.append("h:List-Unsubscribe", `<%recipient.unsubscribe_url%>`);
+          formData.append("h:List-Unsubscribe-Post", "List-Unsubscribe=One-Click");
+          
+          if (campaign.scheduled_at) {
+            const scheduledDate = new Date(campaign.scheduled_at);
+            if (scheduledDate > new Date()) {
+              formData.append("o:deliverytime", formatRFC2822(scheduledDate));
+            }
+          }
+
+          console.log(`[send-campaign-mailgun] Sending ${validAdditionalEmails.length} additional recipients`);
+
+          const mailgunResponse = await fetch(`${mailgunBaseUrl}/${mailgunDomain}/messages`, {
+            method: "POST",
+            headers: {
+              "Authorization": `Basic ${btoa(`api:${mailgunApiKey}`)}`,
+            },
+            body: formData,
+          });
+
+          if (!mailgunResponse.ok) {
+            const errorText = await mailgunResponse.text();
+            console.error(`[send-campaign-mailgun] Additional recipients error: ${errorText}`);
+          } else {
+            totalSent += validAdditionalEmails.length;
+            console.log(`[send-campaign-mailgun] Additional recipients sent successfully`);
+          }
+        } catch (additionalError) {
+          console.error(`[send-campaign-mailgun] Additional recipients batch failed:`, additionalError);
         }
       }
     }
@@ -847,19 +917,30 @@ serve(async (req) => {
     }
 
     // Update campaign status
+    const finalStatus = campaign.scheduled_at && new Date(campaign.scheduled_at) > new Date() ? "scheduled" : "sent";
     await supabase
       .from("campaigns")
       .update({ 
-        status: campaign.scheduled_at && new Date(campaign.scheduled_at) > new Date() ? "scheduled" : "sent",
+        status: finalStatus,
         sent_at: campaign.scheduled_at || new Date().toISOString(),
         total_recipients: totalSent,
       })
       .eq("id", campaignId);
 
-    console.log(`[send-campaign-mailgun] Campaign ${campaignId} completed. Total sent: ${totalSent}`);
+    // Log summary
+    console.log(`[send-campaign-mailgun] Campaign ${campaignId} completed.`);
+    console.log(`[send-campaign-mailgun] Summary: ${totalSent} sent, ${totalSkipped} skipped (invalid), ${failedBatches.length} failed batches`);
+    if (failedBatches.length > 0) {
+      console.log(`[send-campaign-mailgun] Failed batches:`, JSON.stringify(failedBatches));
+    }
 
     return new Response(
-      JSON.stringify({ success: true, sent: totalSent }),
+      JSON.stringify({ 
+        success: true, 
+        sent: totalSent,
+        skipped: totalSkipped,
+        failedBatches: failedBatches.length > 0 ? failedBatches : undefined
+      }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 
