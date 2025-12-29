@@ -452,6 +452,8 @@ export function CampaignDetail({ campaign, onBack, onCancelScheduled }: Campaign
           html_content: campaign.html_content,
           from_name: fromName || campaign.from_name,
           from_email: fromEmail || campaign.from_email,
+          blocks_json: campaign.blocks_json,
+          imprint_id: selectedImprintIds.length > 0 ? selectedImprintIds[0] : undefined,
         },
       });
 
