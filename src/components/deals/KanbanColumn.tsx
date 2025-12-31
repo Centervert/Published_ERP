@@ -53,14 +53,14 @@ export function KanbanColumn({
 
   return (
     <div
-      className="flex-shrink-0 w-80 flex flex-col"
+      className="flex-shrink-0 w-64 sm:w-72 lg:w-80 flex flex-col min-w-0"
       onDragOver={onDragOver}
       onDrop={(e) => onDrop(e, stage)}
     >
       {/* Column Header - White card with top border accent */}
-      <div className={`bg-white border border-gray-200 rounded-t-md border-t-[3px] ${STAGE_BORDER_COLORS[stage]} px-4 py-3`}>
-        <div className="font-semibold text-gray-900">{DEAL_STAGE_LABELS[stage]}</div>
-        <div className="text-xs text-gray-400 mt-0.5">
+      <div className={`bg-white border border-gray-200 rounded-t-md border-t-[3px] ${STAGE_BORDER_COLORS[stage]} px-3 sm:px-4 py-2 sm:py-3`}>
+        <div className="font-semibold text-gray-900 text-sm sm:text-base truncate">{DEAL_STAGE_LABELS[stage]}</div>
+        <div className="text-[10px] sm:text-xs text-gray-400 mt-0.5 truncate">
           {deals.length} Opportunities | {formatCurrency(totalValue)}
         </div>
       </div>

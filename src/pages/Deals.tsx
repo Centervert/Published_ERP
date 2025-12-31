@@ -147,19 +147,19 @@ export default function Deals() {
   };
 
   return (
-    <div className="h-full flex flex-col bg-gray-50">
+    <div className="h-full flex flex-col bg-gray-50 min-w-0">
       {/* Header Toolbar */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4">
-        <div className="flex items-center justify-between">
+      <div className="bg-white border-b border-gray-200 px-3 sm:px-6 py-3 sm:py-4">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           {/* Left side - Title and filters */}
-          <div className="flex items-center gap-4">
-            <h1 className="text-xl font-semibold text-gray-900">Opportunities</h1>
+          <div className="flex flex-wrap items-center gap-2 sm:gap-4">
+            <h1 className="text-lg sm:text-xl font-semibold text-gray-900">Opportunities</h1>
             
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-2">
-                  <Filter className="h-4 w-4" />
-                  Advanced Filters
+                <Button variant="outline" size="sm" className="gap-1 sm:gap-2 text-xs sm:text-sm">
+                  <Filter className="h-3 w-3 sm:h-4 sm:w-4" />
+                  <span className="hidden sm:inline">Advanced </span>Filters
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start">
@@ -172,8 +172,8 @@ export default function Deals() {
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-2">
-                  <SortAsc className="h-4 w-4" />
+                <Button variant="outline" size="sm" className="gap-1 sm:gap-2 text-xs sm:text-sm">
+                  <SortAsc className="h-3 w-3 sm:h-4 sm:w-4" />
                   Sort
                 </Button>
               </DropdownMenuTrigger>
@@ -186,7 +186,7 @@ export default function Deals() {
             </DropdownMenu>
 
             <Select value={filterMode} onValueChange={(v) => setFilterMode(v as 'all' | 'mine')}>
-              <SelectTrigger className="w-32 h-9">
+              <SelectTrigger className="w-24 sm:w-32 h-8 sm:h-9 text-xs sm:text-sm">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -197,30 +197,30 @@ export default function Deals() {
           </div>
 
           {/* Right side - Search and actions */}
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            <div className="relative flex-1 min-w-[140px] sm:flex-none">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3 w-3 sm:h-4 sm:w-4 text-gray-400" />
               <Input
-                placeholder="Search Opportunities"
+                placeholder="Search..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 w-64 h-9 bg-white"
+                className="pl-8 sm:pl-9 w-full sm:w-48 lg:w-64 h-8 sm:h-9 bg-white text-xs sm:text-sm"
               />
             </div>
 
             {/* View Toggle */}
             <div className="flex items-center border border-gray-200 rounded-md">
-              <Button variant="ghost" size="sm" className="h-8 px-2 rounded-r-none bg-gray-100">
-                <LayoutGrid className="h-4 w-4" />
+              <Button variant="ghost" size="sm" className="h-7 sm:h-8 px-2 rounded-r-none bg-gray-100">
+                <LayoutGrid className="h-3 w-3 sm:h-4 sm:w-4" />
               </Button>
-              <Button variant="ghost" size="sm" className="h-8 px-2 rounded-l-none">
-                <List className="h-4 w-4" />
+              <Button variant="ghost" size="sm" className="h-7 sm:h-8 px-2 rounded-l-none">
+                <List className="h-3 w-3 sm:h-4 sm:w-4" />
               </Button>
             </div>
 
-            <Button size="sm" className="gap-2">
-              <Plus className="h-4 w-4" />
-              Add Opportunity
+            <Button size="sm" className="gap-1 sm:gap-2 text-xs sm:text-sm h-8 sm:h-9">
+              <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Add </span>Opportunity
             </Button>
           </div>
         </div>
@@ -232,9 +232,9 @@ export default function Deals() {
           <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
         </div>
       ) : (
-        <div className="flex-1 overflow-hidden p-6">
-          <ScrollArea className="h-full">
-            <div className="flex gap-4 pb-4 min-w-max">
+        <div className="flex-1 overflow-hidden p-3 sm:p-4 lg:p-6 min-w-0">
+          <ScrollArea className="h-full w-full">
+            <div className="flex gap-3 sm:gap-4 pb-4">
               {KANBAN_STAGES.map((stage) => (
                 <KanbanColumn
                   key={stage}
