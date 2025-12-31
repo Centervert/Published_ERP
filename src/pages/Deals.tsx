@@ -150,11 +150,11 @@ export default function Deals() {
     <div className="h-full flex flex-col min-w-0 overflow-hidden">
       {/* Header Toolbar - Flush with edges, no outer spacing */}
       <div className="bg-white border-b border-gray-200 px-4 py-3 flex-shrink-0">
-        <div className="flex items-center gap-3">
-          {/* Left side - Title and filters (can shrink) */}
-          <div className="flex items-center gap-2 min-w-0 overflow-hidden">
-            <h1 className="text-lg font-semibold text-gray-900 flex-shrink-0">Deals</h1>
-            
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          {/* Left side - Title + filters */}
+          <div className="flex flex-wrap items-center gap-2 min-w-0">
+            <h1 className="text-lg font-semibold text-gray-900">Deals</h1>
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm" className="gap-1.5 text-xs h-8 px-3">
@@ -186,7 +186,7 @@ export default function Deals() {
             </DropdownMenu>
 
             <Select value={filterMode} onValueChange={(v) => setFilterMode(v as 'all' | 'mine')}>
-              <SelectTrigger className="w-24 h-8 text-xs">
+              <SelectTrigger className="w-28 h-8 text-xs">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -196,23 +196,19 @@ export default function Deals() {
             </Select>
           </div>
 
-          {/* Spacer */}
-          <div className="flex-1" />
-
-          {/* Right side - Search and actions (never shrink) */}
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <div className="relative">
+          {/* Right side - Search + view + create (always visible; wraps below on small widths) */}
+          <div className="flex items-center gap-2 sm:ml-auto">
+            <div className="relative flex-1 min-w-[160px] sm:flex-none">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
               <Input
-                placeholder="Search..."
+                placeholder="Search deals..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-8 w-28 sm:w-36 md:w-44 h-8 bg-white text-xs"
+                className="pl-8 w-full sm:w-44 md:w-56 h-8 bg-white text-xs"
               />
             </div>
 
-            {/* View Toggle */}
-            <div className="flex items-center border border-gray-200 rounded-md">
+            <div className="flex items-center border border-gray-200 rounded-md flex-shrink-0">
               <Button variant="ghost" size="sm" className="h-8 px-2 rounded-r-none bg-gray-100">
                 <LayoutGrid className="h-4 w-4" />
               </Button>
@@ -221,7 +217,7 @@ export default function Deals() {
               </Button>
             </div>
 
-            <Button size="sm" className="gap-1.5 text-xs h-8 px-3">
+            <Button size="sm" className="gap-1.5 text-xs h-8 px-3 flex-shrink-0">
               <Plus className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">Add Deal</span>
             </Button>
