@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useDealDetail, WRITING_STATUS_OPTIONS } from '@/hooks/useDealDetail';
 import { useContactCommunications } from '@/hooks/useContactCommunications';
 import { DEAL_STAGE_LABELS, DealStage } from '@/hooks/useDeals';
@@ -28,6 +28,7 @@ import {
   DollarSign,
   Calendar,
   User,
+  Sparkles,
 } from 'lucide-react';
 import { NotesSection } from '@/components/contacts/NotesSection';
 import { TasksSection } from '@/components/contacts/TasksSection';
@@ -100,11 +101,16 @@ export function DealDetailSheet({ dealId, contactId, open, onOpenChange }: DealD
     outcome: 'answered' | 'voicemail' | 'no_answer' | 'busy' | 'left_message';
     notes?: string;
   }) => {
-    await logCall.mutateAsync({
-      ...data,
-      deal_id: dealId,
-    });
-    toast.success('Call logged');
+    try {
+      await logCall.mutateAsync({
+        ...data,
+        deal_id: dealId,
+      });
+      toast.success('Call logged successfully');
+    } catch (error) {
+      console.error('Failed to log call:', error);
+      toast.error('Failed to log call');
+    }
   };
 
   if (!dealId) return null;
@@ -122,27 +128,30 @@ export function DealDetailSheet({ dealId, contactId, open, onOpenChange }: DealD
               {/* Header */}
               <SheetHeader className="p-6 pb-4 border-b space-y-0">
                 <div className="flex items-center justify-between mb-3">
-                  <Select
-                    value={deal.stage}
-                    onValueChange={(value) => updateDeal.mutate({ stage: value as DealStage })}
-                  >
-                    <SelectTrigger className="h-8 px-3 text-sm font-medium border rounded-md w-auto gap-2 bg-background">
-                      <div className="flex items-center gap-2">
-                        <div className={`h-2.5 w-2.5 rounded-full ${STAGE_COLORS[deal.stage]}`} />
-                        <SelectValue />
-                      </div>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Object.entries(DEAL_STAGE_LABELS).map(([value, label]) => (
-                        <SelectItem key={value} value={value}>
-                          <div className="flex items-center gap-2">
-                            <div className={`h-2 w-2 rounded-full ${STAGE_COLORS[value as DealStage]}`} />
-                            {label}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">Stage:</span>
+                    <Select
+                      value={deal.stage}
+                      onValueChange={(value) => updateDeal.mutate({ stage: value as DealStage })}
+                    >
+                      <SelectTrigger className="h-8 px-3 text-sm font-medium border rounded-md w-auto gap-2 bg-background">
+                        <div className="flex items-center gap-2">
+                          <div className={`h-2.5 w-2.5 rounded-full ${STAGE_COLORS[deal.stage]}`} />
+                          <span>{DEAL_STAGE_LABELS[deal.stage]}</span>
+                        </div>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(DEAL_STAGE_LABELS).map(([value, label]) => (
+                          <SelectItem key={value} value={value}>
+                            <div className="flex items-center gap-2">
+                              <div className={`h-2 w-2 rounded-full ${STAGE_COLORS[value as DealStage]}`} />
+                              {label}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                   <Button 
                     variant="ghost" 
                     size="sm" 
@@ -196,6 +205,17 @@ export function DealDetailSheet({ dealId, contactId, open, onOpenChange }: DealD
 
               {/* Deal Info Section - Inline Editable */}
               <div className="p-6 border-b space-y-4">
+                {/* AI Summary - Coming Soon */}
+                <div className="space-y-1">
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <Sparkles className="h-3 w-3" />
+                    AI Summary
+                  </div>
+                  <div className="p-3 rounded-md border border-dashed bg-muted/30 text-center">
+                    <span className="text-sm text-muted-foreground">Coming Soon</span>
+                  </div>
+                </div>
+
                 {/* Writing Status */}
                 <div className="space-y-1">
                   <span className="text-xs text-muted-foreground">Writing Status</span>
@@ -262,31 +282,6 @@ export function DealDetailSheet({ dealId, contactId, open, onOpenChange }: DealD
                       onClick={() => startEditing('goals', deal.goals)}
                     >
                       {deal.goals || <span className="text-muted-foreground">Click to add goals</span>}
-                    </p>
-                  )}
-                </div>
-
-                {/* Internal Notes */}
-                <div className="space-y-1">
-                  <span className="text-xs text-muted-foreground">Internal Notes</span>
-                  {editingField === 'notes' ? (
-                    <Textarea
-                      autoFocus
-                      value={fieldValue}
-                      onChange={(e) => setFieldValue(e.target.value)}
-                      onBlur={() => saveField('notes', fieldValue)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Escape') setEditingField(null);
-                      }}
-                      className="resize-none min-h-[60px]"
-                      placeholder="Notes about this deal..."
-                    />
-                  ) : (
-                    <p 
-                      className="text-sm p-2 rounded border border-dashed border-transparent hover:border-border cursor-pointer min-h-[40px]"
-                      onClick={() => startEditing('notes', deal.notes)}
-                    >
-                      {deal.notes || <span className="text-muted-foreground">Click to add notes</span>}
                     </p>
                   )}
                 </div>
