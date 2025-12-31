@@ -1,8 +1,10 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Phone, MessageSquare, Mail, CalendarCheck } from 'lucide-react';
+import { Phone, MessageSquare, Mail, CalendarCheck, Globe } from 'lucide-react';
 import { Deal } from '@/hooks/useDeals';
 import { CommunicationCounts } from '@/hooks/useDealCommunicationCounts';
+import { LeadSourceBadge } from '@/components/contacts/LeadSourceBadge';
+import { LeadSource } from '@/hooks/useContacts';
 
 interface DealCardProps {
   deal: Deal;
@@ -12,16 +14,6 @@ interface DealCardProps {
   onDragEnd?: (e: React.DragEvent) => void;
   onClick: () => void;
   onActionClick?: (action: 'phone' | 'sms' | 'email' | 'calendar', deal: Deal) => void;
-}
-
-function formatCurrency(value: number | null): string {
-  if (!value) return '$0.00';
-  return new Intl.NumberFormat('en-US', { 
-    style: 'currency', 
-    currency: 'USD',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value);
 }
 
 function getInitials(firstName: string | null, lastName: string | null): string {
@@ -67,20 +59,44 @@ export function DealCard({
           </Avatar>
         </div>
         
-        {/* Section B: Details */}
-        <div className="space-y-2">
-          <div className="flex justify-between items-center text-sm">
-            <span className="text-gray-500 text-xs">Opportunity Source</span>
-            <span className="text-gray-900 font-medium text-xs truncate ml-2 max-w-[120px]">{imprintName || 'N/A'}</span>
+        {/* Section B: Contact Details */}
+        <div className="space-y-1.5">
+          {/* Lead Source */}
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-gray-500 text-xs">Source</span>
+            <LeadSourceBadge 
+              source={deal.contact?.lead_source as LeadSource | null} 
+              detail={deal.contact?.lead_source_detail}
+              showDetail
+            />
           </div>
-          <div className="flex justify-between items-center text-sm">
-            <span className="text-gray-500 text-xs">Opportunity Value</span>
-            <span className="text-gray-900 font-medium text-xs">{formatCurrency(deal.total_value)}</span>
-          </div>
-          <div className="flex justify-between items-center text-sm">
-            <span className="text-gray-500 text-xs">Outreach Attempt</span>
-            <span className="text-gray-900 font-medium text-xs">{deal.outreach_count}</span>
-          </div>
+
+          {/* Email */}
+          {deal.contact?.email && (
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-gray-500 text-xs">Email</span>
+              <span className="text-gray-900 text-xs truncate ml-2 max-w-[160px]">{deal.contact.email}</span>
+            </div>
+          )}
+
+          {/* Phone */}
+          {deal.contact?.phone && (
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-gray-500 text-xs">Phone</span>
+              <span className="text-gray-900 text-xs">{deal.contact.phone}</span>
+            </div>
+          )}
+
+          {/* Timezone */}
+          {deal.contact?.timezone && (
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-gray-500 text-xs">Timezone</span>
+              <span className="text-gray-900 text-xs flex items-center gap-1">
+                <Globe className="h-3 w-3 text-gray-400" />
+                {deal.contact.timezone}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Section C: Action Footer */}

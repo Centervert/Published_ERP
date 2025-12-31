@@ -33,7 +33,11 @@ export interface Deal {
     first_name: string | null;
     last_name: string | null;
     email: string;
+    phone: string | null;
+    timezone: string | null;
     imprint_id: string | null;
+    lead_source: string | null;
+    lead_source_detail: string | null;
   };
   assigned_user?: {
     full_name: string | null;
@@ -72,7 +76,7 @@ export function useDeals(filters?: { stage?: DealStage; assignedAsc?: string }) 
         .from('deals')
         .select(`
           *,
-          contact:contacts(id, first_name, last_name, email, imprint_id)
+          contact:contacts(id, first_name, last_name, email, phone, timezone, imprint_id, lead_source, lead_source_detail)
         `)
         .order('created_at', { ascending: false });
 
