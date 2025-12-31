@@ -699,42 +699,6 @@ export function ContactSidebar({ contact, onBack, onSelectTab }: ContactSidebarP
               </Select>
             </div>
 
-            {/* Assigned ASC - using staff_asc_id */}
-            <div>
-              <Label className="text-xs text-muted-foreground">Assigned A.S.C.</Label>
-              <Select value={formData.staff_asc_id} onValueChange={(v) => handleChange('staff_asc_id', v)}>
-                <SelectTrigger className="h-8 mt-1">
-                  <SelectValue placeholder="Select team member" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Unassigned</SelectItem>
-                  {staffMembers.map(member => (
-                    <SelectItem key={member.id} value={member.id}>
-                      {member.full_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Assigned AE */}
-            <div>
-              <Label className="text-xs text-muted-foreground">Assigned A.E.</Label>
-              <Select value={formData.assigned_ae} onValueChange={(v) => handleChange('assigned_ae', v)}>
-                <SelectTrigger className="h-8 mt-1">
-                  <SelectValue placeholder="Select team member" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Unassigned</SelectItem>
-                  {staffMembers.map(member => (
-                    <SelectItem key={member.id} value={member.id}>
-                      {member.full_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
             {/* Imprint */}
             <div>
               <Label className="text-xs text-muted-foreground">Imprint</Label>
