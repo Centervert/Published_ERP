@@ -128,7 +128,7 @@ export function ContactHistoryTab({ contactId }: ContactHistoryTabProps) {
         return (
           <div 
             key={item.id} 
-            className="flex items-start gap-3 py-3 border-b last:border-b-0"
+            className="flex items-start gap-3 pt-2 pb-3 first:pt-0 border-b last:border-b-0"
           >
             <div className={`flex-shrink-0 h-8 w-8 rounded-full flex items-center justify-center ${colorClass}`}>
               <Icon className="h-4 w-4" />
