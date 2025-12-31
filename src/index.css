@@ -23,16 +23,16 @@ All colors MUST be HSL.
     --secondary: 45 25% 94%;
     --secondary-foreground: 222.2 47.4% 11.2%;
 
-    --muted: 45 25% 92%;
+    --muted: 45 25% 94%;
     --muted-foreground: 215 20% 40%;
 
-    --accent: 45 25% 92%;
+    --accent: 45 25% 94%;
     --accent-foreground: 222.2 47.4% 11.2%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 45 25% 88%;
+    --border: 45 20% 85%;
     --input: 45 20% 85%;
     --ring: 222.2 84% 4.9%;
 
