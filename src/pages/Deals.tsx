@@ -147,8 +147,8 @@ export default function Deals() {
 
   return (
     <div className="h-full flex flex-col min-w-0 overflow-hidden">
-      {/* Header Toolbar - Flush with edges, no outer spacing */}
-      <div className="bg-white border-b border-gray-200 px-4 py-3 flex-shrink-0">
+      {/* Header Toolbar - Flush with edges, stays visible */}
+      <div className="sticky top-0 z-20 bg-white border-b border-gray-200 px-4 py-3 flex-shrink-0">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           {/* Left side - Title + filters */}
           <div className="flex flex-wrap items-center gap-2 min-w-0">
