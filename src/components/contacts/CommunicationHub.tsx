@@ -61,7 +61,7 @@ export function CommunicationHub({ contactId, contactEmail, contactName, contact
   return (
     <div className="h-full flex flex-col">
       {/* Top Action Bar */}
-      <div className="flex items-center justify-between px-4 py-3 border-b bg-muted/30">
+      <div className="flex items-center justify-between px-4 py-3 border-b">
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
@@ -130,7 +130,7 @@ export function CommunicationHub({ contactId, contactEmail, contactName, contact
       {/* Bottom Composer Area */}
       <div className="mt-auto">
         <Tabs value={composerTab} onValueChange={(v) => setComposerTab(v as typeof composerTab)}>
-          <div className="border-t bg-muted/30">
+          <div className="border-t">
             <TabsList className="h-10 w-full justify-start gap-0 bg-transparent rounded-none p-0 border-b">
               <TabsTrigger 
                 value="email"

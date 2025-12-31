@@ -233,9 +233,9 @@ export function EmailComposer({
   }
 
   return (
-    <div className="border-t bg-background">
+    <div className="border-t bg-card">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-2 border-b bg-muted/30">
+      <div className="flex items-center justify-between px-4 py-2 border-b">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium">New Email</span>
           <span className="text-xs text-muted-foreground">to {contactName}</span>
@@ -247,7 +247,7 @@ export function EmailComposer({
         )}
       </div>
 
-      <div className={`p-4 space-y-3 ${expanded ? 'min-h-[400px]' : ''}`}>
+      <div className={`p-4 pb-6 space-y-3 ${expanded ? 'min-h-[400px]' : ''}`}>
         {/* From / To Row */}
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1">
