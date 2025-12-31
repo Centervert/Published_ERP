@@ -291,51 +291,6 @@ export function ContactSidebar({ contact, onBack, onSelectTab }: ContactSidebarP
             </div>
           </div>
 
-          {/* Source - Lead Source */}
-          <div className="flex items-center min-h-[28px]">
-            <span className="text-xs text-muted-foreground w-16 flex-shrink-0">Source</span>
-            <div className="flex-1 flex justify-end">
-              <Select value={formData.lead_source} onValueChange={(v) => handleChange('lead_source', v)}>
-                <SelectTrigger className="h-6 w-auto border-0 bg-transparent p-0 text-sm focus:ring-0 [&>svg]:h-3 [&>svg]:w-3">
-                  <LeadSourceBadge source={formData.lead_source} size="sm" />
-                </SelectTrigger>
-                <SelectContent>
-                  {LEAD_SOURCE_OPTIONS.map(source => (
-                    <SelectItem key={source.value} value={source.value}>{source.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          {/* Source Detail */}
-          {formData.lead_source && (
-            <div className="flex items-center min-h-[28px]">
-              <span className="text-xs text-muted-foreground w-16 flex-shrink-0">Detail</span>
-              <div className="flex-1 flex justify-end">
-                {editingField === 'lead_source_detail' ? (
-                  <Input
-                    value={formData.lead_source_detail}
-                    onChange={(e) => handleChange('lead_source_detail', e.target.value)}
-                    placeholder="e.g., authorservices.com/contact"
-                    className="h-6 text-xs"
-                    autoFocus
-                    onBlur={() => setEditingField(null)}
-                    onKeyDown={(e) => e.key === 'Enter' && setEditingField(null)}
-                  />
-                ) : (
-                  <span 
-                    onClick={() => setEditingField('lead_source_detail')}
-                    className="text-xs text-muted-foreground hover:text-primary transition-colors cursor-pointer truncate max-w-[180px]"
-                    title={formData.lead_source_detail || 'Add detail'}
-                  >
-                    {formData.lead_source_detail || '--'}
-                  </span>
-                )}
-              </div>
-            </div>
-          )}
-
           <div className="flex items-center min-h-[28px]">
             <span className="text-xs text-muted-foreground w-16 flex-shrink-0">A.S.C.</span>
             <div className="flex-1 flex justify-end">
@@ -434,6 +389,51 @@ export function ContactSidebar({ contact, onBack, onSelectTab }: ContactSidebarP
               )}
             </div>
           </div>
+
+          {/* Source - Lead Source */}
+          <div className="flex items-center min-h-[28px]">
+            <span className="text-xs text-muted-foreground w-16 flex-shrink-0">Source</span>
+            <div className="flex-1 flex justify-end">
+              <Select value={formData.lead_source} onValueChange={(v) => handleChange('lead_source', v)}>
+                <SelectTrigger className="h-6 w-auto border-0 bg-transparent p-0 text-sm focus:ring-0 [&>svg]:h-3 [&>svg]:w-3">
+                  <LeadSourceBadge source={formData.lead_source} size="sm" />
+                </SelectTrigger>
+                <SelectContent>
+                  {LEAD_SOURCE_OPTIONS.map(source => (
+                    <SelectItem key={source.value} value={source.value}>{source.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Source Detail */}
+          {formData.lead_source && (
+            <div className="flex items-center min-h-[28px]">
+              <span className="text-xs text-muted-foreground w-16 flex-shrink-0 whitespace-nowrap">Src Detail</span>
+              <div className="flex-1 flex justify-end">
+                {editingField === 'lead_source_detail' ? (
+                  <Input
+                    value={formData.lead_source_detail}
+                    onChange={(e) => handleChange('lead_source_detail', e.target.value)}
+                    placeholder="e.g., authorservices.com/contact"
+                    className="h-6 text-xs"
+                    autoFocus
+                    onBlur={() => setEditingField(null)}
+                    onKeyDown={(e) => e.key === 'Enter' && setEditingField(null)}
+                  />
+                ) : (
+                  <span 
+                    onClick={() => setEditingField('lead_source_detail')}
+                    className="text-xs text-muted-foreground hover:text-primary transition-colors cursor-pointer truncate max-w-[180px]"
+                    title={formData.lead_source_detail || 'Add source detail'}
+                  >
+                    {formData.lead_source_detail || '--'}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Created */}
           <div className="flex items-center min-h-[28px]">
