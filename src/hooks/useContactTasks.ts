@@ -1,7 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { toast } from 'sonner';
 
 export interface ContactTask {
   id: string;
@@ -37,10 +36,7 @@ export function useContactTasks({ contactId, dealId }: UseContactTasksOptions) {
     queryFn: async () => {
       let query = supabase
         .from('contact_tasks')
-        .select(`
-          *,
-          profiles:created_by (full_name)
-        `)
+        .select('*')
         .eq('contact_id', contactId)
         .order('completed', { ascending: true })
         .order('due_date', { ascending: true, nullsFirst: false })
@@ -56,10 +52,7 @@ export function useContactTasks({ contactId, dealId }: UseContactTasksOptions) {
 
       if (error) throw error;
       
-      return (data || []).map((task: any) => ({
-        ...task,
-        created_by_name: task.profiles?.full_name || null,
-      })) as ContactTask[];
+      return (data || []) as ContactTask[];
     },
     enabled: !!contactId,
   });
@@ -96,7 +89,6 @@ export function useContactTasks({ contactId, dealId }: UseContactTasksOptions) {
       queryClient.invalidateQueries({ queryKey: taskQueryKey });
     },
     onError: (error) => {
-      toast.error('Failed to create task');
       console.error('Add task error:', error);
     },
   });
@@ -117,7 +109,6 @@ export function useContactTasks({ contactId, dealId }: UseContactTasksOptions) {
       queryClient.invalidateQueries({ queryKey: ['contact-tasks', contactId] });
     },
     onError: (error) => {
-      toast.error('Failed to update task');
       console.error('Update task error:', error);
     },
   });
@@ -141,7 +132,6 @@ export function useContactTasks({ contactId, dealId }: UseContactTasksOptions) {
       queryClient.invalidateQueries({ queryKey: ['contact-tasks', contactId] });
     },
     onError: (error) => {
-      toast.error('Failed to update task');
       console.error('Toggle task error:', error);
     },
   });
@@ -159,7 +149,6 @@ export function useContactTasks({ contactId, dealId }: UseContactTasksOptions) {
       queryClient.invalidateQueries({ queryKey: ['contact-tasks', contactId] });
     },
     onError: (error) => {
-      toast.error('Failed to delete task');
       console.error('Delete task error:', error);
     },
   });
