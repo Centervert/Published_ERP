@@ -302,8 +302,8 @@ export function ContactActivityFeed({
         </TabsContent>
 
         {/* History Tab - Property Changes Audit Log */}
-        <TabsContent value="history" className="mt-0 flex-1 overflow-y-auto data-[state=active]:flex data-[state=active]:flex-col">
-          <div className="p-6">
+        <TabsContent value="history" className="mt-0 flex-1 overflow-y-auto">
+          <div className="p-6 h-full">
             <ContactHistoryTab contactId={contactId} />
           </div>
         </TabsContent>
