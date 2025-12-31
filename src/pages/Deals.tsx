@@ -147,19 +147,19 @@ export default function Deals() {
   };
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 min-w-0">
+    <div className="h-full flex flex-col bg-gray-50 min-w-0 overflow-hidden">
       {/* Header Toolbar - Fixed, never scrolls */}
-      <div className="bg-white border-b border-gray-200 px-0 py-2 sm:py-3 flex-shrink-0">
-        <div className="flex items-center justify-between gap-2 px-3 sm:px-4">
-          {/* Left side - Title and filters */}
-          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-            <h1 className="text-lg sm:text-xl font-semibold text-gray-900 flex-shrink-0">Deals</h1>
+      <div className="bg-white border-b border-gray-200 py-2 flex-shrink-0">
+        <div className="flex items-center gap-2 px-2">
+          {/* Left side - Title and filters (can shrink) */}
+          <div className="flex items-center gap-1.5 min-w-0 overflow-hidden">
+            <h1 className="text-base font-semibold text-gray-900 flex-shrink-0">Deals</h1>
             
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-1 text-xs h-8 px-2 sm:px-3">
-                  <Filter className="h-3.5 w-3.5" />
-                  <span className="hidden md:inline">Filters</span>
+                <Button variant="outline" size="sm" className="gap-1 text-xs h-7 px-2">
+                  <Filter className="h-3 w-3" />
+                  <span className="hidden lg:inline">Filters</span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start">
@@ -172,9 +172,9 @@ export default function Deals() {
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-1 text-xs h-8 px-2 sm:px-3">
-                  <SortAsc className="h-3.5 w-3.5" />
-                  <span className="hidden md:inline">Sort</span>
+                <Button variant="outline" size="sm" className="gap-1 text-xs h-7 px-2">
+                  <SortAsc className="h-3 w-3" />
+                  <span className="hidden lg:inline">Sort</span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start">
@@ -186,7 +186,7 @@ export default function Deals() {
             </DropdownMenu>
 
             <Select value={filterMode} onValueChange={(v) => setFilterMode(v as 'all' | 'mine')}>
-              <SelectTrigger className="w-24 h-8 text-xs">
+              <SelectTrigger className="w-20 h-7 text-xs">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -196,31 +196,34 @@ export default function Deals() {
             </Select>
           </div>
 
-          {/* Right side - Search and actions */}
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <div className="relative hidden sm:block">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
+          {/* Spacer */}
+          <div className="flex-1" />
+
+          {/* Right side - Search and actions (never shrink) */}
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            <div className="relative">
+              <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
               <Input
                 placeholder="Search..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-8 w-32 md:w-48 lg:w-56 h-8 bg-white text-xs"
+                className="pl-7 w-24 sm:w-32 md:w-40 h-7 bg-white text-xs"
               />
             </div>
 
             {/* View Toggle */}
             <div className="flex items-center border border-gray-200 rounded-md">
-              <Button variant="ghost" size="sm" className="h-8 px-2 rounded-r-none bg-gray-100">
+              <Button variant="ghost" size="sm" className="h-7 px-1.5 rounded-r-none bg-gray-100">
                 <LayoutGrid className="h-3.5 w-3.5" />
               </Button>
-              <Button variant="ghost" size="sm" className="h-8 px-2 rounded-l-none">
+              <Button variant="ghost" size="sm" className="h-7 px-1.5 rounded-l-none">
                 <List className="h-3.5 w-3.5" />
               </Button>
             </div>
 
-            <Button size="sm" className="gap-1 text-xs h-8 px-2 sm:px-3">
-              <Plus className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Add Deal</span>
+            <Button size="sm" className="gap-1 text-xs h-7 px-2">
+              <Plus className="h-3 w-3" />
+              <span className="hidden sm:inline">Add</span>
             </Button>
           </div>
         </div>
@@ -232,9 +235,9 @@ export default function Deals() {
           <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
         </div>
       ) : (
-        <div className="flex-1 overflow-hidden pt-3 pb-3 min-w-0">
+        <div className="flex-1 overflow-hidden pt-2 min-w-0">
           <ScrollArea className="h-full w-full">
-            <div className="flex gap-3 pb-4 px-3 sm:px-4">
+            <div className="flex gap-2 pb-4 px-2">
               {KANBAN_STAGES.map((stage) => (
                 <KanbanColumn
                   key={stage}
