@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useDealDetail, WRITING_STATUS_OPTIONS } from '@/hooks/useDealDetail';
 import { useContactCommunications } from '@/hooks/useContactCommunications';
+import { useDealCommunications } from '@/hooks/useDealCommunications';
 import { DEAL_STAGE_LABELS, DealStage } from '@/hooks/useDeals';
 import {
   Sheet,
@@ -29,11 +30,15 @@ import {
   Calendar,
   User,
   Sparkles,
+  PhoneCall,
+  PhoneIncoming,
+  PhoneOutgoing,
 } from 'lucide-react';
 import { NotesSection } from '@/components/contacts/NotesSection';
 import { TasksSection } from '@/components/contacts/TasksSection';
 import { LogCallDialog } from '@/components/contacts/LogCallDialog';
 import { toast } from 'sonner';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface DealDetailSheetProps {
   dealId: string | null;
@@ -54,9 +59,19 @@ const STAGE_COLORS: Record<DealStage, string> = {
   not_interested: 'bg-gray-400',
 };
 
+const OUTCOME_LABELS: Record<string, string> = {
+  answered: 'Answered',
+  voicemail: 'Voicemail',
+  no_answer: 'No Answer',
+  busy: 'Busy',
+  left_message: 'Left Message',
+};
+
 export function DealDetailSheet({ dealId, contactId, open, onOpenChange }: DealDetailSheetProps) {
   const { deal, isLoading, updateDeal } = useDealDetail(dealId);
   const { logCall } = useContactCommunications(contactId);
+  const { communications: dealCommunications, isLoading: isLoadingComms } = useDealCommunications(dealId);
+  const queryClient = useQueryClient();
   const [showLogCallDialog, setShowLogCallDialog] = useState(false);
   const [activeTab, setActiveTab] = useState('notes');
 
@@ -106,6 +121,8 @@ export function DealDetailSheet({ dealId, contactId, open, onOpenChange }: DealD
         ...data,
         deal_id: dealId,
       });
+      // Also invalidate deal communications
+      queryClient.invalidateQueries({ queryKey: ['deal-communications', dealId] });
       toast.success('Call logged successfully');
     } catch (error) {
       console.error('Failed to log call:', error);
@@ -211,7 +228,7 @@ export function DealDetailSheet({ dealId, contactId, open, onOpenChange }: DealD
                     <Sparkles className="h-3 w-3" />
                     AI Summary
                   </div>
-                  <div className="p-3 rounded-md border border-dashed bg-muted/30 text-center">
+                  <div className="py-2 px-3 rounded-md border border-dashed bg-muted/30 text-center">
                     <span className="text-sm text-muted-foreground">Coming Soon</span>
                   </div>
                 </div>
@@ -223,7 +240,7 @@ export function DealDetailSheet({ dealId, contactId, open, onOpenChange }: DealD
                     value={deal.writing_status || ''}
                     onValueChange={(value) => updateDeal.mutate({ writing_status: value || null })}
                   >
-                    <SelectTrigger className="h-9 border-dashed hover:border-solid">
+                    <SelectTrigger className="h-9 border-dashed hover:border-solid bg-muted/50">
                       <SelectValue placeholder="Select writing status" />
                     </SelectTrigger>
                     <SelectContent>
@@ -248,16 +265,16 @@ export function DealDetailSheet({ dealId, contactId, open, onOpenChange }: DealD
                       onKeyDown={(e) => {
                         if (e.key === 'Escape') setEditingField(null);
                       }}
-                      className="resize-none min-h-[60px]"
+                      className="resize-none min-h-[60px] bg-muted/50"
                       placeholder="Brief description of the book..."
                     />
                   ) : (
-                    <p 
-                      className="text-sm p-2 rounded border border-dashed border-transparent hover:border-border cursor-pointer min-h-[40px]"
+                    <div 
+                      className="text-sm p-2 rounded border border-dashed hover:border-solid cursor-pointer min-h-[40px] bg-muted/50"
                       onClick={() => startEditing('book_description', deal.book_description)}
                     >
                       {deal.book_description || <span className="text-muted-foreground">Click to add description</span>}
-                    </p>
+                    </div>
                   )}
                 </div>
 
@@ -273,16 +290,16 @@ export function DealDetailSheet({ dealId, contactId, open, onOpenChange }: DealD
                       onKeyDown={(e) => {
                         if (e.key === 'Escape') setEditingField(null);
                       }}
-                      className="resize-none min-h-[60px]"
+                      className="resize-none min-h-[60px] bg-muted/50"
                       placeholder="What does the author want to achieve?"
                     />
                   ) : (
-                    <p 
-                      className="text-sm p-2 rounded border border-dashed border-transparent hover:border-border cursor-pointer min-h-[40px]"
+                    <div 
+                      className="text-sm p-2 rounded border border-dashed hover:border-solid cursor-pointer min-h-[40px] bg-muted/50"
                       onClick={() => startEditing('goals', deal.goals)}
                     >
                       {deal.goals || <span className="text-muted-foreground">Click to add goals</span>}
-                    </p>
+                    </div>
                   )}
                 </div>
               </div>
@@ -306,6 +323,10 @@ export function DealDetailSheet({ dealId, contactId, open, onOpenChange }: DealD
                     <CheckSquare className="h-4 w-4" />
                     Tasks
                   </TabsTrigger>
+                  <TabsTrigger value="activity" className="gap-1">
+                    <PhoneCall className="h-4 w-4" />
+                    Activity
+                  </TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="notes" className="flex-1 overflow-y-auto px-6 py-4 mt-0">
@@ -323,6 +344,64 @@ export function DealDetailSheet({ dealId, contactId, open, onOpenChange }: DealD
                     dealId={dealId}
                     emptyMessage="No tasks for this deal yet"
                   />
+                </TabsContent>
+
+                <TabsContent value="activity" className="flex-1 overflow-y-auto px-6 py-4 mt-0">
+                  {isLoadingComms ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : dealCommunications.length === 0 ? (
+                    <div className="text-center py-8 text-sm text-muted-foreground">
+                      No activity logged for this deal yet
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {dealCommunications.map((comm) => (
+                        <div 
+                          key={comm.id} 
+                          className="p-3 rounded-lg border bg-card"
+                        >
+                          <div className="flex items-start gap-3">
+                            <div className="p-2 rounded-full bg-muted">
+                              {comm.direction === 'inbound' ? (
+                                <PhoneIncoming className="h-4 w-4 text-green-600" />
+                              ) : (
+                                <PhoneOutgoing className="h-4 w-4 text-blue-600" />
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="text-sm font-medium">
+                                  {comm.direction === 'inbound' ? 'Inbound' : 'Outbound'} Call
+                                </span>
+                                <span className="text-xs text-muted-foreground">
+                                  {format(parseISO(comm.created_at), 'MMM d, h:mm a')}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+                                {comm.outcome && (
+                                  <span className="px-1.5 py-0.5 rounded bg-muted">
+                                    {OUTCOME_LABELS[comm.outcome] || comm.outcome}
+                                  </span>
+                                )}
+                                {comm.duration_seconds && comm.duration_seconds > 0 && (
+                                  <span>
+                                    {Math.floor(comm.duration_seconds / 60)}:{(comm.duration_seconds % 60).toString().padStart(2, '0')} min
+                                  </span>
+                                )}
+                              </div>
+                              {comm.notes && (
+                                <p className="mt-2 text-sm text-muted-foreground">
+                                  {comm.notes}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </TabsContent>
               </Tabs>
             </>
