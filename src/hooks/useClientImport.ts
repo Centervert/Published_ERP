@@ -232,6 +232,8 @@ export function useClientImport() {
           const contact: any = {
             email,
             created_by: user.id,
+            lead_source: 'import',
+            lead_source_detail: fileName,
           };
 
           if (firstNameIdx >= 0) contact.first_name = row[firstNameIdx]?.trim() || null;

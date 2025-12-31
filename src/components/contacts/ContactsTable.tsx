@@ -1,7 +1,8 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { usePaginatedContacts } from '@/hooks/usePaginatedContacts';
-import { useDeleteContact } from '@/hooks/useContacts';
+import { useDeleteContact, LeadSource } from '@/hooks/useContacts';
+import { LeadSourceBadge, LEAD_SOURCE_OPTIONS } from './LeadSourceBadge';
 import { useActiveStaff } from '@/hooks/useStaff';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -49,6 +50,7 @@ export function ContactsTable({ filterByUser }: ContactsTableProps) {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<string>('all');
+  const [sourceFilter, setSourceFilter] = useState<string>('all');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -69,6 +71,7 @@ export function ContactsTable({ filterByUser }: ContactsTableProps) {
     search: debouncedSearch,
     statusFilter,
     typeFilter,
+    sourceFilter,
     filterByUser,
   });
 
@@ -191,6 +194,19 @@ export function ContactsTable({ filterByUser }: ContactsTableProps) {
             <SelectItem value="complained">Complained</SelectItem>
           </SelectContent>
         </Select>
+        <Select value={sourceFilter} onValueChange={(v) => { setSourceFilter(v); setCurrentPage(1); }}>
+          <SelectTrigger className="w-[160px] h-9">
+            <SelectValue placeholder="Source" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Sources</SelectItem>
+            {LEAD_SOURCE_OPTIONS.map((source) => (
+              <SelectItem key={source.value} value={source.value}>
+                {source.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         
         {/* Total count display */}
         <div className="ml-auto text-sm text-muted-foreground">
@@ -264,6 +280,7 @@ export function ContactsTable({ filterByUser }: ContactsTableProps) {
                       </TooltipProvider>
                     </div>
                   </TableHead>
+                  <TableHead className="font-semibold">SOURCE</TableHead>
                   <TableHead className="font-semibold">DATE CREATED</TableHead>
                   <TableHead className="w-12"></TableHead>
                 </TableRow>
@@ -311,6 +328,9 @@ export function ContactsTable({ filterByUser }: ContactsTableProps) {
                         {contact.staff_ae_id 
                           ? staffMemberMap.get(contact.staff_ae_id) || '--' 
                           : contact.assigned_ae_text || '--'}
+                      </TableCell>
+                      <TableCell>
+                        <LeadSourceBadge source={contact.lead_source} size="sm" />
                       </TableCell>
                       <TableCell className="text-muted-foreground">
                         {format(new Date(contact.created_at), 'MM/dd/yyyy')}

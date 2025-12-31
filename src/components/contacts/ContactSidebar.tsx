@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Contact, useUpdateContact, useContactLinks } from '@/hooks/useContacts';
+import { Contact, useUpdateContact, useContactLinks, LeadSource } from '@/hooks/useContacts';
+import { LeadSourceBadge, LEAD_SOURCE_OPTIONS } from './LeadSourceBadge';
 import { useImprints } from '@/hooks/useImprints';
 import { useActiveStaff, useStaffById } from '@/hooks/useStaff';
 import { Button } from '@/components/ui/button';
@@ -109,6 +110,8 @@ export function ContactSidebar({ contact, onBack, onSelectTab }: ContactSidebarP
     staff_asc_id: contact.staff_asc_id || 'none',
     // AE fields left unchanged - not part of this migration
     assigned_ae: contact.assigned_ae || 'none',
+    lead_source: (contact.lead_source || 'manual_entry') as LeadSource,
+    lead_source_detail: contact.lead_source_detail || '',
   });
 
   const [newLink, setNewLink] = useState({ type: 'website', url: '', label: '' });
@@ -144,11 +147,14 @@ export function ContactSidebar({ contact, onBack, onSelectTab }: ContactSidebarP
         notes: contact.notes,
         staff_asc_id: contact.staff_asc_id,
         assigned_ae: contact.assigned_ae,
+        lead_source: contact.lead_source,
+        lead_source_detail: contact.lead_source_detail,
       },
       ...formData,
       imprint_id: formData.imprint_id === 'none' ? null : formData.imprint_id,
       staff_asc_id: formData.staff_asc_id === 'none' ? null : formData.staff_asc_id,
       assigned_ae: formData.assigned_ae === 'none' ? null : formData.assigned_ae,
+      lead_source_detail: formData.lead_source_detail || null,
     });
     setHasChanges(false);
   };
@@ -285,7 +291,51 @@ export function ContactSidebar({ contact, onBack, onSelectTab }: ContactSidebarP
             </div>
           </div>
 
-          {/* ASC - Using staff_asc_id (new foreign key) */}
+          {/* Source - Lead Source */}
+          <div className="flex items-center min-h-[28px]">
+            <span className="text-xs text-muted-foreground w-16 flex-shrink-0">Source</span>
+            <div className="flex-1 flex justify-end">
+              <Select value={formData.lead_source} onValueChange={(v) => handleChange('lead_source', v)}>
+                <SelectTrigger className="h-6 w-auto border-0 bg-transparent p-0 text-sm focus:ring-0 [&>svg]:h-3 [&>svg]:w-3">
+                  <LeadSourceBadge source={formData.lead_source} size="sm" />
+                </SelectTrigger>
+                <SelectContent>
+                  {LEAD_SOURCE_OPTIONS.map(source => (
+                    <SelectItem key={source.value} value={source.value}>{source.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Source Detail */}
+          {formData.lead_source && (
+            <div className="flex items-center min-h-[28px]">
+              <span className="text-xs text-muted-foreground w-16 flex-shrink-0">Detail</span>
+              <div className="flex-1 flex justify-end">
+                {editingField === 'lead_source_detail' ? (
+                  <Input
+                    value={formData.lead_source_detail}
+                    onChange={(e) => handleChange('lead_source_detail', e.target.value)}
+                    placeholder="e.g., authorservices.com/contact"
+                    className="h-6 text-xs"
+                    autoFocus
+                    onBlur={() => setEditingField(null)}
+                    onKeyDown={(e) => e.key === 'Enter' && setEditingField(null)}
+                  />
+                ) : (
+                  <span 
+                    onClick={() => setEditingField('lead_source_detail')}
+                    className="text-xs text-muted-foreground hover:text-primary transition-colors cursor-pointer truncate max-w-[180px]"
+                    title={formData.lead_source_detail || 'Add detail'}
+                  >
+                    {formData.lead_source_detail || '--'}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
           <div className="flex items-center min-h-[28px]">
             <span className="text-xs text-muted-foreground w-16 flex-shrink-0">A.S.C.</span>
             <div className="flex-1 flex justify-end">
