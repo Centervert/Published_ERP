@@ -128,7 +128,7 @@ export function CommunicationHub({ contactId, contactEmail, contactName, contact
       </div>
 
       {/* Bottom Composer Area */}
-      <div className="mt-auto">
+      <div className="mt-auto flex-shrink-0">
         <Tabs value={composerTab} onValueChange={(v) => setComposerTab(v as typeof composerTab)}>
           <div className="border-t">
             <TabsList className="h-10 w-full justify-start gap-0 bg-transparent rounded-none p-0 border-b">
