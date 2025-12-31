@@ -247,7 +247,7 @@ export function EmailComposer({
         )}
       </div>
 
-      <div className={`p-4 pb-8 space-y-3 ${expanded ? 'min-h-[400px]' : ''}`}>
+      <div className={`p-4 pb-4 space-y-3 ${expanded ? 'min-h-[400px]' : ''}`}>
         {/* From / To Row */}
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1">
@@ -312,7 +312,8 @@ export function EmailComposer({
           value={body}
           onChange={setBody}
           placeholder="Type your message..."
-          minHeight={expanded ? '200px' : '100px'}
+          minHeight={expanded ? '220px' : '80px'}
+          maxHeight={expanded ? '360px' : '160px'}
         />
 
         {/* Send Button */}
