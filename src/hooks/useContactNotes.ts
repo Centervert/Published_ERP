@@ -74,8 +74,10 @@ export function useContactNotes({ contactId, dealId }: UseContactNotesOptions) {
       return data;
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['contact-notes', contactId] });
-      toast.success('Note added');
+      const noteQueryKey = variables.dealId 
+        ? ['contact-notes', contactId, variables.dealId] 
+        : ['contact-notes', contactId, 'general'];
+      queryClient.invalidateQueries({ queryKey: noteQueryKey });
     },
     onError: (error) => {
       toast.error('Failed to add note');
@@ -97,7 +99,6 @@ export function useContactNotes({ contactId, dealId }: UseContactNotesOptions) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['contact-notes', contactId] });
-      toast.success('Note updated');
     },
     onError: (error) => {
       toast.error('Failed to update note');
@@ -116,7 +117,6 @@ export function useContactNotes({ contactId, dealId }: UseContactNotesOptions) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['contact-notes', contactId] });
-      toast.success('Note deleted');
     },
     onError: (error) => {
       toast.error('Failed to delete note');

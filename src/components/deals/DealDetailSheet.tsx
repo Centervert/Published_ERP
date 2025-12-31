@@ -30,14 +30,14 @@ import {
   Calendar,
   User,
   Sparkles,
-  PhoneCall,
+  MessageSquare,
   PhoneIncoming,
   PhoneOutgoing,
+  Plus,
 } from 'lucide-react';
 import { NotesSection } from '@/components/contacts/NotesSection';
 import { TasksSection } from '@/components/contacts/TasksSection';
 import { LogCallDialog } from '@/components/contacts/LogCallDialog';
-import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 
 interface DealDetailSheetProps {
@@ -123,10 +123,8 @@ export function DealDetailSheet({ dealId, contactId, open, onOpenChange }: DealD
       });
       // Also invalidate deal communications
       queryClient.invalidateQueries({ queryKey: ['deal-communications', dealId] });
-      toast.success('Call logged successfully');
     } catch (error) {
       console.error('Failed to log call:', error);
-      toast.error('Failed to log call');
     }
   };
 
@@ -135,15 +133,15 @@ export function DealDetailSheet({ dealId, contactId, open, onOpenChange }: DealD
   return (
     <>
       <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent className="w-full sm:max-w-[540px] p-0 flex flex-col" hideCloseButton>
+        <SheetContent className="w-full sm:max-w-[540px] p-0 flex flex-col overflow-hidden" hideCloseButton>
           {isLoading ? (
             <div className="flex items-center justify-center h-full">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
           ) : deal ? (
             <>
-              {/* Header */}
-              <SheetHeader className="p-6 pb-4 border-b space-y-0">
+              {/* Fixed Header */}
+              <SheetHeader className="p-6 pb-4 border-b space-y-0 flex-shrink-0">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-muted-foreground">Stage:</span>
@@ -220,190 +218,202 @@ export function DealDetailSheet({ dealId, contactId, open, onOpenChange }: DealD
                 </div>
               </SheetHeader>
 
-              {/* Deal Info Section - Inline Editable */}
-              <div className="p-6 border-b space-y-4">
-                {/* AI Summary - Coming Soon */}
-                <div className="space-y-1">
-                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <Sparkles className="h-3 w-3" />
-                    AI Summary
+              {/* Scrollable Content */}
+              <div className="flex-1 overflow-y-auto">
+                {/* Deal Info Section - Inline Editable */}
+                <div className="p-6 pt-4 border-b space-y-4">
+                  {/* AI Summary - Coming Soon */}
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <Sparkles className="h-3 w-3" />
+                      AI Summary
+                    </div>
+                    <div className="py-2 px-3 rounded-md border border-dashed bg-muted/30 text-center">
+                      <span className="text-sm text-muted-foreground">Coming Soon</span>
+                    </div>
                   </div>
-                  <div className="py-2 px-3 rounded-md border border-dashed bg-muted/30 text-center">
-                    <span className="text-sm text-muted-foreground">Coming Soon</span>
+
+                  {/* Writing Status */}
+                  <div className="space-y-1">
+                    <span className="text-xs text-muted-foreground">Writing Status</span>
+                    <Select
+                      value={deal.writing_status || ''}
+                      onValueChange={(value) => updateDeal.mutate({ writing_status: value || null })}
+                    >
+                      <SelectTrigger className="h-9 border-dashed hover:border-solid bg-muted/50">
+                        <SelectValue placeholder="Select writing status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {WRITING_STATUS_OPTIONS.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Book Description */}
+                  <div className="space-y-1">
+                    <span className="text-xs text-muted-foreground">Book Description</span>
+                    {editingField === 'book_description' ? (
+                      <Textarea
+                        autoFocus
+                        value={fieldValue}
+                        onChange={(e) => setFieldValue(e.target.value)}
+                        onBlur={() => saveField('book_description', fieldValue)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Escape') setEditingField(null);
+                        }}
+                        className="resize-none min-h-[60px] bg-muted/50"
+                        placeholder="Brief description of the book..."
+                      />
+                    ) : (
+                      <div 
+                        className="text-sm p-2 rounded border border-dashed hover:border-solid cursor-pointer min-h-[40px] bg-muted/50"
+                        onClick={() => startEditing('book_description', deal.book_description)}
+                      >
+                        {deal.book_description || <span className="text-muted-foreground">Click to add description</span>}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Author Goals */}
+                  <div className="space-y-1">
+                    <span className="text-xs text-muted-foreground">Author Goals</span>
+                    {editingField === 'goals' ? (
+                      <Textarea
+                        autoFocus
+                        value={fieldValue}
+                        onChange={(e) => setFieldValue(e.target.value)}
+                        onBlur={() => saveField('goals', fieldValue)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Escape') setEditingField(null);
+                        }}
+                        className="resize-none min-h-[60px] bg-muted/50"
+                        placeholder="What does the author want to achieve?"
+                      />
+                    ) : (
+                      <div 
+                        className="text-sm p-2 rounded border border-dashed hover:border-solid cursor-pointer min-h-[40px] bg-muted/50"
+                        onClick={() => startEditing('goals', deal.goals)}
+                      >
+                        {deal.goals || <span className="text-muted-foreground">Click to add goals</span>}
+                      </div>
+                    )}
                   </div>
                 </div>
 
-                {/* Writing Status */}
-                <div className="space-y-1">
-                  <span className="text-xs text-muted-foreground">Writing Status</span>
-                  <Select
-                    value={deal.writing_status || ''}
-                    onValueChange={(value) => updateDeal.mutate({ writing_status: value || null })}
-                  >
-                    <SelectTrigger className="h-9 border-dashed hover:border-solid bg-muted/50">
-                      <SelectValue placeholder="Select writing status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {WRITING_STATUS_OPTIONS.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                {/* Activity Tabs */}
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col">
+                  <TabsList className="mx-6 mt-4 w-auto justify-start">
+                    <TabsTrigger value="notes" className="gap-1">
+                      <FileText className="h-4 w-4" />
+                      Notes
+                    </TabsTrigger>
+                    <TabsTrigger value="tasks" className="gap-1">
+                      <CheckSquare className="h-4 w-4" />
+                      Tasks
+                    </TabsTrigger>
+                    <TabsTrigger value="communication" className="gap-1">
+                      <MessageSquare className="h-4 w-4" />
+                      Communication
+                    </TabsTrigger>
+                  </TabsList>
 
-                {/* Book Description */}
-                <div className="space-y-1">
-                  <span className="text-xs text-muted-foreground">Book Description</span>
-                  {editingField === 'book_description' ? (
-                    <Textarea
-                      autoFocus
-                      value={fieldValue}
-                      onChange={(e) => setFieldValue(e.target.value)}
-                      onBlur={() => saveField('book_description', fieldValue)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Escape') setEditingField(null);
-                      }}
-                      className="resize-none min-h-[60px] bg-muted/50"
-                      placeholder="Brief description of the book..."
+                  <TabsContent value="notes" className="px-6 py-4 mt-0">
+                    <NotesSection 
+                      contactId={contactId} 
+                      dealId={dealId}
+                      placeholder="Add a note about this deal..."
+                      emptyMessage="No notes for this deal yet"
                     />
-                  ) : (
-                    <div 
-                      className="text-sm p-2 rounded border border-dashed hover:border-solid cursor-pointer min-h-[40px] bg-muted/50"
-                      onClick={() => startEditing('book_description', deal.book_description)}
-                    >
-                      {deal.book_description || <span className="text-muted-foreground">Click to add description</span>}
-                    </div>
-                  )}
-                </div>
+                  </TabsContent>
 
-                {/* Author Goals */}
-                <div className="space-y-1">
-                  <span className="text-xs text-muted-foreground">Author Goals</span>
-                  {editingField === 'goals' ? (
-                    <Textarea
-                      autoFocus
-                      value={fieldValue}
-                      onChange={(e) => setFieldValue(e.target.value)}
-                      onBlur={() => saveField('goals', fieldValue)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Escape') setEditingField(null);
-                      }}
-                      className="resize-none min-h-[60px] bg-muted/50"
-                      placeholder="What does the author want to achieve?"
+                  <TabsContent value="tasks" className="px-6 py-4 mt-0">
+                    <TasksSection 
+                      contactId={contactId} 
+                      dealId={dealId}
+                      emptyMessage="No tasks for this deal yet"
                     />
-                  ) : (
-                    <div 
-                      className="text-sm p-2 rounded border border-dashed hover:border-solid cursor-pointer min-h-[40px] bg-muted/50"
-                      onClick={() => startEditing('goals', deal.goals)}
-                    >
-                      {deal.goals || <span className="text-muted-foreground">Click to add goals</span>}
-                    </div>
-                  )}
-                </div>
-              </div>
+                  </TabsContent>
 
-              {/* Action Bar */}
-              <div className="px-6 py-3 border-b flex items-center gap-2">
-                <Button variant="outline" size="sm" onClick={() => setShowLogCallDialog(true)}>
-                  <Phone className="h-4 w-4 mr-1" />
-                  Log Call
-                </Button>
-              </div>
-
-              {/* Activity Tabs */}
-              <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
-                <TabsList className="mx-6 mt-4 w-auto justify-start">
-                  <TabsTrigger value="notes" className="gap-1">
-                    <FileText className="h-4 w-4" />
-                    Notes
-                  </TabsTrigger>
-                  <TabsTrigger value="tasks" className="gap-1">
-                    <CheckSquare className="h-4 w-4" />
-                    Tasks
-                  </TabsTrigger>
-                  <TabsTrigger value="activity" className="gap-1">
-                    <PhoneCall className="h-4 w-4" />
-                    Activity
-                  </TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="notes" className="flex-1 overflow-y-auto px-6 py-4 mt-0">
-                  <NotesSection 
-                    contactId={contactId} 
-                    dealId={dealId}
-                    placeholder="Add a note about this deal..."
-                    emptyMessage="No notes for this deal yet"
-                  />
-                </TabsContent>
-
-                <TabsContent value="tasks" className="flex-1 overflow-y-auto px-6 py-4 mt-0">
-                  <TasksSection 
-                    contactId={contactId} 
-                    dealId={dealId}
-                    emptyMessage="No tasks for this deal yet"
-                  />
-                </TabsContent>
-
-                <TabsContent value="activity" className="flex-1 overflow-y-auto px-6 py-4 mt-0">
-                  {isLoadingComms ? (
-                    <div className="flex items-center justify-center py-8">
-                      <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                    </div>
-                  ) : dealCommunications.length === 0 ? (
-                    <div className="text-center py-8 text-sm text-muted-foreground">
-                      No activity logged for this deal yet
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {dealCommunications.map((comm) => (
-                        <div 
-                          key={comm.id} 
-                          className="p-3 rounded-lg border bg-card"
+                  <TabsContent value="communication" className="px-6 py-4 mt-0">
+                    <div className="space-y-4">
+                      {/* Log Call Button */}
+                      <div className="flex justify-end">
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => setShowLogCallDialog(true)}
                         >
-                          <div className="flex items-start gap-3">
-                            <div className="p-2 rounded-full bg-muted">
-                              {comm.direction === 'inbound' ? (
-                                <PhoneIncoming className="h-4 w-4 text-green-600" />
-                              ) : (
-                                <PhoneOutgoing className="h-4 w-4 text-blue-600" />
-                              )}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center justify-between gap-2">
-                                <span className="text-sm font-medium">
-                                  {comm.direction === 'inbound' ? 'Inbound' : 'Outbound'} Call
-                                </span>
-                                <span className="text-xs text-muted-foreground">
-                                  {format(parseISO(comm.created_at), 'MMM d, h:mm a')}
-                                </span>
-                              </div>
-                              <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
-                                {comm.outcome && (
-                                  <span className="px-1.5 py-0.5 rounded bg-muted">
-                                    {OUTCOME_LABELS[comm.outcome] || comm.outcome}
-                                  </span>
-                                )}
-                                {comm.duration_seconds && comm.duration_seconds > 0 && (
-                                  <span>
-                                    {Math.floor(comm.duration_seconds / 60)}:{(comm.duration_seconds % 60).toString().padStart(2, '0')} min
-                                  </span>
-                                )}
-                              </div>
-                              {comm.notes && (
-                                <p className="mt-2 text-sm text-muted-foreground">
-                                  {comm.notes}
-                                </p>
-                              )}
-                            </div>
-                          </div>
+                          <Plus className="h-4 w-4 mr-1" />
+                          Log Call
+                        </Button>
+                      </div>
+
+                      {/* Communications List */}
+                      {isLoadingComms ? (
+                        <div className="flex items-center justify-center py-8">
+                          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
                         </div>
-                      ))}
+                      ) : dealCommunications.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-12 text-center">
+                          <MessageSquare className="h-8 w-8 text-muted-foreground mb-2" />
+                          <p className="text-sm text-muted-foreground mb-1">No communication logged yet</p>
+                          <p className="text-xs text-muted-foreground">Log calls and emails related to this deal</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          {dealCommunications.map((comm) => (
+                            <div 
+                              key={comm.id} 
+                              className="p-3 rounded-lg border bg-card"
+                            >
+                              <div className="flex items-start gap-3">
+                                <div className="p-2 rounded-full bg-muted">
+                                  {comm.direction === 'inbound' ? (
+                                    <PhoneIncoming className="h-4 w-4 text-green-600" />
+                                  ) : (
+                                    <PhoneOutgoing className="h-4 w-4 text-blue-600" />
+                                  )}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center justify-between gap-2">
+                                    <span className="text-sm font-medium">
+                                      {comm.direction === 'inbound' ? 'Inbound' : 'Outbound'} Call
+                                    </span>
+                                    <span className="text-xs text-muted-foreground">
+                                      {format(parseISO(comm.created_at), 'MMM d, h:mm a')}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+                                    {comm.outcome && (
+                                      <span className="px-1.5 py-0.5 rounded bg-muted">
+                                        {OUTCOME_LABELS[comm.outcome] || comm.outcome}
+                                      </span>
+                                    )}
+                                    {comm.duration_seconds && comm.duration_seconds > 0 && (
+                                      <span>
+                                        {Math.floor(comm.duration_seconds / 60)}:{(comm.duration_seconds % 60).toString().padStart(2, '0')} min
+                                      </span>
+                                    )}
+                                  </div>
+                                  {comm.notes && (
+                                    <p className="mt-2 text-sm text-muted-foreground">
+                                      {comm.notes}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                  )}
-                </TabsContent>
-              </Tabs>
+                  </TabsContent>
+                </Tabs>
+              </div>
             </>
           ) : (
             <div className="flex items-center justify-center h-full text-muted-foreground">
