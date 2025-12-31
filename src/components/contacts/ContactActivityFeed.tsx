@@ -168,7 +168,7 @@ export function ContactActivityFeed({
   const { activities, isLoading } = useContactActivity(contactId);
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col bg-background">
       {/* Tab Header */}
       <Tabs value={selectedTab} onValueChange={onTabChange} className="flex-1 flex flex-col">
         <div className="border-b bg-background sticky top-0 z-10 px-6 h-[57px] flex items-end justify-between">
