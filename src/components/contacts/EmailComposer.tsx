@@ -233,7 +233,7 @@ export function EmailComposer({
   }
 
   return (
-    <div className="border-t bg-card">
+    <div className="border-t">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-2 border-b">
         <div className="flex items-center gap-2">

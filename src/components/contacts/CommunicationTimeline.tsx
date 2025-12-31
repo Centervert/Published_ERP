@@ -130,10 +130,10 @@ export function CommunicationTimeline({ communications, isLoading, contactEmail,
               return (
                 <div 
                   key={comm.id}
-                  className="flex flex-col rounded-lg border bg-card overflow-hidden"
+                  className="flex flex-col overflow-hidden"
                 >
                   {/* Header with From/To */}
-                  <div className="flex items-start gap-3 p-3">
+                  <div className="flex items-start gap-3 py-3">
                     {/* Avatar */}
                     <div className={`flex-shrink-0 h-10 w-10 rounded-full flex items-center justify-center ${colorClass} relative`}>
                       <span className="text-xs font-semibold">
@@ -184,7 +184,7 @@ export function CommunicationTimeline({ communications, isLoading, contactEmail,
 
                   {/* Body Content */}
                   {comm.body && (
-                    <div className="p-3">
+                    <div className="py-3 pl-13">
                       {comm.type === 'email' ? (
                         <div 
                           className="text-sm text-foreground prose prose-sm max-w-none [&>*]:m-0 [&>p]:mb-2 [&>ul]:my-2 [&>ol]:my-2"
@@ -205,7 +205,7 @@ export function CommunicationTimeline({ communications, isLoading, contactEmail,
 
                   {/* Notes for calls */}
                   {comm.notes && (
-                    <div className="px-3 pb-3">
+                    <div className="pb-3 pl-13">
                       <p className="text-sm text-muted-foreground italic">
                         "{comm.notes}"
                       </p>
