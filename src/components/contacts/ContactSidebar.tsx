@@ -396,7 +396,7 @@ export function ContactSidebar({ contact, onBack, onSelectTab }: ContactSidebarP
             <div className="flex-1 flex justify-end">
               <Select value={formData.lead_source} onValueChange={(v) => handleChange('lead_source', v)}>
                 <SelectTrigger className="h-6 w-auto border-0 bg-transparent p-0 text-sm focus:ring-0 [&>svg]:h-3 [&>svg]:w-3">
-                  <LeadSourceBadge source={formData.lead_source} size="sm" />
+                  <span className="text-sm">{LEAD_SOURCE_OPTIONS.find(s => s.value === formData.lead_source)?.label || '--'}</span>
                 </SelectTrigger>
                 <SelectContent>
                   {LEAD_SOURCE_OPTIONS.map(source => (
