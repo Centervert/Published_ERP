@@ -89,9 +89,11 @@ export function useContactTasks({ contactId, dealId }: UseContactTasksOptions) {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['contact-tasks', contactId] });
-      toast.success('Task created');
+    onSuccess: (_, variables) => {
+      const taskQueryKey = variables.dealId 
+        ? ['contact-tasks', contactId, variables.dealId] 
+        : ['contact-tasks', contactId, 'general'];
+      queryClient.invalidateQueries({ queryKey: taskQueryKey });
     },
     onError: (error) => {
       toast.error('Failed to create task');
@@ -135,9 +137,8 @@ export function useContactTasks({ contactId, dealId }: UseContactTasksOptions) {
       if (error) throw error;
       return data;
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['contact-tasks', contactId] });
-      toast.success(data.completed ? 'Task completed' : 'Task reopened');
     },
     onError: (error) => {
       toast.error('Failed to update task');
@@ -156,7 +157,6 @@ export function useContactTasks({ contactId, dealId }: UseContactTasksOptions) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['contact-tasks', contactId] });
-      toast.success('Task deleted');
     },
     onError: (error) => {
       toast.error('Failed to delete task');
