@@ -31,7 +31,10 @@ export function useContactNotes({ contactId, dealId }: UseContactNotesOptions) {
     queryFn: async () => {
       let query = supabase
         .from('contact_notes')
-        .select('*')
+        .select(`
+          *,
+          profiles:created_by (full_name)
+        `)
         .eq('contact_id', contactId)
         .order('created_at', { ascending: false });
 
@@ -45,7 +48,10 @@ export function useContactNotes({ contactId, dealId }: UseContactNotesOptions) {
 
       if (error) throw error;
       
-      return (data || []) as ContactNote[];
+      return (data || []).map((note: any) => ({
+        ...note,
+        created_by_name: note.profiles?.full_name || null,
+      })) as ContactNote[];
     },
     enabled: !!contactId,
   });

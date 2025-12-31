@@ -36,7 +36,10 @@ export function useContactTasks({ contactId, dealId }: UseContactTasksOptions) {
     queryFn: async () => {
       let query = supabase
         .from('contact_tasks')
-        .select('*')
+        .select(`
+          *,
+          profiles:created_by (full_name)
+        `)
         .eq('contact_id', contactId)
         .order('completed', { ascending: true })
         .order('due_date', { ascending: true, nullsFirst: false })
@@ -52,7 +55,10 @@ export function useContactTasks({ contactId, dealId }: UseContactTasksOptions) {
 
       if (error) throw error;
       
-      return (data || []) as ContactTask[];
+      return (data || []).map((task: any) => ({
+        ...task,
+        created_by_name: task.profiles?.full_name || null,
+      })) as ContactTask[];
     },
     enabled: !!contactId,
   });
