@@ -28,13 +28,11 @@ interface KanbanColumnProps {
   onActionClick?: (action: 'phone' | 'sms' | 'email' | 'calendar', deal: Deal) => void;
 }
 
-function formatCurrency(value: number | null): string {
-  if (!value) return '$0.00';
+function formatValue(value: number | null): string {
+  if (!value) return '0';
   return new Intl.NumberFormat('en-US', { 
-    style: 'currency', 
-    currency: 'USD',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
   }).format(value);
 }
 
@@ -53,21 +51,21 @@ export function KanbanColumn({
 
   return (
     <div
-      className="flex-shrink-0 w-64 sm:w-72 lg:w-80 flex flex-col min-w-0"
+      className="flex-shrink-0 w-56 sm:w-64 lg:w-72 flex flex-col min-w-0"
       onDragOver={onDragOver}
       onDrop={(e) => onDrop(e, stage)}
     >
       {/* Column Header - White card with top border accent */}
-      <div className={`bg-white border border-gray-200 rounded-t-md border-t-[3px] ${STAGE_BORDER_COLORS[stage]} px-3 sm:px-4 py-2 sm:py-3`}>
-        <div className="font-semibold text-gray-900 text-sm sm:text-base truncate">{DEAL_STAGE_LABELS[stage]}</div>
-        <div className="text-[10px] sm:text-xs text-gray-400 mt-0.5 truncate">
-          {deals.length} Opportunities | {formatCurrency(totalValue)}
+      <div className={`bg-white border border-gray-200 rounded-t-md border-t-[3px] ${STAGE_BORDER_COLORS[stage]} px-3 py-2`}>
+        <div className="font-semibold text-gray-900 text-sm truncate">{DEAL_STAGE_LABELS[stage]}</div>
+        <div className="text-[10px] text-gray-400 mt-0.5 truncate">
+          {deals.length} {deals.length === 1 ? 'Deal' : 'Deals'} | {formatValue(totalValue)}
         </div>
       </div>
 
       {/* Cards Container */}
       <ScrollArea className="flex-1 bg-transparent">
-        <div className="space-y-3 pt-3 pb-4">
+        <div className="space-y-2 pt-2 pb-3">
           {deals.map((deal) => (
             <DealCard
               key={deal.id}
@@ -80,8 +78,8 @@ export function KanbanColumn({
             />
           ))}
           {deals.length === 0 && (
-            <div className="text-center py-8 text-sm text-gray-400">
-              No opportunities
+            <div className="text-center py-6 text-xs text-gray-400">
+              No deals
             </div>
           )}
         </div>
