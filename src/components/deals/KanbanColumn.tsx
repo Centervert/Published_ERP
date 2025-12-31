@@ -67,7 +67,7 @@ export function KanbanColumn({
 
       {/* Cards Container - Clean, minimal background */}
       <ScrollArea className="flex-1">
-        <div className="space-y-2.5 p-3 min-h-[200px]">
+        <div className="space-y-2.5 px-0 py-3 min-h-[200px]">
           {deals.map((deal) => (
             <DealCard
               key={deal.id}
