@@ -100,7 +100,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="space-y-8 max-w-6xl">
+    <div className="p-6 space-y-8 max-w-6xl">
       {/* Page Header */}
       <div className="flex items-center gap-3">
         <h1 className="text-2xl font-semibold tracking-tight">Home</h1>

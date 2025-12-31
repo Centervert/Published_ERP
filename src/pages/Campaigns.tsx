@@ -211,7 +211,7 @@ export default function Campaigns() {
   }
 
   return (
-    <div className="space-y-6 max-w-6xl">
+    <div className="p-6 space-y-6 max-w-6xl">
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold tracking-tight">All campaigns</h1>

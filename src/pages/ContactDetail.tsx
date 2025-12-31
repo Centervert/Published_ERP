@@ -70,7 +70,7 @@ export default function ContactDetail() {
   }
 
   return (
-    <div className="h-[calc(100vh-56px)] flex -m-6 overflow-hidden">
+    <div className="h-[calc(100vh-56px)] flex overflow-hidden">
       {/* Left Sidebar - Contact Info */}
       <div className="w-[400px] border-r overflow-y-auto flex-shrink-0">
         <ContactSidebar 
