@@ -6,6 +6,7 @@ export interface ContactSearchResult {
   email: string;
   first_name: string | null;
   last_name: string | null;
+  phone: string | null;
 }
 
 interface UseContactSearchParams {
@@ -16,8 +17,9 @@ interface UseContactSearchParams {
 }
 
 /**
- * Lightweight hook for searching contacts by name/email.
- * Uses the optimized search_name column with trigram indexes.
+ * Lightweight hook for searching contacts by name, email, or phone.
+ * Uses the optimized search_name column with trigram indexes for name search,
+ * and also searches email and phone_normalized fields.
  * Only fetches when search term is provided (no eager loading).
  */
 export function useContactSearch({
@@ -35,10 +37,11 @@ export function useContactSearch({
         return [];
       }
 
+      // Build OR filter to search across name, email, and phone
       let query = supabase
         .from('contacts')
-        .select('id, email, first_name, last_name')
-        .ilike('search_name', `%${normalizedSearch}%`)
+        .select('id, email, first_name, last_name, phone')
+        .or(`search_name.ilike.%${normalizedSearch}%,email.ilike.%${normalizedSearch}%,phone_normalized.ilike.%${normalizedSearch}%`)
         .limit(limit);
 
       // Exclude already-selected contacts
