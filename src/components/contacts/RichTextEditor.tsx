@@ -18,6 +18,7 @@ interface RichTextEditorProps {
   placeholder?: string;
   className?: string;
   minHeight?: string;
+  maxHeight?: string;
 }
 
 export function RichTextEditor({ 
@@ -25,7 +26,8 @@ export function RichTextEditor({
   onChange, 
   placeholder = 'Type your message...', 
   className,
-  minHeight = '120px'
+  minHeight = '120px',
+  maxHeight,
 }: RichTextEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
   const isInternalChange = useRef(false);
@@ -134,7 +136,7 @@ export function RichTextEditor({
         contentEditable
         onInput={handleInput}
         className="px-3 py-2 focus:outline-none prose prose-sm max-w-none [&:empty]:before:content-[attr(data-placeholder)] [&:empty]:before:text-muted-foreground [&:empty]:before:pointer-events-none"
-        style={{ minHeight }}
+        style={{ minHeight, maxHeight, overflowY: maxHeight ? 'auto' : undefined }}
         data-placeholder={placeholder}
         suppressContentEditableWarning
       />
