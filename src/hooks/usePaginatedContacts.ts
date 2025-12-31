@@ -1,6 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
+import { LeadSource } from './useContacts';
+
 export interface PaginatedContact {
   id: string;
   email: string;
@@ -15,6 +17,8 @@ export interface PaginatedContact {
   assigned_ae_text: string | null;
   staff_asc_id: string | null;
   staff_ae_id: string | null;
+  lead_source: LeadSource | null;
+  lead_source_detail: string | null;
   created_at: string;
   imprint?: {
     id: string;
@@ -28,6 +32,7 @@ interface UsePaginatedContactsParams {
   search?: string;
   statusFilter?: string;
   typeFilter?: string;
+  sourceFilter?: string;
   filterByUser?: string | null;
 }
 
@@ -37,11 +42,12 @@ export function usePaginatedContacts({
   search = '',
   statusFilter = 'all',
   typeFilter = 'all',
+  sourceFilter = 'all',
   filterByUser = null,
 }: UsePaginatedContactsParams) {
   // Query for paginated data
   const contactsQuery = useQuery({
-    queryKey: ['contacts-paginated', page, pageSize, search, statusFilter, typeFilter, filterByUser],
+    queryKey: ['contacts-paginated', page, pageSize, search, statusFilter, typeFilter, sourceFilter, filterByUser],
     queryFn: async () => {
       const normalizedSearch = (search ?? '').trim();
       // Always use 'planned' for fast count estimates on large tables (423k+ rows)
@@ -64,6 +70,8 @@ export function usePaginatedContacts({
           assigned_ae_text,
           staff_asc_id,
           staff_ae_id,
+          lead_source,
+          lead_source_detail,
           created_at,
           imprint:imprints(id, name)
         `, { count: countMode });
@@ -91,6 +99,10 @@ export function usePaginatedContacts({
 
       if (typeFilter !== 'all') {
         query = query.eq('contact_type', typeFilter);
+      }
+
+      if (sourceFilter !== 'all') {
+        query = query.eq('lead_source', sourceFilter as LeadSource);
       }
 
       if (filterByUser) {

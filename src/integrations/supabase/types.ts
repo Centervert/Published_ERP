@@ -505,6 +505,8 @@ export type Database = {
           id: string
           imprint_id: string | null
           last_name: string | null
+          lead_source: Database["public"]["Enums"]["lead_source"] | null
+          lead_source_detail: string | null
           notes: string | null
           phone: string | null
           phone_normalized: string | null
@@ -529,6 +531,8 @@ export type Database = {
           id?: string
           imprint_id?: string | null
           last_name?: string | null
+          lead_source?: Database["public"]["Enums"]["lead_source"] | null
+          lead_source_detail?: string | null
           notes?: string | null
           phone?: string | null
           phone_normalized?: string | null
@@ -553,6 +557,8 @@ export type Database = {
           id?: string
           imprint_id?: string | null
           last_name?: string | null
+          lead_source?: Database["public"]["Enums"]["lead_source"] | null
+          lead_source_detail?: string | null
           notes?: string | null
           phone?: string | null
           phone_normalized?: string | null
@@ -1448,6 +1454,11 @@ export type Database = {
         | "won"
         | "lost"
         | "not_interested"
+      lead_source:
+        | "website_landing_page"
+        | "manual_entry"
+        | "marketing_partner"
+        | "import"
       product_category: "format" | "bundle" | "package" | "service" | "add_on"
     }
     CompositeTypes: {
@@ -1588,6 +1599,12 @@ export const Constants = {
         "won",
         "lost",
         "not_interested",
+      ],
+      lead_source: [
+        "website_landing_page",
+        "manual_entry",
+        "marketing_partner",
+        "import",
       ],
       product_category: ["format", "bundle", "package", "service", "add_on"],
     },

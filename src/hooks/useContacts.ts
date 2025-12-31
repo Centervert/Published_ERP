@@ -11,6 +11,8 @@ export interface ContactLink {
   label?: string;
 }
 
+export type LeadSource = 'website_landing_page' | 'manual_entry' | 'marketing_partner' | 'import';
+
 export interface Contact {
   id: string;
   email: string;
@@ -29,6 +31,8 @@ export interface Contact {
   assigned_ae_text: string | null;
   staff_asc_id: string | null;
   staff_ae_id: string | null;
+  lead_source: LeadSource | null;
+  lead_source_detail: string | null;
   created_at: string;
   updated_at: string;
   imprint?: {
@@ -84,6 +88,8 @@ export function useContacts() {
       contact_type?: string;
       imprint_id?: string;
       notes?: string;
+      lead_source?: LeadSource;
+      lead_source_detail?: string;
       links?: { type: string; url: string; label?: string }[];
     }) => {
       const { links, ...contactData } = contact;
@@ -100,6 +106,8 @@ export function useContacts() {
           contact_type: contactData.contact_type || 'lead',
           imprint_id: contactData.imprint_id || null,
           notes: contactData.notes || null,
+          lead_source: contactData.lead_source || 'manual_entry',
+          lead_source_detail: contactData.lead_source_detail || null,
           created_by: user?.id,
         })
         .select()

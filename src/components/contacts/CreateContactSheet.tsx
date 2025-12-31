@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { useContacts } from '@/hooks/useContacts';
+import { useContacts, LeadSource } from '@/hooks/useContacts';
 import { useImprints } from '@/hooks/useImprints';
+import { LEAD_SOURCE_OPTIONS } from './LeadSourceBadge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -102,6 +103,8 @@ export function CreateContactSheet({ open, onOpenChange }: CreateContactSheetPro
     contact_type: 'lead',
     imprint_id: '',
     notes: '',
+    lead_source: 'manual_entry' as LeadSource,
+    lead_source_detail: '',
   });
   const [links, setLinks] = useState<ContactLink[]>([]);
   const [error, setError] = useState('');
@@ -121,6 +124,8 @@ export function CreateContactSheet({ open, onOpenChange }: CreateContactSheetPro
       contact_type: 'lead',
       imprint_id: '',
       notes: '',
+      lead_source: 'manual_entry' as LeadSource,
+      lead_source_detail: '',
     });
     setLinks([]);
     setError('');
@@ -139,6 +144,8 @@ export function CreateContactSheet({ open, onOpenChange }: CreateContactSheetPro
         contact_type: formData.contact_type || undefined,
         imprint_id: formData.imprint_id || undefined,
         notes: formData.notes || undefined,
+        lead_source: formData.lead_source || 'manual_entry',
+        lead_source_detail: formData.lead_source_detail || undefined,
         links: links.length > 0 ? links : undefined,
       });
       
@@ -349,6 +356,38 @@ export function CreateContactSheet({ open, onOpenChange }: CreateContactSheetPro
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+
+              {/* Lead Source */}
+              <div className="space-y-2">
+                <Label>Lead Source</Label>
+                <Select
+                  value={formData.lead_source}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, lead_source: value as LeadSource }))}
+                  disabled={!hasName}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select source" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {LEAD_SOURCE_OPTIONS.map((source) => (
+                      <SelectItem key={source.value} value={source.value}>
+                        {source.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Lead Source Detail */}
+              <div className="space-y-2">
+                <Label>Source Detail <span className="text-muted-foreground text-xs">(optional)</span></Label>
+                <Input
+                  placeholder="e.g., authorservices.com/contact or BookBub"
+                  value={formData.lead_source_detail}
+                  onChange={(e) => setFormData(prev => ({ ...prev, lead_source_detail: e.target.value }))}
+                  disabled={!hasName}
+                />
               </div>
 
               {/* Websites & Social */}
