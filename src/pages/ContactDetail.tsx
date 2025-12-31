@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Loader2 } from 'lucide-react';
+import { ArrowLeft, Loader2, PanelRightOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useContact, useUpdateContact } from '@/hooks/useContacts';
 import { useQuery } from '@tanstack/react-query';
@@ -8,6 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { ContactSidebar } from '@/components/contacts/ContactSidebar';
 import { ContactActivityFeed } from '@/components/contacts/ContactActivityFeed';
 import { ContactSummaryPanel } from '@/components/contacts/ContactSummaryPanel';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 
 export default function ContactDetail() {
   const { contactId } = useParams<{ contactId: string }>();
@@ -15,6 +16,7 @@ export default function ContactDetail() {
   const { contact, isLoading } = useContact(contactId || '');
   const updateContact = useUpdateContact();
   const [selectedTab, setSelectedTab] = useState('contact');
+  const [summaryOpen, setSummaryOpen] = useState(false);
 
   // Fetch team members for assignment dropdowns
   const { data: teamMembers = [] } = useQuery({
@@ -81,7 +83,22 @@ export default function ContactDetail() {
       </div>
 
       {/* Center - Tabs */}
-      <div className="flex-1 min-w-[400px] overflow-hidden flex flex-col">
+      <div className="flex-1 min-w-[400px] overflow-hidden flex flex-col relative">
+        {/* Mobile/Tablet Summary Toggle Button - visible when sidebar is hidden */}
+        <div className="2xl:hidden absolute top-3 right-3 z-10">
+          <Sheet open={summaryOpen} onOpenChange={setSummaryOpen}>
+            <SheetTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-2">
+                <PanelRightOpen className="h-4 w-4" />
+                <span className="hidden sm:inline">Summary</span>
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="right" className="w-[350px] sm:w-[400px] p-0 overflow-y-auto">
+              <ContactSummaryPanel contact={contact} />
+            </SheetContent>
+          </Sheet>
+        </div>
+
         <ContactActivityFeed 
           contactId={contact.id} 
           contactEmail={contact.email}
@@ -93,7 +110,7 @@ export default function ContactDetail() {
         />
       </div>
 
-      {/* Right Sidebar - Summary - hidden on smaller screens */}
+      {/* Right Sidebar - Summary - visible on 2xl screens */}
       <div className="w-[320px] border-l overflow-y-auto flex-shrink-0 hidden 2xl:block">
         <ContactSummaryPanel contact={contact} />
       </div>
