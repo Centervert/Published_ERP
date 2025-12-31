@@ -3,7 +3,7 @@ import { useContactNotes, ContactNote } from '@/hooks/useContactNotes';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { format, parseISO } from 'date-fns';
-import { Plus, FileText, Loader2, Trash2, MoreHorizontal } from 'lucide-react';
+import { Plus, FileText, Loader2, Trash2, MoreHorizontal, Check, X } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,7 +25,7 @@ export function NotesSection({
   emptyMessage = 'No notes yet',
 }: NotesSectionProps) {
   const [noteText, setNoteText] = useState('');
-  const { notes, isLoading, addNote, deleteNote } = useContactNotes({ contactId, dealId });
+  const { notes, isLoading, addNote, updateNote, deleteNote } = useContactNotes({ contactId, dealId });
 
   const handleAddNote = async () => {
     if (!noteText.trim()) return;
@@ -80,7 +80,9 @@ export function NotesSection({
             <NoteItem 
               key={note.id} 
               note={note} 
+              onUpdate={async (content) => { await updateNote.mutateAsync({ id: note.id, content }); }}
               onDelete={() => deleteNote.mutate(note.id)}
+              isUpdating={updateNote.isPending}
               isDeleting={deleteNote.isPending}
             />
           ))}
@@ -92,67 +94,137 @@ export function NotesSection({
 
 interface NoteItemProps {
   note: ContactNote;
+  onUpdate: (content: string) => Promise<void>;
   onDelete: () => void;
+  isUpdating: boolean;
   isDeleting: boolean;
 }
 
-function NoteItem({ note, onDelete, isDeleting }: NoteItemProps) {
+function NoteItem({ note, onUpdate, onDelete, isUpdating, isDeleting }: NoteItemProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editContent, setEditContent] = useState(note.content);
+  
   const date = parseISO(note.created_at);
   const isLongNote = note.content.length > 200;
   const displayContent = isLongNote && !isExpanded 
     ? note.content.slice(0, 200) + '...' 
     : note.content;
+
+  const handleSave = async () => {
+    if (!editContent.trim()) return;
+    await onUpdate(editContent.trim());
+    setIsEditing(false);
+  };
+
+  const handleCancel = () => {
+    setEditContent(note.content);
+    setIsEditing(false);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      handleCancel();
+    } else if (e.key === 'Enter' && e.metaKey) {
+      handleSave();
+    }
+  };
   
   return (
     <div className="rounded-lg border bg-card overflow-hidden group">
       {/* Left accent border via pseudo-element */}
       <div className="border-l-4 border-primary/60 pl-4 pr-3 py-3">
         {/* Content */}
-        <p className="text-sm whitespace-pre-wrap leading-relaxed">
-          {displayContent}
-        </p>
-        
-        {isLongNote && (
-          <button 
-            onClick={() => setIsExpanded(!isExpanded)}
-            className="text-primary text-sm font-medium mt-2 hover:underline"
-          >
-            {isExpanded ? 'Show less' : 'Show more'}
-          </button>
+        {isEditing ? (
+          <div className="space-y-2">
+            <Textarea
+              value={editContent}
+              onChange={(e) => setEditContent(e.target.value)}
+              onKeyDown={handleKeyDown}
+              className="min-h-[100px] resize-none text-sm"
+              autoFocus
+            />
+            <div className="flex items-center gap-2 justify-end">
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={handleCancel}
+                disabled={isUpdating}
+              >
+                <X className="h-4 w-4 mr-1" />
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleSave}
+                disabled={!editContent.trim() || isUpdating}
+              >
+                {isUpdating ? (
+                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                ) : (
+                  <Check className="h-4 w-4 mr-1" />
+                )}
+                Save
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <p 
+              className="text-sm whitespace-pre-wrap leading-relaxed cursor-pointer hover:bg-muted/50 rounded p-1 -m-1 transition-colors"
+              onClick={() => setIsEditing(true)}
+              title="Click to edit"
+            >
+              {displayContent}
+            </p>
+            
+            {isLongNote && !isEditing && (
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsExpanded(!isExpanded);
+                }}
+                className="text-primary text-sm font-medium mt-2 hover:underline"
+              >
+                {isExpanded ? 'Show less' : 'Show more'}
+              </button>
+            )}
+          </>
         )}
         
         {/* Divider */}
-        <div className="border-t mt-3 pt-3 flex items-end justify-between">
-          <div className="text-xs text-muted-foreground space-y-0.5">
-            <div>{format(date, 'MMM d yyyy, h:mma')}</div>
-            {note.created_by_name && (
-              <div>Created by: {note.created_by_name}</div>
-            )}
+        {!isEditing && (
+          <div className="border-t mt-3 pt-3 flex items-end justify-between">
+            <div className="text-xs text-muted-foreground space-y-0.5">
+              <div>{format(date, 'MMM d yyyy, h:mma')}</div>
+              {note.created_by_name && (
+                <div>Created by: {note.created_by_name}</div>
+              )}
+            </div>
+            
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem 
+                  onClick={onDelete}
+                  className="text-destructive focus:text-destructive"
+                  disabled={isDeleting}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
-          
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
-              >
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem 
-                onClick={onDelete}
-                className="text-destructive focus:text-destructive"
-                disabled={isDeleting}
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+        )}
       </div>
     </div>
   );

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useDealDetail, WRITING_STATUS_OPTIONS } from '@/hooks/useDealDetail';
 import { useContactCommunications } from '@/hooks/useContactCommunications';
 import { useDealCommunications } from '@/hooks/useDealCommunications';
+import { useContactTasks } from '@/hooks/useContactTasks';
 import { DEAL_STAGE_LABELS, DealStage } from '@/hooks/useDeals';
 import {
   Sheet,
@@ -74,6 +75,7 @@ export function DealDetailSheet({ dealId, contactId, open, onOpenChange }: DealD
   const queryClient = useQueryClient();
   const [showLogCallDialog, setShowLogCallDialog] = useState(false);
   const [activeTab, setActiveTab] = useState('notes');
+  const [isCreatingCallback, setIsCreatingCallback] = useState(false);
 
   // Inline edit state - tracks individual field changes
   const [editingField, setEditingField] = useState<string | null>(null);
@@ -125,6 +127,35 @@ export function DealDetailSheet({ dealId, contactId, open, onOpenChange }: DealD
       queryClient.invalidateQueries({ queryKey: ['deal-communications', dealId] });
     } catch (error) {
       console.error('Failed to log call:', error);
+    }
+  };
+
+  // Callback task creation handler for voicemail follow-ups
+  const handleCreateCallback = async (data: {
+    title: string;
+    description?: string;
+    due_date?: string;
+    priority?: 'low' | 'medium' | 'high';
+  }) => {
+    setIsCreatingCallback(true);
+    try {
+      const { supabase } = await import('@/integrations/supabase/client');
+      await supabase
+        .from('contact_tasks')
+        .insert({
+          contact_id: contactId,
+          deal_id: dealId,
+          title: data.title,
+          description: data.description || null,
+          due_date: data.due_date || null,
+          priority: data.priority || 'medium',
+        });
+      // Invalidate tasks query
+      queryClient.invalidateQueries({ queryKey: ['contact-tasks', contactId, dealId] });
+    } catch (error) {
+      console.error('Failed to create callback task:', error);
+    } finally {
+      setIsCreatingCallback(false);
     }
   };
 
@@ -427,7 +458,8 @@ export function DealDetailSheet({ dealId, contactId, open, onOpenChange }: DealD
         open={showLogCallDialog}
         onOpenChange={setShowLogCallDialog}
         onLogCall={handleLogCall}
-        isLogging={logCall.isPending}
+        onCreateCallback={handleCreateCallback}
+        isLogging={logCall.isPending || isCreatingCallback}
       />
     </>
   );

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -16,7 +16,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
-import { Phone, Loader2 } from 'lucide-react';
+import { Phone, Loader2, PhoneCall } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { format, addDays } from 'date-fns';
 
 interface LogCallDialogProps {
   open: boolean;
@@ -27,15 +29,42 @@ interface LogCallDialogProps {
     outcome: 'answered' | 'voicemail' | 'no_answer' | 'busy' | 'left_message';
     notes?: string;
   }) => Promise<void>;
+  onCreateCallback?: (data: {
+    title: string;
+    description?: string;
+    due_date?: string;
+    priority?: 'low' | 'medium' | 'high';
+  }) => Promise<void>;
   isLogging?: boolean;
 }
 
-export function LogCallDialog({ open, onOpenChange, onLogCall, isLogging }: LogCallDialogProps) {
+export function LogCallDialog({ open, onOpenChange, onLogCall, onCreateCallback, isLogging }: LogCallDialogProps) {
   const [direction, setDirection] = useState<'inbound' | 'outbound'>('outbound');
   const [outcome, setOutcome] = useState<'answered' | 'voicemail' | 'no_answer' | 'busy' | 'left_message'>('answered');
   const [durationMinutes, setDurationMinutes] = useState('');
   const [durationSeconds, setDurationSeconds] = useState('');
   const [notes, setNotes] = useState('');
+  
+  // Callback reminder state
+  const [createCallback, setCreateCallback] = useState(false);
+  const [callbackDate, setCallbackDate] = useState('');
+  const [callbackPriority, setCallbackPriority] = useState<'low' | 'medium' | 'high'>('medium');
+
+  // Show callback section for voicemail/left_message/no_answer outcomes
+  const showCallbackSection = outcome === 'voicemail' || outcome === 'left_message' || outcome === 'no_answer';
+
+  // Auto-enable callback checkbox when outcome is voicemail-related
+  useEffect(() => {
+    if (showCallbackSection) {
+      setCreateCallback(true);
+      // Default to tomorrow
+      if (!callbackDate) {
+        setCallbackDate(format(addDays(new Date(), 1), 'yyyy-MM-dd'));
+      }
+    } else {
+      setCreateCallback(false);
+    }
+  }, [outcome, showCallbackSection]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,12 +80,28 @@ export function LogCallDialog({ open, onOpenChange, onLogCall, isLogging }: LogC
       notes: notes.trim() || undefined,
     });
 
+    // Create callback reminder if requested
+    if (createCallback && onCreateCallback && callbackDate) {
+      const outcomeLabel = outcome === 'voicemail' ? 'Voicemail' : 
+                          outcome === 'left_message' ? 'Left Message' : 
+                          'No Answer';
+      await onCreateCallback({
+        title: `Return call - ${outcomeLabel}`,
+        description: notes.trim() || undefined,
+        due_date: callbackDate,
+        priority: callbackPriority,
+      });
+    }
+
     // Reset form
     setDirection('outbound');
     setOutcome('answered');
     setDurationMinutes('');
     setDurationSeconds('');
     setNotes('');
+    setCreateCallback(false);
+    setCallbackDate('');
+    setCallbackPriority('medium');
     onOpenChange(false);
   };
 
@@ -136,6 +181,57 @@ export function LogCallDialog({ open, onOpenChange, onLogCall, isLogging }: LogC
               className="min-h-[100px] resize-none"
             />
           </div>
+
+          {/* Callback Reminder Section */}
+          {showCallbackSection && onCreateCallback && (
+            <div className="border-t pt-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <PhoneCall className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-medium">Callback Reminder</span>
+              </div>
+              
+              <div className="flex items-start gap-3">
+                <Checkbox
+                  id="create-callback"
+                  checked={createCallback}
+                  onCheckedChange={(checked) => setCreateCallback(checked === true)}
+                  className="mt-0.5"
+                />
+                <label 
+                  htmlFor="create-callback" 
+                  className="text-sm text-muted-foreground cursor-pointer"
+                >
+                  Create a callback reminder for this contact
+                </label>
+              </div>
+
+              {createCallback && (
+                <div className="grid grid-cols-2 gap-3 pl-6">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Callback Date</Label>
+                    <Input
+                      type="date"
+                      value={callbackDate}
+                      onChange={(e) => setCallbackDate(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Priority</Label>
+                    <Select value={callbackPriority} onValueChange={(v) => setCallbackPriority(v as typeof callbackPriority)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="low">Low</SelectItem>
+                        <SelectItem value="medium">Medium</SelectItem>
+                        <SelectItem value="high">High</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
