@@ -83,22 +83,7 @@ export default function ContactDetail() {
       </div>
 
       {/* Center - Tabs */}
-      <div className="flex-1 min-w-[400px] overflow-hidden flex flex-col relative">
-        {/* Mobile/Tablet Summary Toggle Button - visible when sidebar is hidden */}
-        <div className="2xl:hidden absolute top-3 right-3 z-10">
-          <Sheet open={summaryOpen} onOpenChange={setSummaryOpen}>
-            <SheetTrigger asChild>
-              <Button variant="outline" size="sm" className="gap-2">
-                <PanelRightOpen className="h-4 w-4" />
-                <span className="hidden sm:inline">Summary</span>
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="right" className="w-[350px] sm:w-[400px] p-0 overflow-y-auto">
-              <ContactSummaryPanel contact={contact} />
-            </SheetContent>
-          </Sheet>
-        </div>
-
+      <div className="flex-1 min-w-[400px] overflow-hidden flex flex-col">
         <ContactActivityFeed 
           contactId={contact.id} 
           contactEmail={contact.email}
@@ -107,6 +92,21 @@ export default function ContactDetail() {
           assignedAscId={contact.assigned_asc}
           selectedTab={selectedTab}
           onTabChange={setSelectedTab}
+          summaryButton={
+            <div className="2xl:hidden">
+              <Sheet open={summaryOpen} onOpenChange={setSummaryOpen}>
+                <SheetTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-2">
+                    <PanelRightOpen className="h-4 w-4" />
+                    <span className="hidden sm:inline">Summary</span>
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="right" className="w-[350px] sm:w-[400px] p-0 overflow-y-auto">
+                  <ContactSummaryPanel contact={contact} />
+                </SheetContent>
+              </Sheet>
+            </div>
+          }
         />
       </div>
 
