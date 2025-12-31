@@ -26,6 +26,7 @@ import { useImprints } from '@/hooks/useImprints';
 import { useDealCommunicationCounts, CommunicationCounts } from '@/hooks/useDealCommunicationCounts';
 import { useAuth } from '@/contexts/AuthContext';
 import { KanbanColumn } from '@/components/deals/KanbanColumn';
+import { AddDealDialog } from '@/components/deals/AddDealDialog';
 
 // Kanban columns to show (excluding terminal states from main flow)
 const KANBAN_STAGES: DealStage[] = [
@@ -43,6 +44,7 @@ export default function Deals() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterMode, setFilterMode] = useState<'all' | 'mine'>('all');
   const [draggedDeal, setDraggedDeal] = useState<Deal | null>(null);
+  const [addDealOpen, setAddDealOpen] = useState(false);
 
   const { data: deals = [], isLoading } = useDeals(
     filterMode === 'mine' && user ? { assignedAsc: user.id } : undefined
@@ -255,13 +257,20 @@ export default function Deals() {
             <div className="h-6 w-px bg-gray-300" />
 
             {/* Primary Action - Add Deal */}
-            <Button size="sm" className="gap-1.5 text-xs h-9 px-4 bg-primary hover:bg-primary/90">
+            <Button 
+              size="sm" 
+              className="gap-1.5 text-xs h-9 px-4 bg-primary hover:bg-primary/90"
+              onClick={() => setAddDealOpen(true)}
+            >
               <Plus className="h-4 w-4" />
               <span className="hidden sm:inline">Add Deal</span>
             </Button>
           </div>
         </div>
       </div>
+
+      {/* Add Deal Dialog */}
+      <AddDealDialog open={addDealOpen} onOpenChange={setAddDealOpen} />
 
       {/* Kanban Board - Only this area scrolls horizontally */}
       {isLoading ? (
