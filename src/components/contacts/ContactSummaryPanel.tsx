@@ -1,6 +1,7 @@
+import { useState } from 'react';
 import { Contact } from '@/hooks/useContacts';
 import { useBooks, useAddBook, useDeleteBook } from '@/hooks/useBooks';
-import { useDealsByContact, DEAL_STAGE_LABELS } from '@/hooks/useDeals';
+import { useDealsByContact, DEAL_STAGE_LABELS, DealStage } from '@/hooks/useDeals';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -25,11 +26,12 @@ import {
   Briefcase,
   BookOpen,
   Trash2,
-  Loader2
+  Loader2,
+  ChevronRight
 } from 'lucide-react';
-import { useState } from 'react';
 import { format, parseISO } from 'date-fns';
 import { CreateDealDialog } from '@/components/contacts/CreateDealDialog';
+import { DealDetailSheet } from '@/components/deals/DealDetailSheet';
 
 interface ContactSummaryPanelProps {
   contact: Contact;
@@ -52,12 +54,25 @@ const getStatusBadgeVariant = (status: string | null) => {
   }
 };
 
+const STAGE_COLORS: Record<DealStage, string> = {
+  new: 'bg-slate-500',
+  outreach: 'bg-blue-500',
+  contacted: 'bg-cyan-500',
+  qualified: 'bg-violet-500',
+  nurturing: 'bg-purple-500',
+  proposal_sent: 'bg-amber-500',
+  won: 'bg-green-500',
+  lost: 'bg-red-500',
+  not_interested: 'bg-gray-500',
+};
+
 export function ContactSummaryPanel({ contact }: ContactSummaryPanelProps) {
   const [summaryOpen, setSummaryOpen] = useState(true);
   const [dealsOpen, setDealsOpen] = useState(true);
   const [booksOpen, setBooksOpen] = useState(true);
   const [addBookOpen, setAddBookOpen] = useState(false);
   const [addDealOpen, setAddDealOpen] = useState(false);
+  const [selectedDealId, setSelectedDealId] = useState<string | null>(null);
   const [newBookTitle, setNewBookTitle] = useState('');
   const [newBookStatus, setNewBookStatus] = useState('draft');
 
@@ -257,20 +272,31 @@ export function ContactSummaryPanel({ contact }: ContactSummaryPanelProps) {
           ) : (
             <div className="space-y-2">
               {deals.map((deal) => (
-                <div 
+                <button
                   key={deal.id} 
-                  className="flex items-center justify-between p-2 rounded-md border bg-card hover:bg-muted/50 group"
+                  onClick={() => setSelectedDealId(deal.id)}
+                  className="flex items-center justify-between w-full p-3 rounded-md border bg-card hover:bg-muted/50 group text-left transition-colors"
                 >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <Briefcase className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                    <span className="text-sm truncate">{DEAL_STAGE_LABELS[deal.stage]}</span>
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className={`h-2 w-2 rounded-full ${STAGE_COLORS[deal.stage]}`} />
+                    <div className="min-w-0">
+                      <span className="text-sm font-medium block truncate">
+                        {DEAL_STAGE_LABELS[deal.stage]}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {deal.created_at && format(parseISO(deal.created_at), 'MMM d, yyyy')}
+                      </span>
+                    </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Badge variant="secondary" className="text-xs">
-                      ${deal.total_value?.toLocaleString() || '0'}
-                    </Badge>
+                    {deal.total_value && deal.total_value > 0 && (
+                      <Badge variant="secondary" className="text-xs">
+                        ${deal.total_value.toLocaleString()}
+                      </Badge>
+                    )}
+                    <ChevronRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                   </div>
-                </div>
+                </button>
               ))}
             </div>
           )}
@@ -283,6 +309,14 @@ export function ContactSummaryPanel({ contact }: ContactSummaryPanelProps) {
         onOpenChange={setAddDealOpen}
         contactId={contact.id}
         contactName={displayName}
+      />
+
+      {/* Deal Detail Sheet */}
+      <DealDetailSheet
+        dealId={selectedDealId}
+        contactId={contact.id}
+        open={!!selectedDealId}
+        onOpenChange={(open) => !open && setSelectedDealId(null)}
       />
 
       {/* Add Book Dialog */}

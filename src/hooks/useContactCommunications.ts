@@ -43,6 +43,7 @@ export function useContactCommunications(contactId: string) {
       duration_seconds?: number;
       outcome: 'answered' | 'voicemail' | 'no_answer' | 'busy' | 'left_message';
       notes?: string;
+      deal_id?: string | null;
     }) => {
       const { data, error } = await supabase
         .from('contact_communications')
@@ -55,6 +56,7 @@ export function useContactCommunications(contactId: string) {
           notes: callData.notes || null,
           status: 'sent',
           created_by: user?.id,
+          deal_id: callData.deal_id || null,
         })
         .select()
         .single();

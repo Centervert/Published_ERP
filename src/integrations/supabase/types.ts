@@ -339,6 +339,7 @@ export type Database = {
           contact_id: string
           created_at: string
           created_by: string | null
+          deal_id: string | null
           direction: string
           duration_seconds: number | null
           external_id: string | null
@@ -354,6 +355,7 @@ export type Database = {
           contact_id: string
           created_at?: string
           created_by?: string | null
+          deal_id?: string | null
           direction: string
           duration_seconds?: number | null
           external_id?: string | null
@@ -369,6 +371,7 @@ export type Database = {
           contact_id?: string
           created_at?: string
           created_by?: string | null
+          deal_id?: string | null
           direction?: string
           duration_seconds?: number | null
           external_id?: string | null
@@ -385,6 +388,13 @@ export type Database = {
             columns: ["contact_id"]
             isOneToOne: false
             referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_communications_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
             referencedColumns: ["id"]
           },
         ]
@@ -457,6 +467,51 @@ export type Database = {
           },
         ]
       }
+      contact_notes: {
+        Row: {
+          contact_id: string
+          content: string
+          created_at: string
+          created_by: string | null
+          deal_id: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          contact_id: string
+          content: string
+          created_at?: string
+          created_by?: string | null
+          deal_id?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          contact_id?: string
+          content?: string
+          created_at?: string
+          created_by?: string | null
+          deal_id?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contact_notes_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_notes_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contact_tags: {
         Row: {
           added_at: string | null
@@ -486,6 +541,66 @@ export type Database = {
             columns: ["tag_id"]
             isOneToOne: false
             referencedRelation: "tags"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contact_tasks: {
+        Row: {
+          completed: boolean
+          completed_at: string | null
+          contact_id: string
+          created_at: string
+          created_by: string | null
+          deal_id: string | null
+          description: string | null
+          due_date: string | null
+          id: string
+          priority: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          completed?: boolean
+          completed_at?: string | null
+          contact_id: string
+          created_at?: string
+          created_by?: string | null
+          deal_id?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          priority?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          completed?: boolean
+          completed_at?: string | null
+          contact_id?: string
+          created_at?: string
+          created_by?: string | null
+          deal_id?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          priority?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contact_tasks_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_tasks_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
             referencedColumns: ["id"]
           },
         ]
@@ -610,48 +725,63 @@ export type Database = {
       deals: {
         Row: {
           assigned_asc: string | null
+          book_description: string | null
+          book_title: string | null
           closed_at: string | null
           commission_amount: number | null
           commission_locked: boolean
           contact_id: string
           created_at: string
           created_by: string | null
+          goals: string | null
           id: string
+          name: string | null
           notes: string | null
           outreach_count: number
           stage: Database["public"]["Enums"]["deal_stage"]
           total_value: number | null
           updated_at: string
+          writing_status: string | null
         }
         Insert: {
           assigned_asc?: string | null
+          book_description?: string | null
+          book_title?: string | null
           closed_at?: string | null
           commission_amount?: number | null
           commission_locked?: boolean
           contact_id: string
           created_at?: string
           created_by?: string | null
+          goals?: string | null
           id?: string
+          name?: string | null
           notes?: string | null
           outreach_count?: number
           stage?: Database["public"]["Enums"]["deal_stage"]
           total_value?: number | null
           updated_at?: string
+          writing_status?: string | null
         }
         Update: {
           assigned_asc?: string | null
+          book_description?: string | null
+          book_title?: string | null
           closed_at?: string | null
           commission_amount?: number | null
           commission_locked?: boolean
           contact_id?: string
           created_at?: string
           created_by?: string | null
+          goals?: string | null
           id?: string
+          name?: string | null
           notes?: string | null
           outreach_count?: number
           stage?: Database["public"]["Enums"]["deal_stage"]
           total_value?: number | null
           updated_at?: string
+          writing_status?: string | null
         }
         Relationships: [
           {
