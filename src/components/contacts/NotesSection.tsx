@@ -97,42 +97,62 @@ interface NoteItemProps {
 }
 
 function NoteItem({ note, onDelete, isDeleting }: NoteItemProps) {
+  const [isExpanded, setIsExpanded] = useState(false);
   const date = parseISO(note.created_at);
+  const isLongNote = note.content.length > 200;
+  const displayContent = isLongNote && !isExpanded 
+    ? note.content.slice(0, 200) + '...' 
+    : note.content;
   
   return (
-    <div className="p-3 rounded-md border bg-card group">
-      <div className="flex items-start justify-between gap-2">
-        <p className="text-sm whitespace-pre-wrap flex-1">{note.content}</p>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-            >
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem 
-              onClick={onDelete}
-              className="text-destructive focus:text-destructive"
-              disabled={isDeleting}
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-      <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
-        <span>{format(date, 'MMM d, yyyy')} at {format(date, 'h:mm a')}</span>
-        {note.created_by_name && (
-          <>
-            <span>•</span>
-            <span>by {note.created_by_name}</span>
-          </>
+    <div className="rounded-lg border bg-card overflow-hidden group">
+      {/* Left accent border via pseudo-element */}
+      <div className="border-l-4 border-primary/60 pl-4 pr-3 py-3">
+        {/* Content */}
+        <p className="text-sm whitespace-pre-wrap leading-relaxed">
+          {displayContent}
+        </p>
+        
+        {isLongNote && (
+          <button 
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="text-primary text-sm font-medium mt-2 hover:underline"
+          >
+            {isExpanded ? 'Show less' : 'Show more'}
+          </button>
         )}
+        
+        {/* Divider */}
+        <div className="border-t mt-3 pt-3 flex items-end justify-between">
+          <div className="text-xs text-muted-foreground space-y-0.5">
+            <div>{format(date, 'MMM d yyyy, h:mma')}</div>
+            {note.created_by_name && (
+              <div>Created by: {note.created_by_name}</div>
+            )}
+          </div>
+          
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+              >
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem 
+                onClick={onDelete}
+                className="text-destructive focus:text-destructive"
+                disabled={isDeleting}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
     </div>
   );
