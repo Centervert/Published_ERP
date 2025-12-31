@@ -235,7 +235,7 @@ export default function Deals() {
           <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
         </div>
       ) : (
-        <div className="flex-1 overflow-hidden bg-gray-50 min-w-0">
+        <div className="flex-1 overflow-hidden bg-background min-w-0">
           <ScrollArea className="h-full w-full">
             <div className="flex gap-3 p-4">
               {KANBAN_STAGES.map((stage) => (
