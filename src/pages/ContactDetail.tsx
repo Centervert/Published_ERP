@@ -74,7 +74,7 @@ export default function ContactDetail() {
   return (
     <div className="h-[calc(100vh-56px)] flex overflow-hidden">
       {/* Left Sidebar - Contact Info */}
-      <div className="w-[400px] border-r overflow-y-auto flex-shrink-0 shadow-[2px_0_8px_-2px_rgba(0,0,0,0.1)]">
+      <div className="w-[400px] border-r overflow-y-auto flex-shrink-0">
         <ContactSidebar 
           contact={contact} 
           onBack={() => navigate('/contacts')} 
@@ -111,7 +111,7 @@ export default function ContactDetail() {
       </div>
 
       {/* Right Sidebar - Summary - visible on 2xl screens */}
-      <div className="w-[320px] border-l overflow-y-auto flex-shrink-0 hidden 2xl:block shadow-[-2px_0_8px_-2px_rgba(0,0,0,0.1)]">
+      <div className="w-[320px] border-l overflow-y-auto flex-shrink-0 hidden 2xl:block">
         <ContactSummaryPanel contact={contact} />
       </div>
     </div>
