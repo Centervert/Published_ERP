@@ -1,7 +1,6 @@
 import { useState, useMemo } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import {
   Select,
   SelectContent,
@@ -225,32 +224,29 @@ export default function Deals() {
         </div>
       </div>
 
-      {/* Kanban Board */}
+      {/* Kanban Board - Only this area scrolls horizontally */}
       {isLoading ? (
         <div className="flex-1 flex items-center justify-center">
           <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
         </div>
       ) : (
-        <div className="flex-1 overflow-hidden bg-background min-w-0">
-          <ScrollArea className="h-full w-full">
-            <div className="flex gap-3 p-4">
-              {KANBAN_STAGES.map((stage) => (
-                <KanbanColumn
-                  key={stage}
-                  stage={stage}
-                  deals={dealsByStage[stage]}
-                  imprintMap={imprintMap}
-                  communicationCountsMap={communicationCountsMap}
-                  onDragOver={handleDragOver}
-                  onDrop={handleDrop}
-                  onDealClick={handleDealClick}
-                  onDragStart={handleDragStart}
-                  onActionClick={handleActionClick}
-                />
-              ))}
-            </div>
-            <ScrollBar orientation="horizontal" />
-          </ScrollArea>
+        <div className="flex-1 overflow-x-auto overflow-y-hidden min-w-0">
+          <div className="flex gap-3 p-4 h-full min-w-max">
+            {KANBAN_STAGES.map((stage) => (
+              <KanbanColumn
+                key={stage}
+                stage={stage}
+                deals={dealsByStage[stage]}
+                imprintMap={imprintMap}
+                communicationCountsMap={communicationCountsMap}
+                onDragOver={handleDragOver}
+                onDrop={handleDrop}
+                onDealClick={handleDealClick}
+                onDragStart={handleDragStart}
+                onActionClick={handleActionClick}
+              />
+            ))}
+          </div>
         </div>
       )}
     </div>
