@@ -50,18 +50,18 @@ interface TasksSectionProps {
 export function TasksSection({ 
   contactId, 
   dealId,
-  emptyMessage = 'No callback tasks yet',
+  emptyMessage = 'No tasks yet',
 }: TasksSectionProps) {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const { tasks, isLoading, addTask, updateTask, toggleComplete, deleteTask } = useContactTasks({ contactId, dealId });
 
   return (
     <div className="space-y-4">
-      {/* Add Task Button */}
-      <div className="flex justify-end">
+      {/* Add Task Buttons */}
+      <div className="flex justify-end gap-2">
         <Button size="sm" variant="outline" onClick={() => setShowAddDialog(true)}>
           <Plus className="h-4 w-4 mr-1" />
-          Add Callback
+          Add Task
         </Button>
       </div>
 
@@ -72,9 +72,9 @@ export function TasksSection({
         </div>
       ) : tasks.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12 text-center">
-          <PhoneCall className="h-8 w-8 text-muted-foreground mb-2" />
+          <CheckSquare className="h-8 w-8 text-muted-foreground mb-2" />
           <p className="text-sm text-muted-foreground mb-1">{emptyMessage}</p>
-          <p className="text-xs text-muted-foreground">Create callback reminders to follow up</p>
+          <p className="text-xs text-muted-foreground">Create tasks to follow up with this contact</p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -322,8 +322,8 @@ export function AddTaskDialog({ open, onOpenChange, onAdd, isPending, defaultTit
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <PhoneCall className="h-5 w-5" />
-            Add Callback Reminder
+            <CheckSquare className="h-5 w-5" />
+            Add Task
           </DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -331,7 +331,7 @@ export function AddTaskDialog({ open, onOpenChange, onAdd, isPending, defaultTit
             <Label htmlFor="title">Title</Label>
             <Input
               id="title"
-              placeholder="e.g., Follow up call, Return voicemail..."
+              placeholder="What needs to be done?"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               autoFocus
@@ -339,10 +339,10 @@ export function AddTaskDialog({ open, onOpenChange, onAdd, isPending, defaultTit
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description">Notes (optional)</Label>
+            <Label htmlFor="description">Description (optional)</Label>
             <Textarea
               id="description"
-              placeholder="Add context for the callback..."
+              placeholder="Add more details..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               className="resize-none"
@@ -352,7 +352,7 @@ export function AddTaskDialog({ open, onOpenChange, onAdd, isPending, defaultTit
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="due-date">Callback Date</Label>
+              <Label htmlFor="due-date">Due Date</Label>
               <Input
                 id="due-date"
                 type="date"
@@ -382,7 +382,7 @@ export function AddTaskDialog({ open, onOpenChange, onAdd, isPending, defaultTit
             </Button>
             <Button type="submit" disabled={!title.trim() || isPending}>
               {isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Add Callback
+              Add Task
             </Button>
           </DialogFooter>
         </form>
