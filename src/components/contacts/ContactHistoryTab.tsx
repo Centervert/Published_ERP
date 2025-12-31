@@ -118,7 +118,7 @@ export function ContactHistoryTab({ contactId }: ContactHistoryTabProps) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {history.map((item) => {
         const Icon = getActivityIcon(item.activity_type);
         const colorClass = getActivityColor(item.activity_type);
