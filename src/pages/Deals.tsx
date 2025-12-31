@@ -104,6 +104,18 @@ export default function Deals() {
   const handleDragStart = (e: React.DragEvent, deal: Deal) => {
     setDraggedDeal(deal);
     e.dataTransfer.effectAllowed = 'move';
+    // Add visual feedback
+    if (e.currentTarget instanceof HTMLElement) {
+      e.currentTarget.style.opacity = '0.5';
+    }
+  };
+
+  const handleDragEnd = (e: React.DragEvent) => {
+    // Reset visual feedback
+    if (e.currentTarget instanceof HTMLElement) {
+      e.currentTarget.style.opacity = '1';
+    }
+    setDraggedDeal(null);
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -119,17 +131,21 @@ export default function Deals() {
       return;
     }
 
-    await updateDeal.mutateAsync({
-      dealId: draggedDeal.id,
-      updates: {
-        stage: newStage,
-        ...(newStage === 'won' || newStage === 'lost' || newStage === 'not_interested'
-          ? { closed_at: new Date().toISOString() }
-          : {}),
-      },
-    });
-    
-    setDraggedDeal(null);
+    try {
+      await updateDeal.mutateAsync({
+        dealId: draggedDeal.id,
+        updates: {
+          stage: newStage,
+          ...(newStage === 'won' || newStage === 'lost' || newStage === 'not_interested'
+            ? { closed_at: new Date().toISOString() }
+            : {}),
+        },
+      });
+    } catch (error) {
+      console.error('Error updating deal:', error);
+    } finally {
+      setDraggedDeal(null);
+    }
   };
 
   const handleDealClick = (deal: Deal) => {
@@ -146,46 +162,87 @@ export default function Deals() {
   };
 
   return (
-    <div className="h-full flex flex-col min-w-0 overflow-hidden">
-      {/* Header Toolbar - Flush with edges, stays visible */}
-      <div className="sticky top-0 z-20 bg-white border-b border-gray-200 px-4 py-3 flex-shrink-0">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          {/* Left side - Title + filters */}
-          <div className="flex flex-wrap items-center gap-2 min-w-0">
-            <h1 className="text-lg font-semibold text-gray-900">Deals</h1>
+    <div className="h-[calc(100vh-56px)] flex flex-col overflow-hidden">
+      {/* Header Toolbar - Fixed height, never scrolls */}
+      <div className="flex-shrink-0 bg-gray-50 border-b border-gray-200 shadow-sm px-4 py-3 z-10">
+        <div className="flex items-center gap-4">
+          {/* Left side - Title */}
+          <h1 className="text-lg font-semibold text-gray-900 whitespace-nowrap flex-shrink-0">Deals</h1>
 
+          {/* Center - Search (more prominent) */}
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+            <Input
+              placeholder="Search deals..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 h-9 bg-white text-sm border-gray-300 focus:ring-2 focus:ring-primary/20"
+              aria-label="Search deals"
+            />
+          </div>
+
+          {/* Right side - View options + filter mode + create */}
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {/* View Options Menu - Combines Filter, Sort, and View Toggle */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-1.5 text-xs h-8 px-3">
-                  <Filter className="h-3.5 w-3.5" />
-                  <span className="hidden lg:inline">Filters</span>
+                <Button variant="outline" size="sm" className="gap-1.5 text-xs h-9 px-3 hover:bg-white transition-colors">
+                  <Filter className="h-4 w-4" />
+                  <span className="hidden sm:inline">View</span>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="start">
-                <DropdownMenuItem>By Stage</DropdownMenuItem>
-                <DropdownMenuItem>By Owner</DropdownMenuItem>
-                <DropdownMenuItem>By Value</DropdownMenuItem>
-                <DropdownMenuItem>By Date</DropdownMenuItem>
+              <DropdownMenuContent align="end" className="w-56">
+                <div className="px-2 py-1.5 text-xs font-semibold text-gray-500 uppercase">Filter</div>
+                <DropdownMenuItem className="cursor-pointer">
+                  <Filter className="h-4 w-4 mr-2" />
+                  By Stage
+                </DropdownMenuItem>
+                <DropdownMenuItem className="cursor-pointer">
+                  <Filter className="h-4 w-4 mr-2" />
+                  By Owner
+                </DropdownMenuItem>
+                <DropdownMenuItem className="cursor-pointer">
+                  <Filter className="h-4 w-4 mr-2" />
+                  By Value
+                </DropdownMenuItem>
+                <DropdownMenuItem className="cursor-pointer">
+                  <Filter className="h-4 w-4 mr-2" />
+                  By Date
+                </DropdownMenuItem>
+                <div className="h-px bg-gray-200 my-1" />
+                <div className="px-2 py-1.5 text-xs font-semibold text-gray-500 uppercase">Sort</div>
+                <DropdownMenuItem className="cursor-pointer">
+                  <SortAsc className="h-4 w-4 mr-2" />
+                  Date Created
+                </DropdownMenuItem>
+                <DropdownMenuItem className="cursor-pointer">
+                  <SortAsc className="h-4 w-4 mr-2" />
+                  Value (High to Low)
+                </DropdownMenuItem>
+                <DropdownMenuItem className="cursor-pointer">
+                  <SortAsc className="h-4 w-4 mr-2" />
+                  Value (Low to High)
+                </DropdownMenuItem>
+                <DropdownMenuItem className="cursor-pointer">
+                  <SortAsc className="h-4 w-4 mr-2" />
+                  Name A-Z
+                </DropdownMenuItem>
+                <div className="h-px bg-gray-200 my-1" />
+                <div className="px-2 py-1.5 text-xs font-semibold text-gray-500 uppercase">View</div>
+                <DropdownMenuItem className="cursor-pointer">
+                  <LayoutGrid className="h-4 w-4 mr-2" />
+                  Kanban View
+                </DropdownMenuItem>
+                <DropdownMenuItem className="cursor-pointer">
+                  <List className="h-4 w-4 mr-2" />
+                  List View
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
 
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-1.5 text-xs h-8 px-3">
-                  <SortAsc className="h-3.5 w-3.5" />
-                  <span className="hidden lg:inline">Sort</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start">
-                <DropdownMenuItem>Date Created</DropdownMenuItem>
-                <DropdownMenuItem>Value (High to Low)</DropdownMenuItem>
-                <DropdownMenuItem>Value (Low to High)</DropdownMenuItem>
-                <DropdownMenuItem>Name A-Z</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-
+            {/* Filter Mode Selector */}
             <Select value={filterMode} onValueChange={(v) => setFilterMode(v as 'all' | 'mine')}>
-              <SelectTrigger className="w-28 h-8 text-xs">
+              <SelectTrigger className="w-32 h-9 text-xs">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -193,31 +250,13 @@ export default function Deals() {
                 <SelectItem value="mine">My Deals</SelectItem>
               </SelectContent>
             </Select>
-          </div>
 
-          {/* Right side - Search + view + create (always visible; wraps below on small widths) */}
-          <div className="flex items-center gap-2 sm:ml-auto">
-            <div className="relative flex-1 min-w-[160px] sm:flex-none">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
-              <Input
-                placeholder="Search deals..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-8 w-full sm:w-44 md:w-56 h-8 bg-white text-xs"
-              />
-            </div>
+            {/* Visual Separator */}
+            <div className="h-6 w-px bg-gray-300" />
 
-            <div className="flex items-center border border-gray-200 rounded-md flex-shrink-0">
-              <Button variant="ghost" size="sm" className="h-8 px-2 rounded-r-none bg-gray-100">
-                <LayoutGrid className="h-4 w-4" />
-              </Button>
-              <Button variant="ghost" size="sm" className="h-8 px-2 rounded-l-none">
-                <List className="h-4 w-4" />
-              </Button>
-            </div>
-
-            <Button size="sm" className="gap-1.5 text-xs h-8 px-3 flex-shrink-0">
-              <Plus className="h-3.5 w-3.5" />
+            {/* Primary Action - Add Deal */}
+            <Button size="sm" className="gap-1.5 text-xs h-9 px-4 bg-primary hover:bg-primary/90">
+              <Plus className="h-4 w-4" />
               <span className="hidden sm:inline">Add Deal</span>
             </Button>
           </div>
@@ -226,12 +265,12 @@ export default function Deals() {
 
       {/* Kanban Board - Only this area scrolls horizontally */}
       {isLoading ? (
-        <div className="flex-1 flex items-center justify-center">
+        <div className="flex-1 flex items-center justify-center min-w-0">
           <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
         </div>
       ) : (
-        <div className="flex-1 overflow-x-auto overflow-y-hidden min-w-0">
-          <div className="flex gap-3 p-4 h-full min-w-max">
+        <div className="flex-1 min-w-0 overflow-x-auto overflow-y-auto bg-gray-50/30">
+          <div className="flex gap-4 p-4 h-full" style={{ width: 'max-content' }}>
             {KANBAN_STAGES.map((stage) => (
               <KanbanColumn
                 key={stage}
@@ -243,6 +282,7 @@ export default function Deals() {
                 onDrop={handleDrop}
                 onDealClick={handleDealClick}
                 onDragStart={handleDragStart}
+                onDragEnd={handleDragEnd}
                 onActionClick={handleActionClick}
               />
             ))}

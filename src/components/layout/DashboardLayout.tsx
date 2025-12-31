@@ -24,7 +24,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     <SidebarProvider>
       <div className="flex min-h-screen w-full">
         <AppSidebar />
-        <SidebarInset className="flex flex-1 flex-col">
+        <SidebarInset className="flex flex-1 flex-col overflow-hidden">
           <header className="flex h-14 shrink-0 items-center gap-2 border-b bg-background px-4">
             <SidebarTrigger className="-ml-1" />
             <Separator orientation="vertical" className="mr-2 h-4" />
@@ -36,7 +36,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               </BreadcrumbList>
             </Breadcrumb>
           </header>
-          <main className="flex-1 overflow-y-auto overflow-x-hidden">
+          <main className="flex-1 overflow-hidden">
             {children}
           </main>
         </SidebarInset>

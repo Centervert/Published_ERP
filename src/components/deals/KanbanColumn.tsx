@@ -25,6 +25,7 @@ interface KanbanColumnProps {
   onDrop: (e: React.DragEvent, stage: DealStage) => void;
   onDealClick: (deal: Deal) => void;
   onDragStart: (e: React.DragEvent, deal: Deal) => void;
+  onDragEnd?: (e: React.DragEvent) => void;
   onActionClick?: (action: 'phone' | 'sms' | 'email' | 'calendar', deal: Deal) => void;
 }
 
@@ -45,27 +46,28 @@ export function KanbanColumn({
   onDrop, 
   onDealClick, 
   onDragStart,
+  onDragEnd,
   onActionClick 
 }: KanbanColumnProps) {
   const totalValue = deals.reduce((sum, d) => sum + (d.total_value || 0), 0);
 
   return (
     <div
-      className="flex-shrink-0 w-56 sm:w-64 lg:w-72 flex flex-col min-w-0"
+      className="flex-shrink-0 w-64 sm:w-72 lg:w-80 flex flex-col min-w-0 h-full"
       onDragOver={onDragOver}
       onDrop={(e) => onDrop(e, stage)}
     >
-      {/* Column Header - White card with top border accent */}
-      <div className={`bg-white border border-gray-200 rounded-t-md border-t-[3px] ${STAGE_BORDER_COLORS[stage]} px-3 py-2`}>
-        <div className="font-semibold text-gray-900 text-sm truncate">{DEAL_STAGE_LABELS[stage]}</div>
-        <div className="text-[10px] text-gray-400 mt-0.5 truncate">
-          {deals.length} {deals.length === 1 ? 'Deal' : 'Deals'} | {formatValue(totalValue)}
+      {/* Column Header - Container with subtle styling */}
+      <div className={`bg-white border-t-[2px] ${STAGE_BORDER_COLORS[stage]} border-x border-gray-200 rounded-t-md px-3 py-2.5 shadow-sm`}>
+        <div className="font-semibold text-gray-900 text-sm mb-0.5 truncate">{DEAL_STAGE_LABELS[stage]}</div>
+        <div className="text-xs text-gray-500 truncate">
+          {deals.length} {deals.length === 1 ? 'Deal' : 'Deals'} | {stage === 'proposal_sent' ? '$' : ''}{formatValue(totalValue)}
         </div>
       </div>
 
-      {/* Cards Container */}
-      <ScrollArea className="flex-1 bg-transparent">
-        <div className="space-y-2 pt-2 pb-3">
+      {/* Cards Container - Clean, minimal background */}
+      <ScrollArea className="flex-1">
+        <div className="space-y-2.5 p-3 min-h-[200px]">
           {deals.map((deal) => (
             <DealCard
               key={deal.id}
@@ -73,13 +75,15 @@ export function KanbanColumn({
               imprintName={deal.contact?.imprint_id ? imprintMap[deal.contact.imprint_id] : undefined}
               communicationCounts={deal.contact_id ? communicationCountsMap[deal.contact_id] : undefined}
               onDragStart={onDragStart}
+              onDragEnd={onDragEnd}
               onClick={() => onDealClick(deal)}
               onActionClick={onActionClick}
             />
           ))}
           {deals.length === 0 && (
-            <div className="text-center py-6 text-xs text-gray-400">
-              No deals
+            <div className="text-center py-12 text-sm text-gray-400">
+              <div className="text-gray-300 mb-1 font-medium">No deals</div>
+              <div className="text-xs text-gray-400 mt-1">Drag deals here to move them</div>
             </div>
           )}
         </div>
