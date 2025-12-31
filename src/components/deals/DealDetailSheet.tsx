@@ -122,27 +122,27 @@ export function DealDetailSheet({ dealId, contactId, open, onOpenChange }: DealD
               {/* Header */}
               <SheetHeader className="p-6 pb-4 border-b space-y-0">
                 <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-3">
-                    <div className={`h-3 w-3 rounded-full ${STAGE_COLORS[deal.stage]}`} />
-                    <Select
-                      value={deal.stage}
-                      onValueChange={(value) => updateDeal.mutate({ stage: value as DealStage })}
-                    >
-                      <SelectTrigger className="h-auto py-1 px-2 text-sm font-medium border-0 bg-transparent hover:bg-muted focus:ring-0 w-auto gap-1.5">
+                  <Select
+                    value={deal.stage}
+                    onValueChange={(value) => updateDeal.mutate({ stage: value as DealStage })}
+                  >
+                    <SelectTrigger className="h-8 px-3 text-sm font-medium border rounded-md w-auto gap-2 bg-background">
+                      <div className="flex items-center gap-2">
+                        <div className={`h-2.5 w-2.5 rounded-full ${STAGE_COLORS[deal.stage]}`} />
                         <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Object.entries(DEAL_STAGE_LABELS).map(([value, label]) => (
-                          <SelectItem key={value} value={value}>
-                            <div className="flex items-center gap-2">
-                              <div className={`h-2 w-2 rounded-full ${STAGE_COLORS[value as DealStage]}`} />
-                              {label}
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                      </div>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(DEAL_STAGE_LABELS).map(([value, label]) => (
+                        <SelectItem key={value} value={value}>
+                          <div className="flex items-center gap-2">
+                            <div className={`h-2 w-2 rounded-full ${STAGE_COLORS[value as DealStage]}`} />
+                            {label}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <Button 
                     variant="ghost" 
                     size="sm" 
@@ -162,14 +162,14 @@ export function DealDetailSheet({ dealId, contactId, open, onOpenChange }: DealD
                     onBlur={() => saveField('book_title', fieldValue)}
                     onKeyDown={(e) => handleKeyDown(e, 'book_title')}
                     className="text-lg font-semibold border-0 border-b rounded-none px-0 focus-visible:ring-0 focus-visible:border-primary"
-                    placeholder="Deal title"
+                    placeholder="Book or deal title"
                   />
                 ) : (
                   <SheetTitle 
-                    className="text-lg cursor-pointer hover:text-primary transition-colors"
+                    className={`text-lg cursor-pointer hover:text-primary transition-colors ${!deal.book_title && !deal.name ? 'text-muted-foreground' : ''}`}
                     onClick={() => startEditing('book_title', deal.book_title)}
                   >
-                    {deal.book_title || deal.name || 'Click to add title'}
+                    {deal.book_title || deal.name || 'Click to add book or deal title'}
                   </SheetTitle>
                 )}
                 
