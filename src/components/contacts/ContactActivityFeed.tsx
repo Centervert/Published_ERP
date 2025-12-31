@@ -1,8 +1,6 @@
 import { useState } from 'react';
 import { useContactActivity } from '@/hooks/useContacts';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
 import { 
   UserPlus, 
   Edit, 
@@ -15,16 +13,14 @@ import {
   Clock,
   Loader2,
   ArrowRight,
-  Phone,
-  MessageSquare,
   CheckSquare,
-  Plus,
-  MoreHorizontal,
   History
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { CommunicationHub } from './CommunicationHub';
 import { ContactHistoryTab } from './ContactHistoryTab';
+import { NotesSection } from './NotesSection';
+import { TasksSection } from './TasksSection';
 
 interface TeamMember {
   id: string;
@@ -170,7 +166,6 @@ export function ContactActivityFeed({
   summaryButton,
 }: ContactActivityFeedProps) {
   const { activities, isLoading } = useContactActivity(contactId);
-  const [noteText, setNoteText] = useState('');
 
   return (
     <div className="h-full flex flex-col">
@@ -232,47 +227,21 @@ export function ContactActivityFeed({
         {/* Notes Tab */}
         <TabsContent value="notes" className="mt-0 flex-1 overflow-y-auto">
           <div className="p-6">
-            {/* Add Note Input */}
-            <div className="mb-6">
-              <Textarea 
-                placeholder="Add a note about this contact..."
-                value={noteText}
-                onChange={(e) => setNoteText(e.target.value)}
-                className="min-h-[100px] resize-none"
-              />
-              <div className="flex justify-end mt-2">
-                <Button size="sm" disabled={!noteText.trim()}>
-                  <Plus className="h-4 w-4 mr-1" />
-                  Add Note
-                </Button>
-              </div>
-            </div>
-
-            {/* Notes List Placeholder */}
-            <div className="flex flex-col items-center justify-center py-8 text-center">
-              <FileText className="h-8 w-8 text-muted-foreground mb-2" />
-              <p className="text-sm text-muted-foreground">No notes yet</p>
-            </div>
+            <NotesSection 
+              contactId={contactId}
+              placeholder="Add a note about this contact..."
+              emptyMessage="No contact notes yet"
+            />
           </div>
         </TabsContent>
 
         {/* Tasks Tab */}
         <TabsContent value="tasks" className="mt-0 flex-1 overflow-y-auto">
           <div className="p-6">
-            {/* Add Task Button */}
-            <div className="flex justify-end mb-4">
-              <Button size="sm" variant="outline">
-                <Plus className="h-4 w-4 mr-1" />
-                Add Task
-              </Button>
-            </div>
-
-            {/* Tasks List Placeholder */}
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <CheckSquare className="h-8 w-8 text-muted-foreground mb-2" />
-              <p className="text-sm text-muted-foreground mb-1">No tasks yet</p>
-              <p className="text-xs text-muted-foreground">Create tasks to follow up with this contact</p>
-            </div>
+            <TasksSection 
+              contactId={contactId}
+              emptyMessage="No contact tasks yet"
+            />
           </div>
         </TabsContent>
 
