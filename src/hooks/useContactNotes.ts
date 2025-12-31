@@ -1,7 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { toast } from 'sonner';
 
 export interface ContactNote {
   id: string;
@@ -32,10 +31,7 @@ export function useContactNotes({ contactId, dealId }: UseContactNotesOptions) {
     queryFn: async () => {
       let query = supabase
         .from('contact_notes')
-        .select(`
-          *,
-          profiles:created_by (full_name)
-        `)
+        .select('*')
         .eq('contact_id', contactId)
         .order('created_at', { ascending: false });
 
@@ -49,10 +45,7 @@ export function useContactNotes({ contactId, dealId }: UseContactNotesOptions) {
 
       if (error) throw error;
       
-      return (data || []).map((note: any) => ({
-        ...note,
-        created_by_name: note.profiles?.full_name || null,
-      })) as ContactNote[];
+      return (data || []) as ContactNote[];
     },
     enabled: !!contactId,
   });
@@ -80,7 +73,6 @@ export function useContactNotes({ contactId, dealId }: UseContactNotesOptions) {
       queryClient.invalidateQueries({ queryKey: noteQueryKey });
     },
     onError: (error) => {
-      toast.error('Failed to add note');
       console.error('Add note error:', error);
     },
   });
@@ -101,7 +93,6 @@ export function useContactNotes({ contactId, dealId }: UseContactNotesOptions) {
       queryClient.invalidateQueries({ queryKey: ['contact-notes', contactId] });
     },
     onError: (error) => {
-      toast.error('Failed to update note');
       console.error('Update note error:', error);
     },
   });
@@ -119,7 +110,6 @@ export function useContactNotes({ contactId, dealId }: UseContactNotesOptions) {
       queryClient.invalidateQueries({ queryKey: ['contact-notes', contactId] });
     },
     onError: (error) => {
-      toast.error('Failed to delete note');
       console.error('Delete note error:', error);
     },
   });
