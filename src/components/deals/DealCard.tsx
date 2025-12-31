@@ -3,7 +3,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Phone, MessageSquare, Mail, CalendarCheck, Globe } from 'lucide-react';
 import { Deal } from '@/hooks/useDeals';
 import { CommunicationCounts } from '@/hooks/useDealCommunicationCounts';
-import { LeadSourceBadge } from '@/components/contacts/LeadSourceBadge';
+import { getLeadSourceConfig } from '@/components/contacts/LeadSourceBadge';
 import { LeadSource } from '@/hooks/useContacts';
 
 interface DealCardProps {
@@ -61,42 +61,44 @@ export function DealCard({
         
         {/* Section B: Contact Details */}
         <div className="space-y-1.5">
-          {/* Lead Source */}
+          {/* Source Detail */}
           <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-500 text-xs">Source</span>
-            <LeadSourceBadge 
-              source={deal.contact?.lead_source as LeadSource | null} 
-              detail={deal.contact?.lead_source_detail}
-              showDetail
-            />
+            <span className="text-gray-500 text-xs">Source Detail</span>
+            <span className="text-gray-900 text-xs truncate ml-2 max-w-[160px]">
+              {deal.contact?.lead_source_detail || getLeadSourceConfig(deal.contact?.lead_source as LeadSource | null)?.label || 'N/A'}
+            </span>
+          </div>
+
+          {/* Timezone */}
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-gray-500 text-xs">Timezone</span>
+            <span className="text-gray-900 text-xs flex items-center gap-1">
+              {deal.contact?.timezone ? (
+                <>
+                  <Globe className="h-3 w-3 text-gray-400" />
+                  {deal.contact.timezone}
+                </>
+              ) : (
+                'N/A'
+              )}
+            </span>
           </div>
 
           {/* Email */}
-          {deal.contact?.email && (
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-gray-500 text-xs">Email</span>
-              <span className="text-gray-900 text-xs truncate ml-2 max-w-[160px]">{deal.contact.email}</span>
-            </div>
-          )}
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-gray-500 text-xs">Email</span>
+            <span className="text-gray-900 text-xs truncate ml-2 max-w-[160px]">
+              {deal.contact?.email || 'N/A'}
+            </span>
+          </div>
 
           {/* Phone */}
-          {deal.contact?.phone && (
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-gray-500 text-xs">Phone</span>
-              <span className="text-gray-900 text-xs">{deal.contact.phone}</span>
-            </div>
-          )}
-
-          {/* Timezone */}
-          {deal.contact?.timezone && (
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-gray-500 text-xs">Timezone</span>
-              <span className="text-gray-900 text-xs flex items-center gap-1">
-                <Globe className="h-3 w-3 text-gray-400" />
-                {deal.contact.timezone}
-              </span>
-            </div>
-          )}
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-gray-500 text-xs">Phone</span>
+            <span className="text-gray-900 text-xs">
+              {deal.contact?.phone || 'N/A'}
+            </span>
+          </div>
         </div>
 
         {/* Section C: Action Footer */}
