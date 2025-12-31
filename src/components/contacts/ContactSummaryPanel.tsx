@@ -1,5 +1,6 @@
 import { Contact } from '@/hooks/useContacts';
 import { useBooks, useAddBook, useDeleteBook } from '@/hooks/useBooks';
+import { useDealsByContact, DEAL_STAGE_LABELS } from '@/hooks/useDeals';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -28,6 +29,7 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import { format, parseISO } from 'date-fns';
+import { CreateDealDialog } from '@/components/contacts/CreateDealDialog';
 
 interface ContactSummaryPanelProps {
   contact: Contact;
@@ -55,12 +57,15 @@ export function ContactSummaryPanel({ contact }: ContactSummaryPanelProps) {
   const [dealsOpen, setDealsOpen] = useState(true);
   const [booksOpen, setBooksOpen] = useState(true);
   const [addBookOpen, setAddBookOpen] = useState(false);
+  const [addDealOpen, setAddDealOpen] = useState(false);
   const [newBookTitle, setNewBookTitle] = useState('');
   const [newBookStatus, setNewBookStatus] = useState('draft');
 
   const { books, isLoading: booksLoading } = useBooks(contact.id);
   const addBook = useAddBook();
   const deleteBook = useDeleteBook();
+  
+  const { data: deals = [], isLoading: dealsLoading } = useDealsByContact(contact.id);
 
   const displayName = [contact.first_name, contact.last_name].filter(Boolean).join(' ') || 'this contact';
 
@@ -214,25 +219,71 @@ export function ContactSummaryPanel({ contact }: ContactSummaryPanelProps) {
         <CollapsibleTrigger className="flex items-center justify-between w-full px-6 py-4 border-b hover:bg-muted/50 text-left">
           <div className="flex items-center gap-2">
             <ChevronDown className={`h-4 w-4 transition-transform ${dealsOpen ? '' : '-rotate-90'}`} />
-            <span className="font-medium text-sm">Deals (0)</span>
+            <span className="font-medium text-sm">Deals ({deals.length})</span>
           </div>
-          <Button variant="ghost" size="sm" className="h-6 text-primary text-xs px-2">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="h-6 text-primary text-xs px-2"
+            onClick={(e) => {
+              e.stopPropagation();
+              setAddDealOpen(true);
+            }}
+          >
             <Plus className="h-3 w-3 mr-1" />
             Add
           </Button>
         </CollapsibleTrigger>
         <CollapsibleContent className="p-6">
-          <div className="flex flex-col items-center justify-center py-6 text-center">
-            <Briefcase className="h-8 w-8 text-muted-foreground mb-2" />
-            <p className="text-sm text-muted-foreground">
-              Track the revenue opportunities associated with {displayName}.
-            </p>
-            <Button variant="link" size="sm" className="text-primary mt-1">
-              Create a deal
-            </Button>
-          </div>
+          {dealsLoading ? (
+            <div className="flex items-center justify-center py-4">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : deals.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-6 text-center">
+              <Briefcase className="h-8 w-8 text-muted-foreground mb-2" />
+              <p className="text-sm text-muted-foreground">
+                Track the revenue opportunities associated with {displayName}.
+              </p>
+              <Button 
+                variant="link" 
+                size="sm" 
+                className="text-primary mt-1"
+                onClick={() => setAddDealOpen(true)}
+              >
+                Create a deal
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {deals.map((deal) => (
+                <div 
+                  key={deal.id} 
+                  className="flex items-center justify-between p-2 rounded-md border bg-card hover:bg-muted/50 group"
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Briefcase className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    <span className="text-sm truncate">{DEAL_STAGE_LABELS[deal.stage]}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary" className="text-xs">
+                      ${deal.total_value?.toLocaleString() || '0'}
+                    </Badge>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </CollapsibleContent>
       </Collapsible>
+
+      {/* Create Deal Dialog */}
+      <CreateDealDialog
+        open={addDealOpen}
+        onOpenChange={setAddDealOpen}
+        contactId={contact.id}
+        contactName={displayName}
+      />
 
       {/* Add Book Dialog */}
       <Dialog open={addBookOpen} onOpenChange={setAddBookOpen}>
