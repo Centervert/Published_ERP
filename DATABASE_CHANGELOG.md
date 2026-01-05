@@ -1,14 +1,17 @@
 # Database Changelog
 
-> Enterprise-grade database migration documentation for Author Services Platform
+> Historical migration documentation for Author Services Platform
 > 
-> **Last Updated:** 2025-12-07  
-> **Total Migrations:** 17  
+> **Last Updated:** 2025-01-05  
 > **Database:** Supabase PostgreSQL (Lovable Cloud)
+>
+> ⚠️ **Note**: This file documents the early migration history. For the current complete database schema, see [SCHEMA.md](./SCHEMA.md).
+>
+> The database has grown significantly since these initial migrations. SCHEMA.md contains the authoritative reference for all 31 tables, 5 enums, RLS policies, and functions.
 
 ---
 
-## Migration Index
+## Migration Index (Historical)
 
 | # | Migration ID | Date | Summary |
 |---|--------------|------|---------|
