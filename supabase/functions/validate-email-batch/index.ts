@@ -80,7 +80,7 @@ async function validateAllContacts(
         .select('id, email')
         .is('email_validation_result', null)
         .not('email', 'is', null)
-        .limit(BATCH_SIZE);
+        .limit(BATCH_SIZE) as { data: Contact[] | null; error: any };
 
       if (fetchError) {
         console.error(`[Job ${jobId}] Failed to fetch contacts:`, fetchError);
@@ -102,7 +102,7 @@ async function validateAllContacts(
           const validation = await validateEmail(contact.email, mailgunApiKey, baseUrl);
           
           if (validation) {
-            await supabase
+            await (supabase as any)
               .from('contacts')
               .update({
                 email_validation_result: validation.result,
@@ -272,7 +272,7 @@ Deno.serve(async (req) => {
         const validation = await validateEmail(contact.email, MAILGUN_API_KEY, baseUrl);
         
         if (validation) {
-          await supabase
+          await (supabase as any)
             .from('contacts')
             .update({
               email_validation_result: validation.result,
