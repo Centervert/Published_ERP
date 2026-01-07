@@ -21,6 +21,7 @@ import Products from "./pages/Products";
 import Deals from "./pages/Deals";
 import Development from "./pages/Development";
 import Unsubscribed from "./pages/Unsubscribed";
+import ContactHealth from "./pages/ContactHealth";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -82,6 +83,16 @@ const App = () => (
                 <ProtectedRoute>
                   <DashboardLayout>
                     <Templates />
+                  </DashboardLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/contact-health"
+              element={
+                <ProtectedRoute>
+                  <DashboardLayout>
+                    <ContactHealth />
                   </DashboardLayout>
                 </ProtectedRoute>
               }
