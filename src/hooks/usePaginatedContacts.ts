@@ -20,6 +20,8 @@ export interface PaginatedContact {
   lead_source: LeadSource | null;
   lead_source_detail: string | null;
   created_at: string;
+  email_validated_at: string | null;
+  email_validation_result: string | null;
   imprint?: {
     id: string;
     name: string;
@@ -139,6 +141,8 @@ export function usePaginatedContacts({
             lead_source,
             lead_source_detail,
             created_at,
+            email_validated_at,
+            email_validation_result,
             imprint:imprints(id, name)
           `
           )
