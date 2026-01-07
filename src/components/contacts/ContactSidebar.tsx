@@ -3,6 +3,9 @@ import { Contact, useUpdateContact, useContactLinks, LeadSource } from '@/hooks/
 import { LeadSourceBadge, LEAD_SOURCE_OPTIONS } from './LeadSourceBadge';
 import { useImprints } from '@/hooks/useImprints';
 import { useActiveStaff, useStaffById } from '@/hooks/useStaff';
+import { useContactNotes } from '@/hooks/useContactNotes';
+import { useValidateEmail } from '@/hooks/useEmailValidation';
+import { EmailValidationBadge } from './EmailValidationBadge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -42,12 +45,14 @@ import {
   Copy,
   Pencil,
   DollarSign,
-  MessageSquare
+  MessageSquare,
+  ShieldCheck
 } from 'lucide-react';
 import { formatPhoneNumber } from '@/lib/phone-utils';
 import { format, parseISO } from 'date-fns';
 import { AddressAutocomplete } from './AddressAutocomplete';
 import { CreateDealDialog } from './CreateDealDialog';
+import { toast } from 'sonner';
 
 const CONTACT_TYPES = [
   { value: 'lead', label: 'Lead' },
@@ -82,6 +87,8 @@ export function ContactSidebar({ contact, onBack, onSelectTab }: ContactSidebarP
   const { imprints } = useImprints();
   const updateContact = useUpdateContact();
   const { links, addLink, deleteLink } = useContactLinks(contact.id);
+  const { addNote } = useContactNotes({ contactId: contact.id });
+  const validateEmail = useValidateEmail();
   
   // Fetch staff members for ASC/AE assignment
   const { data: staffMembers = [] } = useActiveStaff();
@@ -92,6 +99,7 @@ export function ContactSidebar({ contact, onBack, onSelectTab }: ContactSidebarP
   const [timezoneDialogOpen, setTimezoneDialogOpen] = useState(false);
   const [timezoneInput, setTimezoneInput] = useState('');
   const [dealDialogOpen, setDealDialogOpen] = useState(false);
+  const [isValidating, setIsValidating] = useState(false);
   
   // Lookup staff by ID for display (includes inactive staff)
   const { staff: currentAsc } = useStaffById(contact.staff_asc_id);
@@ -168,6 +176,54 @@ export function ContactSidebar({ contact, onBack, onSelectTab }: ContactSidebarP
       label: newLink.label || null,
     });
     setNewLink({ type: 'website', url: '', label: '' });
+  };
+
+  const handleValidateEmail = async () => {
+    if (!formData.email) {
+      toast.error('No email to validate');
+      return;
+    }
+    
+    setIsValidating(true);
+    try {
+      const result = await validateEmail.mutateAsync({
+        email: formData.email,
+        contactId: contact.id
+      });
+      
+      // If email is invalid/undeliverable, remove it and add a note
+      if (result.result === 'undeliverable' || result.result === 'do_not_send') {
+        const invalidEmail = formData.email;
+        const reasons = result.reasons?.join(', ') || 'Unknown reason';
+        
+        // Add note about the invalid email
+        await addNote.mutateAsync({
+          content: `⚠️ Invalid email removed: ${invalidEmail}\n\nValidation result: ${result.result}\nRisk: ${result.risk}\nReasons: ${reasons}${result.isDisposable ? '\n• Disposable email address' : ''}${result.isRoleAddress ? '\n• Role address (e.g., admin@, support@)' : ''}`,
+          dealId: null
+        });
+        
+        // Clear the email - the validation fields are already set by the edge function
+        await updateContact.mutateAsync({
+          id: contact.id,
+          originalData: { email: contact.email },
+          email: ''
+        });
+        
+        // Update local form state
+        setFormData(prev => ({ ...prev, email: '' }));
+        
+        toast.warning(`Invalid email removed and logged to notes`);
+      }
+    } catch (error) {
+      console.error('Validation failed:', error);
+    } finally {
+      setIsValidating(false);
+    }
+  };
+
+  const handleApplySuggestion = async (suggestion: string) => {
+    handleChange('email', suggestion);
+    toast.info(`Email updated to: ${suggestion}. Don't forget to save and re-validate.`);
   };
 
   const displayName = [contact.first_name, contact.last_name].filter(Boolean).join(' ') || 'No Name';
@@ -493,17 +549,45 @@ export function ContactSidebar({ contact, onBack, onSelectTab }: ContactSidebarP
                   onKeyDown={(e) => e.key === 'Enter' && setEditingField(null)}
                 />
               ) : (
-                <div className="flex items-start gap-1">
-                  <span 
-                    onClick={() => setEditingField('email')}
-                    className="text-sm hover:text-primary transition-colors cursor-pointer break-all"
-                  >
-                    {formData.email || <span className="text-muted-foreground">Add email</span>}
-                  </span>
-                  {formData.email && (
-                    <Button variant="ghost" size="icon" className="h-5 w-5 flex-shrink-0 opacity-0 group-hover:opacity-100 mt-0.5" onClick={() => navigator.clipboard.writeText(formData.email)}>
-                      <Copy className="h-3 w-3 text-muted-foreground" />
-                    </Button>
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-start gap-1">
+                    <span 
+                      onClick={() => setEditingField('email')}
+                      className="text-sm hover:text-primary transition-colors cursor-pointer break-all"
+                    >
+                      {formData.email || <span className="text-muted-foreground">Add email</span>}
+                    </span>
+                    {formData.email && (
+                      <>
+                        <Button variant="ghost" size="icon" className="h-5 w-5 flex-shrink-0 opacity-0 group-hover:opacity-100 mt-0.5" onClick={() => navigator.clipboard.writeText(formData.email)}>
+                          <Copy className="h-3 w-3 text-muted-foreground" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-5 w-5 flex-shrink-0 opacity-0 group-hover:opacity-100 mt-0.5" 
+                          onClick={handleValidateEmail}
+                          disabled={isValidating}
+                          title="Validate email"
+                        >
+                          <ShieldCheck className="h-3 w-3 text-muted-foreground" />
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                  {/* Validation status */}
+                  {(contact.email_validation_result || isValidating) && (
+                    <EmailValidationBadge
+                      result={contact.email_validation_result}
+                      risk={contact.email_validation_risk}
+                      reasons={contact.email_validation_reasons}
+                      isDisposable={contact.email_is_disposable}
+                      isRoleAddress={contact.email_is_role_address}
+                      didYouMean={contact.email_did_you_mean}
+                      validatedAt={contact.email_validated_at}
+                      isValidating={isValidating}
+                      onSuggestClick={handleApplySuggestion}
+                    />
                   )}
                 </div>
               )}
