@@ -38,6 +38,7 @@ import {
   Package,
   Handshake,
   Code,
+  HeartPulse,
 } from 'lucide-react';
 import authorServicesLogo from '@/assets/author-services-logo.png';
 
@@ -46,6 +47,7 @@ const homeItem = { title: 'Home', url: '/', icon: LayoutDashboard };
 const marketingItems = [
   { title: 'Campaigns', url: '/campaigns', icon: Send },
   { title: 'Templates', url: '/templates', icon: FileText },
+  { title: 'Contact Health', url: '/contact-health', icon: HeartPulse },
 ];
 
 const crmItems = [
