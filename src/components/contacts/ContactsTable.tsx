@@ -239,8 +239,13 @@ export function ContactsTable({ filterByUser }: ContactsTableProps) {
         )}
         
         {/* Total count display */}
-        <div className="ml-auto text-sm text-muted-foreground">
-          {formatNumber(totalCount)} total contacts
+        <div className="ml-auto text-sm text-muted-foreground flex items-center gap-2">
+          {isFetching && <Loader2 className="h-3 w-3 animate-spin" />}
+          {debouncedSearch ? (
+            <span>{formatNumber(totalCount)} results</span>
+          ) : (
+            <span>{formatNumber(totalCount)} total contacts</span>
+          )}
         </div>
       </div>
 
@@ -251,8 +256,12 @@ export function ContactsTable({ filterByUser }: ContactsTableProps) {
           placeholder="Search name, phone, email"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="pl-9 h-10"
+          className="pl-9 pr-9 h-10"
         />
+        {/* Loading indicator when searching */}
+        {isFetching && search.trim() && (
+          <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+        )}
       </div>
 
       {totalCount === 0 ? (
