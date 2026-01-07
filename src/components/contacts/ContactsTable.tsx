@@ -241,7 +241,7 @@ export function ContactsTable({ filterByUser }: ContactsTableProps) {
         
         {/* Total count display */}
         <div className="ml-auto text-sm text-muted-foreground flex items-center gap-2">
-          {isFetching && <Spinner size="sm" />}
+          {isLoading && <Spinner size="sm" />}
           {debouncedSearch ? (
             <span>{formatNumber(totalCount)} results</span>
           ) : (
@@ -252,7 +252,7 @@ export function ContactsTable({ filterByUser }: ContactsTableProps) {
 
       {/* Search */}
       <div className="relative max-w-sm">
-        {isFetching && search.trim() ? (
+        {isLoading && search.trim() ? (
           <div className="absolute left-3 top-1/2 -translate-y-1/2">
             <Spinner size="sm" />
           </div>
@@ -263,7 +263,7 @@ export function ContactsTable({ filterByUser }: ContactsTableProps) {
           placeholder="Search name, phone, email"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="pl-9 h-10"
+          className="pl-10 h-10"
         />
       </div>
 
