@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -58,10 +58,26 @@ const EMAILS_PER_BATCH = 100;
 const CONCURRENT_REQUESTS = 5;
 const DELAY_BETWEEN_BATCHES_MS = 200;
 const ESTIMATED_EMAIL_TIME_MS = 800; // ~0.8s per email on average
+const MAX_CONSECUTIVE_ERRORS = 10; // Stop after this many consecutive errors
+
+// Format time helper (outside component for stable reference)
+const formatTime = (ms: number): string => {
+  if (ms < 0 || !isFinite(ms)) return 'Calculating...';
+  const seconds = Math.floor(ms / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+
+  if (days > 0) return `~${days}d ${hours % 24}h`;
+  if (hours > 0) return `~${hours}h ${minutes % 60}m`;
+  if (minutes > 0) return `~${minutes}m ${seconds % 60}s`;
+  return `~${seconds}s`;
+};
 
 export default function ContactHealth() {
   const queryClient = useQueryClient();
   const isRunningRef = useRef(false);
+  const isMountedRef = useRef(true);
   
   const [progress, setProgress] = useState<ValidationProgress>({
     status: 'idle',
@@ -77,6 +93,15 @@ export default function ContactHealth() {
     estimatedTimeRemaining: '',
     rate: 0,
   });
+
+  // Cleanup on unmount
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+      isRunningRef.current = false;
+    };
+  }, []);
 
   // Fetch validation statistics using optimized RPC function
   const { data: stats, isLoading, isError, error, refetch } = useQuery({
@@ -109,28 +134,6 @@ export default function ContactHealth() {
     },
   });
 
-  const formatTime = (ms: number): string => {
-    if (ms < 0) return 'Calculating...';
-    const seconds = Math.floor(ms / 1000);
-    const minutes = Math.floor(seconds / 60);
-    const hours = Math.floor(minutes / 60);
-    const days = Math.floor(hours / 24);
-
-    if (days > 0) return `~${days}d ${hours % 24}h`;
-    if (hours > 0) return `~${hours}h ${minutes % 60}m`;
-    if (minutes > 0) return `~${minutes}m ${seconds % 60}s`;
-    return `~${seconds}s`;
-  };
-
-  const calculateETA = (processed: number, total: number, startTime: number): string => {
-    if (processed === 0) return 'Calculating...';
-    const elapsed = Date.now() - startTime;
-    const rate = processed / (elapsed / 1000); // emails per second
-    const remaining = total - processed;
-    const estimatedMs = (remaining / rate) * 1000;
-    return formatTime(estimatedMs);
-  };
-
   const getInitialETA = (count: number): string => {
     // Estimate based on: 5 concurrent, ~0.8s per email + 200ms delay per batch
     const batches = Math.ceil(count / CONCURRENT_REQUESTS);
@@ -147,27 +150,52 @@ export default function ContactHealth() {
     let totalRisky = 0;
     let totalUnknown = 0;
     let totalErrors = 0;
+    let consecutiveErrors = 0;
 
-    while (isRunningRef.current) {
+    while (isRunningRef.current && isMountedRef.current) {
       try {
         const { data, error } = await supabase.functions.invoke('validate-email-batch', {
           body: { validateAll: true },
         });
 
+        if (!isMountedRef.current) return;
+
         if (error) {
           console.error('Chunk validation error:', error);
+          consecutiveErrors++;
           totalErrors++;
-          // Continue trying unless stopped
+          
+          if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+            isRunningRef.current = false;
+            setProgress(prev => ({ ...prev, status: 'error' }));
+            toast.error(`Validation stopped after ${MAX_CONSECUTIVE_ERRORS} consecutive errors. Please try again later.`);
+            queryClient.invalidateQueries({ queryKey: ['contact-health-stats'] });
+            return;
+          }
+          
           await new Promise(resolve => setTimeout(resolve, 2000));
           continue;
         }
 
         if (!data.success) {
           console.error('Chunk failed:', data.error);
+          consecutiveErrors++;
           totalErrors++;
+          
+          if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+            isRunningRef.current = false;
+            setProgress(prev => ({ ...prev, status: 'error' }));
+            toast.error(`Validation stopped after ${MAX_CONSECUTIVE_ERRORS} consecutive errors.`);
+            queryClient.invalidateQueries({ queryKey: ['contact-health-stats'] });
+            return;
+          }
+          
           await new Promise(resolve => setTimeout(resolve, 2000));
           continue;
         }
+
+        // Reset consecutive error counter on success
+        consecutiveErrors = 0;
 
         const { chunkResults, complete } = data;
         
@@ -182,40 +210,58 @@ export default function ContactHealth() {
         const rate = totalProcessed > 0 ? totalProcessed / (elapsed / 1000) : 0;
         const remaining = chunkResults.remaining;
 
-        setProgress(prev => ({
-          ...prev,
-          processed: initialTotal - remaining,
-          total: initialTotal,
-          deliverable: totalDeliverable,
-          undeliverable: totalUndeliverable,
-          catchAll: totalRisky,
-          unknown: totalUnknown,
-          errors: totalErrors,
-          rate,
-          estimatedTimeRemaining: rate > 0 ? formatTime((remaining / rate) * 1000) : 'Calculating...',
-        }));
+        if (isMountedRef.current) {
+          setProgress(prev => ({
+            ...prev,
+            processed: initialTotal - remaining,
+            total: initialTotal,
+            deliverable: totalDeliverable,
+            undeliverable: totalUndeliverable,
+            catchAll: totalRisky,
+            unknown: totalUnknown,
+            errors: totalErrors,
+            rate,
+            estimatedTimeRemaining: rate > 0 ? formatTime((remaining / rate) * 1000) : 'Calculating...',
+          }));
+        }
 
         if (complete || remaining === 0) {
           isRunningRef.current = false;
-          setProgress(prev => ({ ...prev, status: 'completed' }));
-          toast.success(`Validation complete! Processed ${totalProcessed.toLocaleString()} emails.`);
+          if (isMountedRef.current) {
+            setProgress(prev => ({ ...prev, status: 'completed' }));
+            toast.success(`Validation complete! Processed ${totalProcessed.toLocaleString()} emails.`);
+          }
           queryClient.invalidateQueries({ queryKey: ['contact-health-stats'] });
           queryClient.invalidateQueries({ queryKey: ['contacts'] });
           return;
         }
       } catch (err) {
         console.error('Validation loop error:', err);
+        consecutiveErrors++;
         totalErrors++;
+        
+        if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+          isRunningRef.current = false;
+          if (isMountedRef.current) {
+            setProgress(prev => ({ ...prev, status: 'error' }));
+            toast.error(`Validation stopped due to repeated errors.`);
+          }
+          queryClient.invalidateQueries({ queryKey: ['contact-health-stats'] });
+          return;
+        }
+        
         // Brief pause before retrying
         await new Promise(resolve => setTimeout(resolve, 2000));
       }
     }
 
-    // User stopped the validation
-    setProgress(prev => ({ ...prev, status: 'idle' }));
-    toast.info('Validation stopped.');
+    // User stopped the validation or component unmounted
+    if (isMountedRef.current) {
+      setProgress(prev => ({ ...prev, status: 'idle' }));
+      toast.info('Validation stopped.');
+    }
     queryClient.invalidateQueries({ queryKey: ['contact-health-stats'] });
-  }, [queryClient, formatTime]);
+  }, [queryClient]);
 
   const startValidation = useCallback(async () => {
     if (isRunningRef.current) return;
