@@ -79,51 +79,33 @@ export default function ContactHealth() {
     rate: 0,
   });
 
-  // Fetch validation statistics
-  const { data: stats, isLoading, refetch } = useQuery({
+  // Fetch validation statistics using optimized RPC function
+  const { data: stats, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['contact-health-stats'],
     queryFn: async (): Promise<ValidationStats> => {
-      const { count: total } = await supabase
-        .from('contacts')
-        .select('*', { count: 'exact', head: true });
+      const { data, error } = await supabase.rpc('get_contact_health_stats' as any);
 
-      const { count: validated } = await supabase
-        .from('contacts')
-        .select('*', { count: 'exact', head: true })
-        .not('email_validation_result', 'is', null);
+      if (error) {
+        console.error('Failed to fetch contact health stats:', error);
+        throw new Error('Failed to load contact health statistics');
+      }
 
-      const { data: resultCounts } = await supabase
-        .from('contacts')
-        .select('email_validation_result')
-        .not('email_validation_result', 'is', null);
-
-      const deliverable = resultCounts?.filter(c => c.email_validation_result === 'deliverable').length || 0;
-      const undeliverable = resultCounts?.filter(c => c.email_validation_result === 'undeliverable').length || 0;
-      const catchAll = resultCounts?.filter(c => c.email_validation_result === 'catch_all').length || 0;
-      const doNotSend = resultCounts?.filter(c => c.email_validation_result === 'do_not_send').length || 0;
-      const unknown = resultCounts?.filter(c => c.email_validation_result === 'unknown').length || 0;
-
-      const { data: riskCounts } = await supabase
-        .from('contacts')
-        .select('email_validation_risk')
-        .not('email_validation_risk', 'is', null);
-
-      const lowRisk = riskCounts?.filter(c => c.email_validation_risk === 'low').length || 0;
-      const mediumRisk = riskCounts?.filter(c => c.email_validation_risk === 'medium').length || 0;
-      const highRisk = riskCounts?.filter(c => c.email_validation_risk === 'high').length || 0;
+      const result = data as Record<string, string>;
+      const total = parseInt(result.total) || 0;
+      const validated = parseInt(result.validated) || 0;
 
       return {
-        total: total || 0,
-        validated: validated || 0,
-        unvalidated: (total || 0) - (validated || 0),
-        deliverable,
-        undeliverable,
-        catchAll,
-        doNotSend,
-        unknown,
-        lowRisk,
-        mediumRisk,
-        highRisk,
+        total,
+        validated,
+        unvalidated: total - validated,
+        deliverable: parseInt(result.deliverable) || 0,
+        undeliverable: parseInt(result.undeliverable) || 0,
+        catchAll: parseInt(result.catchAll) || 0,
+        doNotSend: parseInt(result.doNotSend) || 0,
+        unknown: parseInt(result.unknown) || 0,
+        lowRisk: parseInt(result.lowRisk) || 0,
+        mediumRisk: parseInt(result.mediumRisk) || 0,
+        highRisk: parseInt(result.highRisk) || 0,
       };
     },
   });
@@ -412,6 +394,25 @@ export default function ContactHealth() {
           )}
         </div>
       </div>
+
+      {/* Error State */}
+      {isError && (
+        <Card className="border-destructive/50 bg-destructive/5">
+          <CardContent className="flex items-center gap-4 py-6">
+            <AlertOctagon className="h-8 w-8 text-destructive" />
+            <div>
+              <h3 className="font-semibold text-destructive">Failed to load statistics</h3>
+              <p className="text-sm text-muted-foreground">
+                {error instanceof Error ? error.message : 'An error occurred while fetching contact health data.'}
+              </p>
+            </div>
+            <Button variant="outline" onClick={() => refetch()} className="ml-auto">
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Retry
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Progress Panel during validation */}
       {isActive && (

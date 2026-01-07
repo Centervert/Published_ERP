@@ -1598,6 +1598,7 @@ export type Database = {
           tier_percentage: number
         }[]
       }
+      get_contact_health_stats: { Args: never; Returns: Json }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
