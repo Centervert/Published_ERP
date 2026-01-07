@@ -2,7 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-worker-key',
 };
 
 interface ValidationResult {
@@ -71,9 +71,12 @@ Deno.serve(async (req) => {
       throw new Error('MAILGUN_API_KEY is not configured');
     }
 
-    // Get auth token from request
+    // Get auth token from request - allow either JWT or worker API key
     const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
+    const workerKey = req.headers.get('x-worker-key');
+    const expectedWorkerKey = Deno.env.get('WORKER_API_KEY');
+    
+    if (!authHeader && !(workerKey && workerKey === expectedWorkerKey)) {
       return new Response(
         JSON.stringify({ error: 'Authorization header required' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
