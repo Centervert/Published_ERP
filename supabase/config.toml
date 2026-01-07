@@ -70,3 +70,11 @@ verify_jwt = true
 # Send test email - requires auth
 [functions.send-test-email]
 verify_jwt = true
+
+# Email validation - requires auth
+[functions.validate-email]
+verify_jwt = true
+
+# Batch email validation - requires auth
+[functions.validate-email-batch]
+verify_jwt = true

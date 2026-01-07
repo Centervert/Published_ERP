@@ -630,6 +630,13 @@ export type Database = {
           created_at: string | null
           created_by: string | null
           email: string
+          email_did_you_mean: string | null
+          email_is_disposable: boolean | null
+          email_is_role_address: boolean | null
+          email_validated_at: string | null
+          email_validation_reasons: string[] | null
+          email_validation_result: string | null
+          email_validation_risk: string | null
           first_name: string | null
           id: string
           imprint_id: string | null
@@ -656,6 +663,13 @@ export type Database = {
           created_at?: string | null
           created_by?: string | null
           email: string
+          email_did_you_mean?: string | null
+          email_is_disposable?: boolean | null
+          email_is_role_address?: boolean | null
+          email_validated_at?: string | null
+          email_validation_reasons?: string[] | null
+          email_validation_result?: string | null
+          email_validation_risk?: string | null
           first_name?: string | null
           id?: string
           imprint_id?: string | null
@@ -682,6 +696,13 @@ export type Database = {
           created_at?: string | null
           created_by?: string | null
           email?: string
+          email_did_you_mean?: string | null
+          email_is_disposable?: boolean | null
+          email_is_role_address?: boolean | null
+          email_validated_at?: string | null
+          email_validation_reasons?: string[] | null
+          email_validation_result?: string | null
+          email_validation_risk?: string | null
           first_name?: string | null
           id?: string
           imprint_id?: string | null
