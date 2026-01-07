@@ -143,30 +143,29 @@ export default function ContactHealth() {
     isPausedRef.current = false;
     abortControllerRef.current = new AbortController();
 
-    // Get all unvalidated contact IDs
-    const { data: unvalidatedContacts, error: fetchError } = await supabase
+    // First get the total count of unvalidated contacts
+    const { count: totalUnvalidated, error: countError } = await supabase
       .from('contacts')
-      .select('id')
+      .select('id', { count: 'exact', head: true })
       .is('email_validation_result', null)
       .not('email', 'is', null);
 
-    if (fetchError) {
-      toast.error('Failed to fetch contacts: ' + fetchError.message);
+    if (countError) {
+      toast.error('Failed to count contacts: ' + countError.message);
       return;
     }
 
-    if (!unvalidatedContacts || unvalidatedContacts.length === 0) {
+    if (!totalUnvalidated || totalUnvalidated === 0) {
       toast.info('No unvalidated contacts found');
       return;
     }
 
-    const contactIds = unvalidatedContacts.map(c => c.id);
     const startTime = Date.now();
 
     setProgress({
       status: 'running',
       processed: 0,
-      total: contactIds.length,
+      total: totalUnvalidated,
       deliverable: 0,
       undeliverable: 0,
       catchAll: 0,
@@ -174,7 +173,7 @@ export default function ContactHealth() {
       errors: 0,
       startTime,
       currentBatchStart: startTime,
-      estimatedTimeRemaining: getInitialETA(contactIds.length),
+      estimatedTimeRemaining: getInitialETA(totalUnvalidated),
       rate: 0,
     });
 
@@ -185,8 +184,8 @@ export default function ContactHealth() {
     let unknown = 0;
     let errors = 0;
 
-    // Process in batches
-    for (let i = 0; i < contactIds.length; i += EMAILS_PER_BATCH) {
+    // Process in chunks - fetch contacts as we go to avoid 1000 row limit
+    while (true) {
       // Check if paused or aborted
       if (isPausedRef.current) {
         setProgress(prev => ({ ...prev, status: 'paused' }));
@@ -198,32 +197,51 @@ export default function ContactHealth() {
         return;
       }
 
-      const batch = contactIds.slice(i, i + EMAILS_PER_BATCH);
-      
+      // Fetch next batch of unvalidated contacts (always get fresh list)
+      const { data: batchContacts, error: fetchError } = await supabase
+        .from('contacts')
+        .select('id')
+        .is('email_validation_result', null)
+        .not('email', 'is', null)
+        .limit(EMAILS_PER_BATCH);
+
+      if (fetchError) {
+        console.error('Failed to fetch batch:', fetchError);
+        toast.error('Failed to fetch contacts: ' + fetchError.message);
+        break;
+      }
+
+      // No more contacts to validate
+      if (!batchContacts || batchContacts.length === 0) {
+        break;
+      }
+
+      const batchIds = batchContacts.map(c => c.id);
+
       try {
         const { data, error } = await supabase.functions.invoke('validate-email-batch', {
-          body: { contactIds: batch },
+          body: { contactIds: batchIds },
         });
 
         if (error) {
           console.error('Batch validation error:', error);
-          errors += batch.length;
+          errors += batchIds.length;
         } else if (data?.results) {
           deliverable += data.results.deliverable || 0;
           undeliverable += data.results.undeliverable || 0;
-          catchAll += data.results.risky || 0; // risky often includes catch-all
+          catchAll += data.results.risky || 0;
           unknown += data.results.unknown || 0;
           errors += data.results.failed || 0;
         }
 
-        processed += batch.length;
+        processed += batchIds.length;
         const elapsed = Date.now() - startTime;
         const rate = processed / (elapsed / 1000);
 
         setProgress({
           status: 'running',
           processed,
-          total: contactIds.length,
+          total: totalUnvalidated,
           deliverable,
           undeliverable,
           catchAll,
@@ -231,18 +249,18 @@ export default function ContactHealth() {
           errors,
           startTime,
           currentBatchStart: Date.now(),
-          estimatedTimeRemaining: calculateETA(processed, contactIds.length, startTime),
+          estimatedTimeRemaining: calculateETA(processed, totalUnvalidated, startTime),
           rate,
         });
 
         // Refresh stats every 10 batches
-        if (i % (EMAILS_PER_BATCH * 10) === 0) {
+        if (processed % (EMAILS_PER_BATCH * 10) === 0) {
           queryClient.invalidateQueries({ queryKey: ['contact-health-stats'] });
         }
       } catch (err) {
         console.error('Batch error:', err);
-        errors += batch.length;
-        processed += batch.length;
+        errors += batchIds.length;
+        processed += batchIds.length;
       }
     }
 
