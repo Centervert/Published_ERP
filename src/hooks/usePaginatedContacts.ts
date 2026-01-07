@@ -33,6 +33,7 @@ interface UsePaginatedContactsParams {
   statusFilter?: string;
   typeFilter?: string;
   sourceFilter?: string;
+  validationFilter?: string;
   filterByUser?: string | null;
 }
 
@@ -43,11 +44,12 @@ export function usePaginatedContacts({
   statusFilter = 'all',
   typeFilter = 'all',
   sourceFilter = 'all',
+  validationFilter = 'all',
   filterByUser = null,
 }: UsePaginatedContactsParams) {
   // Query for paginated data
   const contactsQuery = useQuery({
-    queryKey: ['contacts-paginated', page, pageSize, search, statusFilter, typeFilter, sourceFilter, filterByUser],
+    queryKey: ['contacts-paginated', page, pageSize, search, statusFilter, typeFilter, sourceFilter, validationFilter, filterByUser],
     queryFn: async () => {
       const normalizedSearch = (search ?? '').trim();
       // Always use 'planned' for fast count estimates on large tables (423k+ rows)
@@ -103,6 +105,19 @@ export function usePaginatedContacts({
 
       if (sourceFilter !== 'all') {
         query = query.eq('lead_source', sourceFilter as LeadSource);
+      }
+
+      // Validation status filter
+      if (validationFilter === 'validated') {
+        query = query.not('email_validation_result', 'is', null);
+      } else if (validationFilter === 'unvalidated') {
+        query = query.is('email_validation_result', null);
+      } else if (validationFilter === 'deliverable') {
+        query = query.eq('email_validation_result', 'deliverable');
+      } else if (validationFilter === 'undeliverable') {
+        query = query.or('email_validation_result.eq.undeliverable,email_validation_result.eq.do_not_send');
+      } else if (validationFilter === 'risky') {
+        query = query.or('email_validation_risk.eq.high,email_validation_risk.eq.medium');
       }
 
       if (filterByUser) {
