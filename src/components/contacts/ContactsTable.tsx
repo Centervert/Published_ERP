@@ -329,6 +329,7 @@ export function ContactsTable({ filterByUser }: ContactsTableProps) {
                     </div>
                   </TableHead>
                   <TableHead className="font-semibold">SOURCE</TableHead>
+                  <TableHead className="font-semibold">VALIDATED</TableHead>
                   <TableHead className="font-semibold">DATE CREATED</TableHead>
                   <TableHead className="w-12"></TableHead>
                 </TableRow>
@@ -379,6 +380,30 @@ export function ContactsTable({ filterByUser }: ContactsTableProps) {
                       </TableCell>
                       <TableCell>
                         <LeadSourceBadge source={contact.lead_source} size="sm" />
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {contact.email_validated_at ? (
+                          <TooltipProvider delayDuration={0}>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className={`text-xs ${
+                                  contact.email_validation_result === 'deliverable' 
+                                    ? 'text-green-600' 
+                                    : contact.email_validation_result === 'undeliverable' || contact.email_validation_result === 'do_not_send'
+                                    ? 'text-red-600'
+                                    : 'text-yellow-600'
+                                }`}>
+                                  {format(new Date(contact.email_validated_at), 'MM/dd/yy')}
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent side="top">
+                                <p className="capitalize">{contact.email_validation_result?.replace('_', ' ') || 'Validated'}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        ) : (
+                          <span className="text-xs text-muted-foreground/50">—</span>
+                        )}
                       </TableCell>
                       <TableCell className="text-muted-foreground">
                         {format(new Date(contact.created_at), 'MM/dd/yyyy')}
