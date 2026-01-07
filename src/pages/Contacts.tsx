@@ -14,7 +14,7 @@ export default function Contacts() {
   const { user } = useAuth();
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
-  const [contactTab, setContactTab] = useState<'all' | 'my'>('all');
+  
 
   return (
     <div className="p-6 space-y-6">
@@ -36,14 +36,20 @@ export default function Contacts() {
         </div>
       </div>
 
-      {/* Main Tabs */}
-      <Tabs defaultValue="contacts" className="space-y-4">
+      {/* Single Row Tabs */}
+      <Tabs defaultValue="all" className="space-y-4">
         <TabsList className="h-auto p-0 bg-transparent border-b rounded-none w-full justify-start gap-6">
           <TabsTrigger 
-            value="contacts" 
+            value="all" 
             className="px-0 pb-3 rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent data-[state=active]:shadow-none font-medium"
           >
-            Contacts
+            All Contacts
+          </TabsTrigger>
+          <TabsTrigger 
+            value="my"
+            className="px-0 pb-3 rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent data-[state=active]:shadow-none font-medium"
+          >
+            My Contacts
           </TabsTrigger>
           <TabsTrigger 
             value="lists"
@@ -65,32 +71,12 @@ export default function Contacts() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="contacts" className="mt-6">
-          {/* Contact Sub-tabs */}
-          <Tabs value={contactTab} onValueChange={(v) => setContactTab(v as 'all' | 'my')}>
-            <TabsList className="h-auto p-0 bg-transparent border-b-0 gap-4 mb-4">
-              <TabsTrigger 
-                value="all" 
-                className="px-0 pb-2 rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent data-[state=active]:shadow-none text-sm"
-              >
-                All Contacts
-              </TabsTrigger>
-              <TabsTrigger 
-                value="my"
-                className="px-0 pb-2 rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent data-[state=active]:shadow-none text-sm"
-              >
-                My Contacts
-              </TabsTrigger>
-            </TabsList>
+        <TabsContent value="all" className="mt-6">
+          <ContactsTable filterByUser={null} />
+        </TabsContent>
 
-            <TabsContent value="all" className="mt-0">
-              <ContactsTable filterByUser={null} />
-            </TabsContent>
-
-            <TabsContent value="my" className="mt-0">
-              <ContactsTable filterByUser={user?.id || null} />
-            </TabsContent>
-          </Tabs>
+        <TabsContent value="my" className="mt-6">
+          <ContactsTable filterByUser={user?.id || null} />
         </TabsContent>
 
         <TabsContent value="lists">
