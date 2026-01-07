@@ -241,8 +241,12 @@ export function ContactsTable({ filterByUser }: ContactsTableProps) {
         
         {/* Total count display */}
         <div className="ml-auto text-sm text-muted-foreground flex items-center gap-2">
-          {isLoading && <Spinner size="sm" />}
-          {debouncedSearch ? (
+          {isLoading ? (
+            <>
+              <Spinner size="sm" />
+              <span>Searching...</span>
+            </>
+          ) : debouncedSearch ? (
             <span>{formatNumber(totalCount)} results</span>
           ) : (
             <span>{formatNumber(totalCount)} total contacts</span>
