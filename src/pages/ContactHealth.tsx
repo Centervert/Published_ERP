@@ -61,7 +61,7 @@ const ESTIMATED_EMAIL_TIME_MS = 800; // ~0.8s per email on average
 
 export default function ContactHealth() {
   const queryClient = useQueryClient();
-  const pollingRef = useRef<NodeJS.Timeout | null>(null);
+  const isRunningRef = useRef(false);
   
   const [progress, setProgress] = useState<ValidationProgress>({
     status: 'idle',
@@ -138,60 +138,87 @@ export default function ContactHealth() {
     return formatTime(estimatedMs);
   };
 
-  // Poll for progress when background validation is running
-  const pollProgress = useCallback((initialTotal: number) => {
+  // Continuous validation loop - calls edge function repeatedly until done
+  const runValidationLoop = useCallback(async (initialTotal: number) => {
     const startTime = Date.now();
-    
-    const poll = async () => {
-      // Get current validated count
-      const { count: validatedCount, error } = await supabase
-        .from('contacts')
-        .select('id', { count: 'exact', head: true })
-        .not('email_validation_result', 'is', null);
+    let totalProcessed = 0;
+    let totalDeliverable = 0;
+    let totalUndeliverable = 0;
+    let totalRisky = 0;
+    let totalUnknown = 0;
+    let totalErrors = 0;
 
-      if (error) {
-        console.error('Failed to poll progress:', error);
-        return;
-      }
+    while (isRunningRef.current) {
+      try {
+        const { data, error } = await supabase.functions.invoke('validate-email-batch', {
+          body: { validateAll: true },
+        });
 
-      const { count: remainingCount } = await supabase
-        .from('contacts')
-        .select('id', { count: 'exact', head: true })
-        .is('email_validation_result', null)
-        .not('email', 'is', null);
+        if (error) {
+          console.error('Chunk validation error:', error);
+          totalErrors++;
+          // Continue trying unless stopped
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          continue;
+        }
 
-      const processed = initialTotal - (remainingCount || 0);
-      const elapsed = Date.now() - startTime;
-      const rate = processed > 0 ? processed / (elapsed / 1000) : 0;
+        if (!data.success) {
+          console.error('Chunk failed:', data.error);
+          totalErrors++;
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          continue;
+        }
 
-      setProgress(prev => {
-        // Only update if still running
-        if (prev.status !== 'running') return prev;
+        const { chunkResults, complete } = data;
         
-        return {
+        totalProcessed += chunkResults.processed;
+        totalDeliverable += chunkResults.deliverable;
+        totalUndeliverable += chunkResults.undeliverable;
+        totalRisky += chunkResults.risky;
+        totalUnknown += chunkResults.unknown;
+        totalErrors += chunkResults.failed;
+
+        const elapsed = Date.now() - startTime;
+        const rate = totalProcessed > 0 ? totalProcessed / (elapsed / 1000) : 0;
+        const remaining = chunkResults.remaining;
+
+        setProgress(prev => ({
           ...prev,
-          processed,
+          processed: initialTotal - remaining,
           total: initialTotal,
+          deliverable: totalDeliverable,
+          undeliverable: totalUndeliverable,
+          catchAll: totalRisky,
+          unknown: totalUnknown,
+          errors: totalErrors,
           rate,
-          estimatedTimeRemaining: processed > 0 ? calculateETA(processed, initialTotal, startTime) : 'Calculating...',
-        };
-      });
+          estimatedTimeRemaining: rate > 0 ? formatTime((remaining / rate) * 1000) : 'Calculating...',
+        }));
 
-      // If still have remaining, continue polling
-      if (remainingCount && remainingCount > 0) {
-        pollingRef.current = setTimeout(poll, 5000); // Poll every 5 seconds
-      } else if (!remainingCount || remainingCount === 0) {
-        setProgress(prev => ({ ...prev, status: 'completed' }));
-        toast.success('Background validation complete!');
-        queryClient.invalidateQueries({ queryKey: ['contact-health-stats'] });
-        queryClient.invalidateQueries({ queryKey: ['contacts'] });
+        if (complete || remaining === 0) {
+          isRunningRef.current = false;
+          setProgress(prev => ({ ...prev, status: 'completed' }));
+          toast.success(`Validation complete! Processed ${totalProcessed.toLocaleString()} emails.`);
+          queryClient.invalidateQueries({ queryKey: ['contact-health-stats'] });
+          queryClient.invalidateQueries({ queryKey: ['contacts'] });
+          return;
+        }
+      } catch (err) {
+        console.error('Validation loop error:', err);
+        totalErrors++;
+        // Brief pause before retrying
+        await new Promise(resolve => setTimeout(resolve, 2000));
       }
-    };
+    }
 
-    poll();
-  }, [queryClient]);
+    // User stopped the validation
+    setProgress(prev => ({ ...prev, status: 'idle' }));
+    toast.info('Validation stopped.');
+    queryClient.invalidateQueries({ queryKey: ['contact-health-stats'] });
+  }, [queryClient, formatTime]);
 
   const startValidation = useCallback(async () => {
+    if (isRunningRef.current) return;
 
     // Get total count of unvalidated contacts
     const { count: totalUnvalidated, error: countError } = await supabase
@@ -211,6 +238,7 @@ export default function ContactHealth() {
     }
 
     const startTime = Date.now();
+    isRunningRef.current = true;
 
     setProgress({
       status: 'running',
@@ -227,68 +255,18 @@ export default function ContactHealth() {
       rate: 0,
     });
 
-    // Start background validation on server
-    try {
-      const { data, error } = await supabase.functions.invoke('validate-email-batch', {
-        body: { validateAll: true },
-      });
+    toast.success(`Starting validation of ${totalUnvalidated.toLocaleString()} contacts...`);
+    
+    // Start the continuous validation loop
+    runValidationLoop(totalUnvalidated);
+  }, [runValidationLoop]);
 
-      if (error) {
-        console.error('Failed to start background validation:', error);
-        toast.error('Failed to start validation: ' + error.message);
-        setProgress(prev => ({ ...prev, status: 'error' }));
-        return;
-      }
-
-      toast.success(`Background validation started for ${totalUnvalidated.toLocaleString()} contacts. You can safely leave this page.`);
-      
-      // Start polling for progress
-      pollProgress(totalUnvalidated);
-    } catch (err) {
-      console.error('Validation error:', err);
-      toast.error('Failed to start validation');
-      setProgress(prev => ({ ...prev, status: 'error' }));
-    }
-  }, [pollProgress]);
-
-  // Background validation runs on the server, so stop just stops UI polling
-  const stopPolling = useCallback(() => {
-    if (pollingRef.current) {
-      clearTimeout(pollingRef.current);
-      pollingRef.current = null;
-    }
+  const stopValidation = useCallback(() => {
+    isRunningRef.current = false;
     setProgress(prev => ({ ...prev, status: 'idle' }));
-    toast.info('Stopped monitoring. Background validation may still be running on the server.');
+    toast.info('Stopping validation...');
     queryClient.invalidateQueries({ queryKey: ['contact-health-stats'] });
   }, [queryClient]);
-
-  // Check if background validation is still running (for resume after page reload)
-  const checkBackgroundStatus = useCallback(async () => {
-    const { count: remainingCount } = await supabase
-      .from('contacts')
-      .select('id', { count: 'exact', head: true })
-      .is('email_validation_result', null)
-      .not('email', 'is', null);
-
-    const { count: totalCount } = await supabase
-      .from('contacts')
-      .select('id', { count: 'exact', head: true })
-      .not('email', 'is', null);
-
-    // If we have validated some but not all, and user comes back, show current state
-    if (remainingCount && totalCount && remainingCount < totalCount && remainingCount > 0) {
-      const processed = totalCount - remainingCount;
-      setProgress(prev => ({
-        ...prev,
-        processed,
-        total: totalCount,
-        status: 'running',
-        startTime: Date.now(),
-      }));
-      // Resume polling
-      pollProgress(totalCount);
-    }
-  }, [pollProgress]);
 
   const validationPercentage = stats ? Math.round((stats.validated / stats.total) * 100) : 0;
   const healthScore = stats
@@ -359,9 +337,9 @@ export default function ContactHealth() {
           )}
 
           {isRunning && (
-            <Button variant="outline" onClick={stopPolling}>
+            <Button variant="outline" onClick={stopValidation}>
               <Square className="h-4 w-4 mr-2" />
-              Stop Monitoring
+              Stop Validation
             </Button>
           )}
         </div>

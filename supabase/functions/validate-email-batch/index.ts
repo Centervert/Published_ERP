@@ -56,101 +56,105 @@ async function validateEmail(
   }
 }
 
-// Background task to validate all unvalidated contacts
-async function validateAllContacts(
-  supabase: ReturnType<typeof createClient>,
+// Process a single chunk of contacts (returns stats for this chunk)
+async function processChunk(
+  supabase: any,
   mailgunApiKey: string,
-  baseUrl: string,
-  jobId: string
-) {
-  console.log(`[Job ${jobId}] Starting background validation of all contacts`);
-  
-  let totalProcessed = 0;
-  let totalDeliverable = 0;
-  let totalUndeliverable = 0;
-  let totalRisky = 0;
-  let totalUnknown = 0;
-  let totalFailed = 0;
+  baseUrl: string
+): Promise<{
+  processed: number;
+  deliverable: number;
+  undeliverable: number;
+  risky: number;
+  unknown: number;
+  failed: number;
+  remaining: number;
+}> {
+  const results = {
+    processed: 0,
+    deliverable: 0,
+    undeliverable: 0,
+    risky: 0,
+    unknown: 0,
+    failed: 0,
+    remaining: 0,
+  };
 
-  try {
-    while (true) {
-      // Fetch next batch of unvalidated contacts
-      const { data: contacts, error: fetchError } = await supabase
-        .from('contacts')
-        .select('id, email')
-        .is('email_validation_result', null)
-        .not('email', 'is', null)
-        .limit(BATCH_SIZE) as { data: Contact[] | null; error: any };
+  // Fetch batch of unvalidated contacts
+  const { data: contacts, error: fetchError } = await supabase
+    .from('contacts')
+    .select('id, email')
+    .is('email_validation_result', null)
+    .not('email', 'is', null)
+    .limit(BATCH_SIZE) as { data: Contact[] | null; error: any };
 
-      if (fetchError) {
-        console.error(`[Job ${jobId}] Failed to fetch contacts:`, fetchError);
-        break;
-      }
-
-      if (!contacts || contacts.length === 0) {
-        console.log(`[Job ${jobId}] No more unvalidated contacts found`);
-        break;
-      }
-
-      console.log(`[Job ${jobId}] Processing batch of ${contacts.length} contacts`);
-
-      // Process in smaller concurrent batches
-      for (let i = 0; i < contacts.length; i += MAX_CONCURRENT) {
-        const batch = contacts.slice(i, i + MAX_CONCURRENT);
-        
-        const validationPromises = batch.map(async (contact) => {
-          const validation = await validateEmail(contact.email, mailgunApiKey, baseUrl);
-          
-          if (validation) {
-            await (supabase as any)
-              .from('contacts')
-              .update({
-                email_validation_result: validation.result,
-                email_validation_risk: validation.risk,
-                email_validation_reasons: validation.reason,
-                email_is_disposable: validation.is_disposable_address,
-                email_is_role_address: validation.is_role_address,
-                email_did_you_mean: validation.did_you_mean,
-                email_validated_at: new Date().toISOString()
-              })
-              .eq('id', contact.id);
-
-            if (validation.result === 'deliverable') {
-              totalDeliverable++;
-            } else if (validation.result === 'undeliverable' || validation.result === 'do_not_send') {
-              totalUndeliverable++;
-            } else if (validation.risk === 'high' || validation.risk === 'medium') {
-              totalRisky++;
-            } else {
-              totalUnknown++;
-            }
-          } else {
-            totalFailed++;
-          }
-        });
-
-        await Promise.all(validationPromises);
-        
-        if (i + MAX_CONCURRENT < contacts.length) {
-          await sleep(DELAY_BETWEEN_BATCHES_MS);
-        }
-      }
-
-      totalProcessed += contacts.length;
-      console.log(`[Job ${jobId}] Total processed so far: ${totalProcessed}`);
-    }
-
-    console.log(`[Job ${jobId}] Background validation complete:`, {
-      totalProcessed,
-      totalDeliverable,
-      totalUndeliverable,
-      totalRisky,
-      totalUnknown,
-      totalFailed
-    });
-  } catch (error) {
-    console.error(`[Job ${jobId}] Background validation error:`, error);
+  if (fetchError) {
+    console.error('Failed to fetch contacts:', fetchError);
+    throw fetchError;
   }
+
+  if (!contacts || contacts.length === 0) {
+    return results;
+  }
+
+  console.log(`Processing chunk of ${contacts.length} contacts`);
+
+  // Process in smaller concurrent batches
+  for (let i = 0; i < contacts.length; i += MAX_CONCURRENT) {
+    const batch = contacts.slice(i, i + MAX_CONCURRENT);
+    
+    const validationPromises = batch.map(async (contact) => {
+      const validation = await validateEmail(contact.email, mailgunApiKey, baseUrl);
+      
+      if (validation) {
+        await (supabase as any)
+          .from('contacts')
+          .update({
+            email_validation_result: validation.result,
+            email_validation_risk: validation.risk,
+            email_validation_reasons: validation.reason,
+            email_is_disposable: validation.is_disposable_address,
+            email_is_role_address: validation.is_role_address,
+            email_did_you_mean: validation.did_you_mean,
+            email_validated_at: new Date().toISOString()
+          })
+          .eq('id', contact.id);
+
+        results.processed++;
+        if (validation.result === 'deliverable') {
+          results.deliverable++;
+        } else if (validation.result === 'undeliverable' || validation.result === 'do_not_send') {
+          results.undeliverable++;
+        } else if (validation.risk === 'high' || validation.risk === 'medium') {
+          results.risky++;
+        } else {
+          results.unknown++;
+        }
+      } else {
+        results.failed++;
+        results.processed++;
+      }
+    });
+
+    await Promise.all(validationPromises);
+    
+    if (i + MAX_CONCURRENT < contacts.length) {
+      await sleep(DELAY_BETWEEN_BATCHES_MS);
+    }
+  }
+
+  // Check how many remain
+  const { count: remainingCount } = await supabase
+    .from('contacts')
+    .select('id', { count: 'exact', head: true })
+    .is('email_validation_result', null)
+    .not('email', 'is', null);
+
+  results.remaining = remainingCount || 0;
+  
+  console.log(`Chunk complete: processed ${results.processed}, remaining ${results.remaining}`);
+  
+  return results;
 }
 
 Deno.serve(async (req) => {
@@ -181,19 +185,17 @@ Deno.serve(async (req) => {
       );
     }
 
-    const { contactIds, listId, validateAll } = await req.json();
+    const { contactIds, listId, validateAll, processChunk: isChunkMode } = await req.json();
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     const baseUrl = MAILGUN_REGION === 'eu' 
       ? 'https://api.eu.mailgun.net' 
       : 'https://api.mailgun.net';
 
-    // Handle "validate all" mode - runs in background
-    if (validateAll) {
-      const jobId = crypto.randomUUID();
-      
-      // Get count of unvalidated contacts
-      const { count, error: countError } = await supabase
+    // Handle chunk mode - processes one batch and returns
+    if (validateAll || isChunkMode) {
+      // Get count of unvalidated contacts first
+      const { count: totalRemaining, error: countError } = await supabase
         .from('contacts')
         .select('id', { count: 'exact', head: true })
         .is('email_validation_result', null)
@@ -203,25 +205,28 @@ Deno.serve(async (req) => {
         throw countError;
       }
 
-      if (!count || count === 0) {
+      if (!totalRemaining || totalRemaining === 0) {
         return new Response(
-          JSON.stringify({ success: true, message: 'No unvalidated contacts found', jobId }),
+          JSON.stringify({ 
+            success: true, 
+            complete: true,
+            message: 'No unvalidated contacts found',
+            chunkResults: { processed: 0, remaining: 0, deliverable: 0, undeliverable: 0, risky: 0, unknown: 0, failed: 0 }
+          }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
-      console.log(`Starting background validation job ${jobId} for ${count} contacts`);
+      console.log(`Processing chunk, ${totalRemaining} contacts remaining`);
 
-      // Start background task using EdgeRuntime.waitUntil
-      // @ts-ignore - EdgeRuntime is available in Supabase edge functions
-      EdgeRuntime.waitUntil(validateAllContacts(supabase, MAILGUN_API_KEY, baseUrl, jobId));
+      // Process one chunk
+      const chunkResults = await processChunk(supabase, MAILGUN_API_KEY, baseUrl);
 
       return new Response(
         JSON.stringify({
           success: true,
-          message: `Background validation started for ${count} contacts`,
-          jobId,
-          totalToValidate: count
+          complete: chunkResults.remaining === 0,
+          chunkResults
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
