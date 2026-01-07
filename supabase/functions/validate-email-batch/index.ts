@@ -24,36 +24,74 @@ interface Contact {
 const MAX_CONCURRENT = 5;
 const DELAY_BETWEEN_BATCHES_MS = 200;
 const BATCH_SIZE = 100;
+const API_TIMEOUT_MS = 30000; // 30 second timeout for Mailgun API
+const MAX_RETRIES = 3;
+const INITIAL_BACKOFF_MS = 1000;
 
 async function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-async function validateEmail(
+async function validateEmailWithRetry(
   email: string,
   apiKey: string,
-  baseUrl: string
+  baseUrl: string,
+  retries = MAX_RETRIES
 ): Promise<ValidationResult | null> {
-  try {
-    const response = await fetch(
-      `${baseUrl}/v4/address/validate?address=${encodeURIComponent(email)}`,
-      {
-        headers: {
-          'Authorization': 'Basic ' + btoa(`api:${apiKey}`)
+  for (let attempt = 0; attempt < retries; attempt++) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
+      
+      const response = await fetch(
+        `${baseUrl}/v4/address/validate?address=${encodeURIComponent(email)}`,
+        {
+          headers: {
+            'Authorization': 'Basic ' + btoa(`api:${apiKey}`)
+          },
+          signal: controller.signal
         }
+      );
+      
+      clearTimeout(timeoutId);
+
+      // Handle rate limiting with exponential backoff
+      if (response.status === 429) {
+        const backoffMs = INITIAL_BACKOFF_MS * Math.pow(2, attempt);
+        console.warn(`Rate limited for ${email}, backing off ${backoffMs}ms (attempt ${attempt + 1}/${retries})`);
+        await sleep(backoffMs);
+        continue;
       }
-    );
 
-    if (!response.ok) {
-      console.error(`Validation failed for ${email}: ${response.status}`);
-      return null;
+      if (!response.ok) {
+        console.error(`Validation failed for ${email}: ${response.status} ${response.statusText}`);
+        
+        // Server errors are retryable
+        if (response.status >= 500) {
+          const backoffMs = INITIAL_BACKOFF_MS * Math.pow(2, attempt);
+          await sleep(backoffMs);
+          continue;
+        }
+        
+        return null;
+      }
+
+      return await response.json();
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        console.error(`Timeout validating ${email} (attempt ${attempt + 1}/${retries})`);
+      } else {
+        console.error(`Error validating ${email} (attempt ${attempt + 1}/${retries}):`, error);
+      }
+      
+      if (attempt < retries - 1) {
+        const backoffMs = INITIAL_BACKOFF_MS * Math.pow(2, attempt);
+        await sleep(backoffMs);
+      }
     }
-
-    return await response.json();
-  } catch (error) {
-    console.error(`Error validating ${email}:`, error);
-    return null;
   }
+  
+  return null;
 }
 
 // Process a single chunk of contacts (returns stats for this chunk)
@@ -104,10 +142,10 @@ async function processChunk(
     const batch = contacts.slice(i, i + MAX_CONCURRENT);
     
     const validationPromises = batch.map(async (contact) => {
-      const validation = await validateEmail(contact.email, mailgunApiKey, baseUrl);
+      const validation = await validateEmailWithRetry(contact.email, mailgunApiKey, baseUrl);
       
       if (validation) {
-        await (supabase as any)
+        const { error: updateError } = await supabase
           .from('contacts')
           .update({
             email_validation_result: validation.result,
@@ -119,6 +157,13 @@ async function processChunk(
             email_validated_at: new Date().toISOString()
           })
           .eq('id', contact.id);
+
+        if (updateError) {
+          console.error(`Failed to update contact ${contact.id}:`, updateError);
+          results.failed++;
+          results.processed++;
+          return;
+        }
 
         results.processed++;
         if (validation.result === 'deliverable') {
@@ -152,7 +197,7 @@ async function processChunk(
 
   results.remaining = remainingCount || 0;
   
-  console.log(`Chunk complete: processed ${results.processed}, remaining ${results.remaining}`);
+  console.log(`Chunk complete: processed ${results.processed}, deliverable ${results.deliverable}, failed ${results.failed}, remaining ${results.remaining}`);
   
   return results;
 }
@@ -170,7 +215,11 @@ Deno.serve(async (req) => {
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
     if (!MAILGUN_API_KEY) {
-      throw new Error('MAILGUN_API_KEY is not configured');
+      console.error('MAILGUN_API_KEY is not configured');
+      return new Response(
+        JSON.stringify({ error: 'MAILGUN_API_KEY is not configured' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     // Get auth token from request - allow either JWT or worker API key
@@ -185,7 +234,17 @@ Deno.serve(async (req) => {
       );
     }
 
-    const { contactIds, listId, validateAll, processChunk: isChunkMode } = await req.json();
+    let body;
+    try {
+      body = await req.json();
+    } catch {
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON body' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const { contactIds, listId, validateAll, processChunk: isChunkMode } = body;
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     const baseUrl = MAILGUN_REGION === 'eu' 
@@ -202,6 +261,7 @@ Deno.serve(async (req) => {
         .not('email', 'is', null);
 
       if (countError) {
+        console.error('Failed to count unvalidated contacts:', countError);
         throw countError;
       }
 
@@ -274,10 +334,10 @@ Deno.serve(async (req) => {
       const batch = contacts.slice(i, i + MAX_CONCURRENT);
       
       const validationPromises = batch.map(async (contact) => {
-        const validation = await validateEmail(contact.email, MAILGUN_API_KEY, baseUrl);
+        const validation = await validateEmailWithRetry(contact.email, MAILGUN_API_KEY, baseUrl);
         
         if (validation) {
-          await (supabase as any)
+          const { error: updateError } = await supabase
             .from('contacts')
             .update({
               email_validation_result: validation.result,
@@ -289,6 +349,12 @@ Deno.serve(async (req) => {
               email_validated_at: new Date().toISOString()
             })
             .eq('id', contact.id);
+
+          if (updateError) {
+            console.error(`Failed to update contact ${contact.id}:`, updateError);
+            results.failed++;
+            return;
+          }
 
           results.validated++;
           
