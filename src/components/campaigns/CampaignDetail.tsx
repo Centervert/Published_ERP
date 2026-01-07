@@ -4,14 +4,15 @@ import { useLists } from '@/hooks/useContacts';
 import type { EmailBlock } from '@/types/email-blocks';
 import { useImprints } from '@/hooks/useImprints';
 import { useCompany } from '@/hooks/useCompany';
-import { useRecipientCounts } from '@/hooks/useRecipientCounts';
+import { useRecipientHealthCounts, EmailQualityFilter, getSendableCount } from '@/hooks/useRecipientHealthCounts';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { RecipientSelector } from './RecipientSelector';
+import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import {
   Dialog,
@@ -88,7 +89,7 @@ export function CampaignDetail({ campaign, onBack, onCancelScheduled }: Campaign
   const { lists } = useLists();
   const { imprints } = useImprints();
   const { company } = useCompany();
-  const { imprintCounts, listCounts, totalCount } = useRecipientCounts();
+  const { data: healthCounts } = useRecipientHealthCounts();
   const { sendCampaign, updateCampaign, scheduleCampaign } = useCampaigns();
   
   // Collapsible section states
@@ -139,6 +140,8 @@ export function CampaignDetail({ campaign, onBack, onCancelScheduled }: Campaign
   const [additionalRecipients, setAdditionalRecipients] = useState<string[]>([]);
   const [newRecipientEmail, setNewRecipientEmail] = useState('');
   const [showAdditionalRecipients, setShowAdditionalRecipients] = useState(false);
+  // Email quality filter state
+  const [emailQualityFilter, setEmailQualityFilter] = useState<EmailQualityFilter>('validated_only');
   // Handle imprint/sender selection
   const handleImprintChange = (value: string) => {
     setSelectedImprintId(value);
@@ -1076,7 +1079,31 @@ export function CampaignDetail({ campaign, onBack, onCancelScheduled }: Campaign
                       <div>
                         <h3 className="font-semibold text-base">To</h3>
                         <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1">
-                          {selectedListIds.length === 0 ? 'All contacts' : `${selectedListIds.length} list(s) selected`}
+                          {selectedListIds.length === 0 && selectedImprintIds.length === 0 
+                            ? 'All contacts' 
+                            : selectedListIds.length > 0 
+                              ? `${selectedListIds.length} list(s) selected`
+                              : `${selectedImprintIds.length} imprint(s) selected`}
+                          {healthCounts && (
+                            <span className="text-green-600 font-medium ml-1">
+                              ({getSendableCount(
+                                selectedListIds.length === 0 && selectedImprintIds.length === 0
+                                  ? healthCounts.total
+                                  : selectedListIds.length > 0
+                                    ? selectedListIds.reduce((acc, id) => ({
+                                        sendable: acc.sendable + (healthCounts.byList[id]?.sendable || 0),
+                                        notValidated: acc.notValidated + (healthCounts.byList[id]?.notValidated || 0),
+                                        excluded: acc.excluded + (healthCounts.byList[id]?.excluded || 0),
+                                      }), { sendable: 0, notValidated: 0, excluded: 0 })
+                                    : selectedImprintIds.reduce((acc, id) => ({
+                                        sendable: acc.sendable + (healthCounts.byImprint[id]?.sendable || 0),
+                                        notValidated: acc.notValidated + (healthCounts.byImprint[id]?.notValidated || 0),
+                                        excluded: acc.excluded + (healthCounts.byImprint[id]?.excluded || 0),
+                                      }), { sendable: 0, notValidated: 0, excluded: 0 }),
+                                emailQualityFilter
+                              ).toLocaleString()} sendable)
+                            </span>
+                          )}
                           <ExternalLink className="h-3 w-3" />
                         </p>
                       </div>
@@ -1089,78 +1116,17 @@ export function CampaignDetail({ campaign, onBack, onCancelScheduled }: Campaign
                 </CollapsibleTrigger>
                 <CollapsibleContent>
                   <div className="px-5 pb-5 pt-0 border-t">
-                    <div className="space-y-4 py-4">
-                      {/* All Contacts */}
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="all-contacts"
-                          checked={selectedListIds.length === 0 && selectedImprintIds.length === 0}
-                          onCheckedChange={(checked) => {
-                            if (checked) {
-                              setSelectedListIds([]);
-                              setSelectedImprintIds([]);
-                            }
-                          }}
-                        />
-                        <label htmlFor="all-contacts" className="text-sm font-medium">
-                          All Contacts
-                          <span className="ml-2 text-muted-foreground">({totalCount.toLocaleString()})</span>
-                        </label>
-                      </div>
-
-                      {/* By Imprint */}
-                      {imprints.length > 0 && (
-                        <div className="space-y-2">
-                          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">By Imprint</p>
-                          {imprints.map((imprint) => (
-                            <div key={imprint.id} className="flex items-center space-x-2">
-                              <Checkbox
-                                id={`imprint-${imprint.id}`}
-                                checked={selectedImprintIds.includes(imprint.id)}
-                                onCheckedChange={(checked) => {
-                                  if (checked) {
-                                    setSelectedImprintIds([...selectedImprintIds, imprint.id]);
-                                  } else {
-                                    setSelectedImprintIds(selectedImprintIds.filter(id => id !== imprint.id));
-                                  }
-                                }}
-                              />
-                              <label htmlFor={`imprint-${imprint.id}`} className="text-sm">
-                                {imprint.name}
-                                <span className="ml-2 text-muted-foreground">({(imprintCounts[imprint.id] || 0).toLocaleString()})</span>
-                              </label>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                      {/* By List */}
-                      {lists.length > 0 && (
-                        <div className="space-y-2">
-                          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">By List</p>
-                          {lists.map((list) => (
-                            <div key={list.id} className="flex items-center space-x-2">
-                              <Checkbox
-                                id={`list-${list.id}`}
-                                checked={selectedListIds.includes(list.id)}
-                                onCheckedChange={(checked) => {
-                                  if (checked) {
-                                    setSelectedListIds([...selectedListIds, list.id]);
-                                  } else {
-                                    setSelectedListIds(selectedListIds.filter(id => id !== list.id));
-                                  }
-                                }}
-                              />
-                              <label htmlFor={`list-${list.id}`} className="text-sm">
-                                {list.name}
-                                <span className="ml-2 text-muted-foreground">({(listCounts[list.id] || 0).toLocaleString()})</span>
-                              </label>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                    <Button size="sm" onClick={() => { setRecipientsConfirmed(true); setToOpen(false); }}>Confirm Recipients</Button>
+                    <RecipientSelector
+                      lists={lists}
+                      imprints={imprints}
+                      selectedListIds={selectedListIds}
+                      selectedImprintIds={selectedImprintIds}
+                      qualityFilter={emailQualityFilter}
+                      onListChange={setSelectedListIds}
+                      onImprintChange={setSelectedImprintIds}
+                      onQualityFilterChange={setEmailQualityFilter}
+                      onConfirm={() => { setRecipientsConfirmed(true); setToOpen(false); }}
+                    />
                   </div>
                 </CollapsibleContent>
               </Card>
