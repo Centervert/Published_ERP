@@ -69,7 +69,7 @@ export function ContactsTable({ filterByUser }: ContactsTableProps) {
   }, [search]);
 
   // Use server-side pagination
-  const { contacts, totalCount, totalPages, isLoading, isFetching } = usePaginatedContacts({
+  const { contacts, totalCount, totalPages, countIsEstimated, isLoading, isFetching } = usePaginatedContacts({
     page: currentPage,
     pageSize: ITEMS_PER_PAGE,
     search: debouncedSearch,
@@ -247,9 +247,15 @@ export function ContactsTable({ filterByUser }: ContactsTableProps) {
               <span>Searching...</span>
             </>
           ) : debouncedSearch ? (
-            <span>{formatNumber(totalCount)} results</span>
+            <span>
+              {countIsEstimated ? '~' : ''}
+              {formatNumber(totalCount)} results
+            </span>
           ) : (
-            <span>{formatNumber(totalCount)} total contacts</span>
+            <span>
+              {countIsEstimated ? '~' : ''}
+              {formatNumber(totalCount)} total contacts
+            </span>
           )}
         </div>
       </div>

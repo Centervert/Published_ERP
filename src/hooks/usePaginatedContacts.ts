@@ -52,8 +52,9 @@ export function usePaginatedContacts({
     queryKey: ['contacts-paginated', page, pageSize, search, statusFilter, typeFilter, sourceFilter, validationFilter, filterByUser],
     queryFn: async () => {
       const normalizedSearch = (search ?? '').trim();
+
       // Counts on very large tables can be expensive.
-      // We still need *accurate* totals for filtered views (especially email validation work).
+      // We only request an *exact* count when filters/search are applied.
       const shouldUseExactCount =
         Boolean(normalizedSearch) ||
         statusFilter !== 'all' ||
@@ -62,47 +63,20 @@ export function usePaginatedContacts({
         validationFilter !== 'all' ||
         Boolean(filterByUser);
 
-      const countMode: 'exact' | 'planned' = shouldUseExactCount ? 'exact' : 'planned';
-
-      const buildQuery = (mode: 'exact' | 'planned') => {
-        let q = supabase
-          .from('contacts')
-          .select(
-            `
-            id,
-            email,
-            first_name,
-            last_name,
-            phone,
-            contact_type,
-            status,
-            assigned_asc,
-            assigned_ae,
-            assigned_asc_text,
-            assigned_ae_text,
-            staff_asc_id,
-            staff_ae_id,
-            lead_source,
-            lead_source_detail,
-            created_at,
-            imprint:imprints(id, name)
-          `,
-            { count: mode }
-          );
-
+      const applyFilters = (q: any) => {
         // Apply filters using optimized trigram-indexed columns
         if (normalizedSearch) {
           if (normalizedSearch.includes('@')) {
-            // Email lookup: prefix match (fast with trigram index)
+            // Email lookup
             q = q.ilike('email', `${normalizedSearch}%`);
           } else if (/\d/.test(normalizedSearch)) {
-            // Phone search: contains digits, search normalized phone column
+            // Phone search
             const digits = normalizedSearch.replace(/\D/g, '');
             if (digits.length > 0) {
               q = q.ilike('phone_normalized', `%${digits}%`);
             }
           } else {
-            // Name search: use combined search_name column (eliminates OR conditions)
+            // Name search
             q = q.ilike('search_name', `%${normalizedSearch.toLowerCase()}%`);
           }
         }
@@ -143,29 +117,94 @@ export function usePaginatedContacts({
       const from = (page - 1) * pageSize;
       const to = from + pageSize - 1;
 
-      const run = async (mode: 'exact' | 'planned') => {
-        const { data, error, count } = await buildQuery(mode)
-          .order('created_at', { ascending: false })
-          .range(from, to);
+      // Data query (no count here; counts are requested separately to avoid timeouts)
+      const dataQuery = applyFilters(
+        supabase
+          .from('contacts')
+          .select(
+            `
+            id,
+            email,
+            first_name,
+            last_name,
+            phone,
+            contact_type,
+            status,
+            assigned_asc,
+            assigned_ae,
+            assigned_asc_text,
+            assigned_ae_text,
+            staff_asc_id,
+            staff_ae_id,
+            lead_source,
+            lead_source_detail,
+            created_at,
+            imprint:imprints(id, name)
+          `
+          )
+      )
+        .order('created_at', { ascending: false })
+        .range(from, to);
 
-        if (error) throw error;
+      let totalCount = 0;
+      let countIsEstimated = false;
+
+      if (shouldUseExactCount) {
+        // Exact count-only query (HEAD + id only keeps it fast)
+        const exactCountQuery = applyFilters(
+          supabase.from('contacts').select('id', { count: 'exact', head: true })
+        );
+
+        const [{ data, error: dataError }, { count, error: countError }] = await Promise.all([
+          dataQuery,
+          exactCountQuery,
+        ]);
+
+        if (dataError) throw dataError;
+
+        if (!countError) {
+          totalCount = count || 0;
+        } else {
+          // Fall back to an estimated count (never show it as an exact number)
+          const { count: plannedCount, error: plannedError } = await applyFilters(
+            supabase.from('contacts').select('id', { count: 'planned', head: true })
+          );
+
+          if (plannedError) throw plannedError;
+          totalCount = plannedCount || 0;
+          countIsEstimated = true;
+        }
 
         return {
-          contacts: data as PaginatedContact[],
-          totalCount: count || 0,
-          totalPages: Math.ceil((count || 0) / pageSize),
+          contacts: (data ?? []) as PaginatedContact[],
+          totalCount,
+          totalPages: Math.max(1, Math.ceil(totalCount / pageSize)),
+          countIsEstimated,
         };
-      };
-
-      try {
-        return await run(countMode);
-      } catch (err) {
-        // If exact count is too slow/timeouts, fall back to planned count so the UI doesn't show 0.
-        if (countMode === 'exact') {
-          return await run('planned');
-        }
-        throw err;
       }
+
+      // Unfiltered view: use planned count for performance
+      const plannedCountQuery = applyFilters(
+        supabase.from('contacts').select('id', { count: 'planned', head: true })
+      );
+
+      const [{ data, error: dataError }, { count, error: countError }] = await Promise.all([
+        dataQuery,
+        plannedCountQuery,
+      ]);
+
+      if (dataError) throw dataError;
+      if (countError) throw countError;
+
+      totalCount = count || 0;
+      countIsEstimated = true;
+
+      return {
+        contacts: (data ?? []) as PaginatedContact[],
+        totalCount,
+        totalPages: Math.max(1, Math.ceil(totalCount / pageSize)),
+        countIsEstimated,
+      };
     },
     placeholderData: (previousData) => previousData,
   });
@@ -174,6 +213,7 @@ export function usePaginatedContacts({
     contacts: contactsQuery.data?.contacts || [],
     totalCount: contactsQuery.data?.totalCount || 0,
     totalPages: contactsQuery.data?.totalPages || 1,
+    countIsEstimated: contactsQuery.data?.countIsEstimated || false,
     isLoading: contactsQuery.isLoading,
     isFetching: contactsQuery.isFetching,
   };
