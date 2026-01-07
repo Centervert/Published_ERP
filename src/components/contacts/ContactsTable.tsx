@@ -246,16 +246,12 @@ export function ContactsTable({ filterByUser }: ContactsTableProps) {
               <Spinner size="sm" />
               <span>Searching...</span>
             </>
+          ) : countIsEstimated ? (
+            <span className="text-muted-foreground/70">Count unavailable</span>
           ) : debouncedSearch ? (
-            <span>
-              {countIsEstimated ? '~' : ''}
-              {formatNumber(totalCount)} results
-            </span>
+            <span>{formatNumber(totalCount)} results</span>
           ) : (
-            <span>
-              {countIsEstimated ? '~' : ''}
-              {formatNumber(totalCount)} total contacts
-            </span>
+            <span>{formatNumber(totalCount)} total contacts</span>
           )}
         </div>
       </div>
