@@ -35,6 +35,14 @@ export interface Contact {
   lead_source_detail: string | null;
   created_at: string;
   updated_at: string;
+  // Email validation fields
+  email_validation_result: string | null;
+  email_validation_risk: string | null;
+  email_validation_reasons: string[] | null;
+  email_is_disposable: boolean | null;
+  email_is_role_address: boolean | null;
+  email_did_you_mean: string | null;
+  email_validated_at: string | null;
   imprint?: {
     id: string;
     name: string;
