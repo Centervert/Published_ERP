@@ -4,6 +4,7 @@ import { usePaginatedContacts } from '@/hooks/usePaginatedContacts';
 import { useDeleteContact, LeadSource } from '@/hooks/useContacts';
 import { LeadSourceBadge, LEAD_SOURCE_OPTIONS } from './LeadSourceBadge';
 import { useActiveStaff } from '@/hooks/useStaff';
+import { BulkValidationDialog } from './BulkValidationDialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -34,7 +35,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { MoreHorizontal, Search, Trash2, Loader2, ChevronLeft, ChevronRight, Info, ChevronsLeft, ChevronsRight } from 'lucide-react';
+import { MoreHorizontal, Search, Trash2, Loader2, ChevronLeft, ChevronRight, Info, ChevronsLeft, ChevronsRight, ShieldCheck } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface ContactsTableProps {
@@ -51,8 +52,10 @@ export function ContactsTable({ filterByUser }: ContactsTableProps) {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [sourceFilter, setSourceFilter] = useState<string>('all');
+  const [validationFilter, setValidationFilter] = useState<string>('all');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
+  const [bulkValidationOpen, setBulkValidationOpen] = useState(false);
 
   // Debounce search input (150ms for snappy response with trigram indexes)
   useEffect(() => {
@@ -72,6 +75,7 @@ export function ContactsTable({ filterByUser }: ContactsTableProps) {
     statusFilter,
     typeFilter,
     sourceFilter,
+    validationFilter,
     filterByUser,
   });
 
@@ -207,6 +211,32 @@ export function ContactsTable({ filterByUser }: ContactsTableProps) {
             ))}
           </SelectContent>
         </Select>
+        <Select value={validationFilter} onValueChange={(v) => { setValidationFilter(v); setCurrentPage(1); }}>
+          <SelectTrigger className="w-[150px] h-9">
+            <SelectValue placeholder="Email Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Emails</SelectItem>
+            <SelectItem value="unvalidated">Unvalidated</SelectItem>
+            <SelectItem value="validated">Validated</SelectItem>
+            <SelectItem value="deliverable">Deliverable</SelectItem>
+            <SelectItem value="undeliverable">Undeliverable</SelectItem>
+            <SelectItem value="risky">Risky</SelectItem>
+          </SelectContent>
+        </Select>
+        
+        {/* Bulk validation button */}
+        {selectedIds.size > 0 && (
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => setBulkValidationOpen(true)}
+            className="h-9"
+          >
+            <ShieldCheck className="mr-2 h-4 w-4" />
+            Validate {selectedIds.size} selected
+          </Button>
+        )}
         
         {/* Total count display */}
         <div className="ml-auto text-sm text-muted-foreground">
@@ -435,6 +465,12 @@ export function ContactsTable({ filterByUser }: ContactsTableProps) {
           </div>
         </>
       )}
+
+      <BulkValidationDialog
+        open={bulkValidationOpen}
+        onOpenChange={setBulkValidationOpen}
+        contactIds={Array.from(selectedIds)}
+      />
     </div>
   );
 }
