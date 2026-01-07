@@ -52,95 +52,120 @@ export function usePaginatedContacts({
     queryKey: ['contacts-paginated', page, pageSize, search, statusFilter, typeFilter, sourceFilter, validationFilter, filterByUser],
     queryFn: async () => {
       const normalizedSearch = (search ?? '').trim();
-      // Use 'exact' count when filters are applied to get accurate counts
-      // Use 'planned' for unfiltered views to maintain performance on large tables
-      const hasFilters = normalizedSearch || statusFilter !== 'all' || typeFilter !== 'all' || 
-                         sourceFilter !== 'all' || validationFilter !== 'all' || filterByUser;
-      const countMode: 'exact' | 'planned' = hasFilters ? 'exact' : 'planned';
+      // Counts on very large tables can be expensive.
+      // We still need *accurate* totals for filtered views (especially email validation work).
+      const shouldUseExactCount =
+        Boolean(normalizedSearch) ||
+        statusFilter !== 'all' ||
+        typeFilter !== 'all' ||
+        sourceFilter !== 'all' ||
+        validationFilter !== 'all' ||
+        Boolean(filterByUser);
 
-      let query = supabase
-        .from('contacts')
-        .select(`
-          id,
-          email,
-          first_name,
-          last_name,
-          phone,
-          contact_type,
-          status,
-          assigned_asc,
-          assigned_ae,
-          assigned_asc_text,
-          assigned_ae_text,
-          staff_asc_id,
-          staff_ae_id,
-          lead_source,
-          lead_source_detail,
-          created_at,
-          imprint:imprints(id, name)
-        `, { count: countMode });
+      const countMode: 'exact' | 'planned' = shouldUseExactCount ? 'exact' : 'planned';
 
-      // Apply filters using optimized trigram-indexed columns
-      if (normalizedSearch) {
-        if (normalizedSearch.includes('@')) {
-          // Email lookup: prefix match (fast with trigram index)
-          query = query.ilike('email', `${normalizedSearch}%`);
-        } else if (/\d/.test(normalizedSearch)) {
-          // Phone search: contains digits, search normalized phone column
-          const digits = normalizedSearch.replace(/\D/g, '');
-          if (digits.length > 0) {
-            query = query.ilike('phone_normalized', `%${digits}%`);
+      const buildQuery = (mode: 'exact' | 'planned') => {
+        let q = supabase
+          .from('contacts')
+          .select(
+            `
+            id,
+            email,
+            first_name,
+            last_name,
+            phone,
+            contact_type,
+            status,
+            assigned_asc,
+            assigned_ae,
+            assigned_asc_text,
+            assigned_ae_text,
+            staff_asc_id,
+            staff_ae_id,
+            lead_source,
+            lead_source_detail,
+            created_at,
+            imprint:imprints(id, name)
+          `,
+            { count: mode }
+          );
+
+        // Apply filters using optimized trigram-indexed columns
+        if (normalizedSearch) {
+          if (normalizedSearch.includes('@')) {
+            // Email lookup: prefix match (fast with trigram index)
+            q = q.ilike('email', `${normalizedSearch}%`);
+          } else if (/\d/.test(normalizedSearch)) {
+            // Phone search: contains digits, search normalized phone column
+            const digits = normalizedSearch.replace(/\D/g, '');
+            if (digits.length > 0) {
+              q = q.ilike('phone_normalized', `%${digits}%`);
+            }
+          } else {
+            // Name search: use combined search_name column (eliminates OR conditions)
+            q = q.ilike('search_name', `%${normalizedSearch.toLowerCase()}%`);
           }
-        } else {
-          // Name search: use combined search_name column (eliminates OR conditions)
-          query = query.ilike('search_name', `%${normalizedSearch.toLowerCase()}%`);
         }
-      }
 
-      if (statusFilter !== 'all') {
-        query = query.eq('status', statusFilter);
-      }
+        if (statusFilter !== 'all') {
+          q = q.eq('status', statusFilter);
+        }
 
-      if (typeFilter !== 'all') {
-        query = query.eq('contact_type', typeFilter);
-      }
+        if (typeFilter !== 'all') {
+          q = q.eq('contact_type', typeFilter);
+        }
 
-      if (sourceFilter !== 'all') {
-        query = query.eq('lead_source', sourceFilter as LeadSource);
-      }
+        if (sourceFilter !== 'all') {
+          q = q.eq('lead_source', sourceFilter as LeadSource);
+        }
 
-      // Validation status filter
-      if (validationFilter === 'validated') {
-        query = query.not('email_validation_result', 'is', null);
-      } else if (validationFilter === 'unvalidated') {
-        query = query.is('email_validation_result', null);
-      } else if (validationFilter === 'deliverable') {
-        query = query.eq('email_validation_result', 'deliverable');
-      } else if (validationFilter === 'undeliverable') {
-        query = query.or('email_validation_result.eq.undeliverable,email_validation_result.eq.do_not_send');
-      } else if (validationFilter === 'risky') {
-        query = query.or('email_validation_risk.eq.high,email_validation_risk.eq.medium');
-      }
+        // Validation status filter
+        if (validationFilter === 'validated') {
+          q = q.not('email_validation_result', 'is', null);
+        } else if (validationFilter === 'unvalidated') {
+          q = q.is('email_validation_result', null);
+        } else if (validationFilter === 'deliverable') {
+          q = q.eq('email_validation_result', 'deliverable');
+        } else if (validationFilter === 'undeliverable') {
+          q = q.or('email_validation_result.eq.undeliverable,email_validation_result.eq.do_not_send');
+        } else if (validationFilter === 'risky') {
+          q = q.or('email_validation_risk.eq.high,email_validation_risk.eq.medium');
+        }
 
-      if (filterByUser) {
-        query = query.or(`assigned_asc.eq.${filterByUser},assigned_ae.eq.${filterByUser}`);
-      }
+        if (filterByUser) {
+          q = q.or(`assigned_asc.eq.${filterByUser},assigned_ae.eq.${filterByUser}`);
+        }
+
+        return q;
+      };
 
       // Order and paginate
       const from = (page - 1) * pageSize;
       const to = from + pageSize - 1;
 
-      const { data, error, count } = await query
-        .order('created_at', { ascending: false })
-        .range(from, to);
+      const run = async (mode: 'exact' | 'planned') => {
+        const { data, error, count } = await buildQuery(mode)
+          .order('created_at', { ascending: false })
+          .range(from, to);
 
-      if (error) throw error;
+        if (error) throw error;
 
-      return {
-        contacts: data as PaginatedContact[],
-        totalCount: count || 0,
-        totalPages: Math.ceil((count || 0) / pageSize),
+        return {
+          contacts: data as PaginatedContact[],
+          totalCount: count || 0,
+          totalPages: Math.ceil((count || 0) / pageSize),
+        };
       };
+
+      try {
+        return await run(countMode);
+      } catch (err) {
+        // If exact count is too slow/timeouts, fall back to planned count so the UI doesn't show 0.
+        if (countMode === 'exact') {
+          return await run('planned');
+        }
+        throw err;
+      }
     },
     placeholderData: (previousData) => previousData,
   });
