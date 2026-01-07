@@ -283,26 +283,31 @@ export default function ContactHealth() {
 
   const resumeValidation = useCallback(async () => {
     isPausedRef.current = false;
-    setProgress(prev => ({ ...prev, status: 'running' }));
     
-    // Continue from where we left off
-    const { data: unvalidatedContacts } = await supabase
+    // Get count of remaining unvalidated contacts
+    const { count: remainingCount, error } = await supabase
       .from('contacts')
-      .select('id')
+      .select('id', { count: 'exact', head: true })
       .is('email_validation_result', null)
       .not('email', 'is', null);
 
-    if (!unvalidatedContacts || unvalidatedContacts.length === 0) {
+    if (error) {
+      toast.error('Failed to check remaining contacts: ' + error.message);
+      return;
+    }
+
+    if (!remainingCount || remainingCount === 0) {
       setProgress(prev => ({ ...prev, status: 'completed' }));
       toast.success('All contacts have been validated!');
       return;
     }
 
-    // Update total to remaining
+    // Update total to include already processed + remaining
     setProgress(prev => ({
       ...prev,
-      total: prev.processed + unvalidatedContacts.length,
-      startTime: Date.now() - ((prev.processed / prev.rate) * 1000 || 0),
+      status: 'running',
+      total: prev.processed + remainingCount,
+      startTime: Date.now() - ((prev.processed / Math.max(prev.rate, 0.1)) * 1000),
     }));
 
     startValidation();
