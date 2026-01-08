@@ -3,20 +3,10 @@ import { useLocation } from 'react-router-dom';
 import { useCampaigns, Campaign } from '@/hooks/useCampaigns';
 import { useLists } from '@/hooks/useContacts';
 import { useImprints } from '@/hooks/useImprints';
-import { useRecipientCounts } from '@/hooks/useRecipientCounts';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,13 +17,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Calendar } from '@/components/ui/calendar';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
 import { 
   Plus, 
   Send, 
@@ -44,7 +27,6 @@ import {
   ChevronDown,
   BarChart3,
   Clock,
-  CalendarIcon,
   XCircle
 } from 'lucide-react';
 import {
@@ -58,8 +40,6 @@ import { format } from 'date-fns';
 import { CampaignDetail } from '@/components/campaigns/CampaignDetail';
 import { CampaignAnalytics } from '@/components/campaigns/CampaignAnalytics';
 
-import { cn } from '@/lib/utils';
-
 const statusColors: Record<string, string> = {
   draft: 'bg-muted text-muted-foreground',
   scheduled: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
@@ -70,16 +50,11 @@ const statusColors: Record<string, string> = {
 
 export default function Campaigns() {
   const location = useLocation();
-  const { campaigns, isLoading, createCampaign, deleteCampaign, sendCampaign, scheduleCampaign, cancelScheduledCampaign } = useCampaigns();
+  const { campaigns, isLoading, createCampaign, deleteCampaign, cancelScheduledCampaign } = useCampaigns();
   const { lists } = useLists();
   const { imprints } = useImprints();
-  const { imprintCounts, listCounts, totalCount } = useRecipientCounts();
-  const [sendDialogOpen, setSendDialogOpen] = useState(false);
-  const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
   const [viewingCampaign, setViewingCampaign] = useState<Campaign | null>(null);
   const [viewingAnalytics, setViewingAnalytics] = useState(false);
-  const [selectedListIds, setSelectedListIds] = useState<string[]>([]);
-  const [selectedImprintIds, setSelectedImprintIds] = useState<string[]>([]);
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'name'>('newest');
@@ -96,11 +71,6 @@ export default function Campaigns() {
   // Delete confirmation state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [campaignToDelete, setCampaignToDelete] = useState<Campaign | null>(null);
-  
-  // Scheduling state
-  const [sendMode, setSendMode] = useState<'now' | 'schedule'>('now');
-  const [scheduleDate, setScheduleDate] = useState<Date | undefined>(undefined);
-  const [scheduleTime, setScheduleTime] = useState('09:00');
 
   const handleCancelScheduled = async (campaign: Campaign) => {
     if (confirm(`Cancel scheduled campaign "${campaign.name}"? It will be returned to draft status.`)) {
@@ -122,38 +92,6 @@ export default function Campaigns() {
     }
   };
 
-  const handleSend = async () => {
-    if (!selectedCampaign) return;
-    
-    if (sendMode === 'schedule' && scheduleDate) {
-      // Combine date and time
-      const [hours, minutes] = scheduleTime.split(':').map(Number);
-      const scheduledAt = new Date(scheduleDate);
-      scheduledAt.setHours(hours, minutes, 0, 0);
-      
-      await scheduleCampaign.mutateAsync({
-        campaignId: selectedCampaign.id,
-        listIds: selectedListIds,
-        imprintIds: selectedImprintIds.length > 0 ? selectedImprintIds : undefined,
-        scheduledAt,
-      });
-    } else {
-      await sendCampaign.mutateAsync({
-        campaignId: selectedCampaign.id,
-        listIds: selectedListIds,
-        imprintIds: selectedImprintIds.length > 0 ? selectedImprintIds : undefined,
-      });
-    }
-    
-    setSendDialogOpen(false);
-    setSelectedCampaign(null);
-    setSelectedListIds([]);
-    setSelectedImprintIds([]);
-    setSendMode('now');
-    setScheduleDate(undefined);
-    setScheduleTime('09:00');
-  };
-
   const handleDelete = async (campaign: Campaign) => {
     setCampaignToDelete(campaign);
     setDeleteDialogOpen(true);
@@ -166,14 +104,9 @@ export default function Campaigns() {
     setCampaignToDelete(null);
   };
 
-  const openSendDialog = (campaign: Campaign) => {
-    setSelectedCampaign(campaign);
-    setSelectedListIds([]);
-    setSelectedImprintIds([]);
-    setSendMode('now');
-    setScheduleDate(undefined);
-    setScheduleTime('09:00');
-    setSendDialogOpen(true);
+  // Open campaign detail to send (use CampaignDetail flow instead of duplicate dialog)
+  const openCampaignForSending = (campaign: Campaign) => {
+    setViewingCampaign(campaign);
   };
 
   const filteredCampaigns = campaigns
@@ -415,7 +348,7 @@ export default function Campaigns() {
                         View Details
                       </DropdownMenuItem>
                       {campaign.status === 'draft' && (
-                        <DropdownMenuItem onClick={() => openSendDialog(campaign)}>
+                        <DropdownMenuItem onClick={() => openCampaignForSending(campaign)}>
                           <Send className="mr-2 h-4 w-4" />
                           Send Campaign
                         </DropdownMenuItem>
@@ -452,203 +385,6 @@ export default function Campaigns() {
           </CardContent>
         </Card>
       )}
-
-      {/* Send Campaign Dialog */}
-      <Dialog open={sendDialogOpen} onOpenChange={setSendDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Send Campaign</DialogTitle>
-            <DialogDescription>
-              Select which lists to send "{selectedCampaign?.name}" to.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Select Recipients</Label>
-              <div className="space-y-3 max-h-[250px] overflow-y-auto">
-                <div className="flex items-center space-x-2 pb-2 border-b">
-                  <Checkbox
-                    id="all-contacts"
-                    checked={selectedListIds.length === 0 && selectedImprintIds.length === 0}
-                    onCheckedChange={(checked) => {
-                      if (checked) {
-                        setSelectedListIds([]);
-                        setSelectedImprintIds([]);
-                      }
-                    }}
-                  />
-                  <label
-                    htmlFor="all-contacts"
-                    className="text-sm font-medium leading-none"
-                  >
-                    All Contacts
-                    <span className="ml-2 text-muted-foreground">({totalCount.toLocaleString()})</span>
-                  </label>
-                </div>
-
-                {/* By Imprint */}
-                {imprints.length > 0 && (
-                  <div className="space-y-2 pt-2">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">By Imprint</p>
-                    {imprints.map((imprint) => (
-                      <div key={imprint.id} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={`send-imprint-${imprint.id}`}
-                          checked={selectedImprintIds.includes(imprint.id)}
-                          onCheckedChange={(checked) => {
-                            if (checked) {
-                              setSelectedImprintIds([...selectedImprintIds, imprint.id]);
-                            } else {
-                              setSelectedImprintIds(selectedImprintIds.filter(id => id !== imprint.id));
-                            }
-                          }}
-                        />
-                        <label
-                          htmlFor={`send-imprint-${imprint.id}`}
-                          className="text-sm font-medium leading-none"
-                        >
-                          {imprint.name}
-                          <span className="ml-2 text-muted-foreground">({(imprintCounts[imprint.id] || 0).toLocaleString()})</span>
-                        </label>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* By List */}
-                {lists.length > 0 && (
-                  <div className="space-y-2 pt-2">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">By List</p>
-                    {lists.map((list) => (
-                      <div key={list.id} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={list.id}
-                          checked={selectedListIds.includes(list.id)}
-                          onCheckedChange={(checked) => {
-                            if (checked) {
-                              setSelectedListIds([...selectedListIds, list.id]);
-                            } else {
-                              setSelectedListIds(selectedListIds.filter(id => id !== list.id));
-                            }
-                          }}
-                        />
-                        <label
-                          htmlFor={list.id}
-                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                        >
-                          {list.name}
-                          <span className="ml-2 text-muted-foreground">({(listCounts[list.id] || 0).toLocaleString()})</span>
-                        </label>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {selectedListIds.length === 0 && selectedImprintIds.length === 0
-                ? 'Sending to all active contacts'
-                : `Sending to ${selectedImprintIds.length > 0 ? `${selectedImprintIds.length} imprint(s)` : ''}${selectedImprintIds.length > 0 && selectedListIds.length > 0 ? ' and ' : ''}${selectedListIds.length > 0 ? `${selectedListIds.length} list(s)` : ''}`}
-            </p>
-
-            {/* Send Mode Selection */}
-            <div className="space-y-3 pt-2 border-t">
-              <Label>When to send</Label>
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  variant={sendMode === 'now' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setSendMode('now')}
-                  className="flex-1"
-                >
-                  <Send className="mr-2 h-4 w-4" />
-                  Send Now
-                </Button>
-                <Button
-                  type="button"
-                  variant={sendMode === 'schedule' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setSendMode('schedule')}
-                  className="flex-1"
-                >
-                  <Clock className="mr-2 h-4 w-4" />
-                  Schedule
-                </Button>
-              </div>
-
-              {sendMode === 'schedule' && (
-                <div className="space-y-3 pt-2">
-                  <div className="flex gap-3">
-                    <div className="flex-1">
-                      <Label className="text-xs">Date</Label>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            className={cn(
-                              "w-full justify-start text-left font-normal mt-1",
-                              !scheduleDate && "text-muted-foreground"
-                            )}
-                          >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {scheduleDate ? format(scheduleDate, "PPP") : "Pick a date"}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={scheduleDate}
-                            onSelect={setScheduleDate}
-                            disabled={(date) => date < new Date()}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-                    <div className="w-32">
-                      <Label className="text-xs">Time</Label>
-                      <Input
-                        type="time"
-                        value={scheduleTime}
-                        onChange={(e) => setScheduleTime(e.target.value)}
-                        className="mt-1"
-                      />
-                    </div>
-                  </div>
-                  {scheduleDate && (
-                    <p className="text-xs text-muted-foreground">
-                      Campaign will be sent on {format(scheduleDate, 'MMMM d, yyyy')} at {scheduleTime}
-                    </p>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setSendDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button 
-              onClick={handleSend} 
-              disabled={sendCampaign.isPending || scheduleCampaign.isPending || (sendMode === 'schedule' && !scheduleDate)}
-            >
-              {(sendCampaign.isPending || scheduleCampaign.isPending) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {sendMode === 'schedule' ? (
-                <>
-                  <Clock className="mr-2 h-4 w-4" />
-                  Schedule Campaign
-                </>
-              ) : (
-                <>
-                  <Send className="mr-2 h-4 w-4" />
-                  Send Now
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
