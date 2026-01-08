@@ -483,7 +483,7 @@ export function CampaignDetail({ campaign, onBack, onCancelScheduled }: Campaign
     const isPast = timeUntilSend <= 0;
 
     return (
-      <div className="space-y-6 max-w-6xl">
+      <div className="p-6 space-y-6 max-w-6xl">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={handleBack}>
             <ArrowLeft className="h-4 w-4" />
@@ -611,7 +611,7 @@ export function CampaignDetail({ campaign, onBack, onCancelScheduled }: Campaign
   // For sent campaigns, show analytics view
   if (campaign.status === 'sent') {
     return (
-      <div className="space-y-6 max-w-6xl">
+      <div className="p-6 space-y-6 max-w-6xl">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={handleBack}>
             <ArrowLeft className="h-4 w-4" />
@@ -773,7 +773,7 @@ export function CampaignDetail({ campaign, onBack, onCancelScheduled }: Campaign
 
   // For draft campaigns, show builder/checklist view
   return (
-    <div className="max-w-6xl">
+    <div className="p-6 max-w-6xl">
       {/* Status Banner */}
       <div className={`rounded-lg p-4 mb-6 ${isReadyToSend ? 'bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800' : 'bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800'}`}>
         <div className="flex items-center gap-2">
