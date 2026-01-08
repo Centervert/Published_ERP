@@ -127,8 +127,9 @@ async function processChunk(
     .limit(BATCH_SIZE) as { data: Contact[] | null; error: any };
 
   if (fetchError) {
-    console.error('Failed to fetch contacts:', fetchError);
-    throw fetchError;
+    const errorMsg = fetchError.message || fetchError.code || JSON.stringify(fetchError);
+    console.error('Failed to fetch contacts:', errorMsg, fetchError);
+    throw new Error(`Fetch contacts failed: ${errorMsg}`);
   }
 
   if (!contacts || contacts.length === 0) {
@@ -261,8 +262,9 @@ Deno.serve(async (req) => {
         .not('email', 'is', null);
 
       if (countError) {
-        console.error('Failed to count unvalidated contacts:', countError);
-        throw countError;
+        const errorMsg = countError.message || countError.code || JSON.stringify(countError);
+        console.error('Failed to count unvalidated contacts:', errorMsg, countError);
+        throw new Error(`Count query failed: ${errorMsg}`);
       }
 
       if (!totalRemaining || totalRemaining === 0) {
@@ -392,8 +394,10 @@ Deno.serve(async (req) => {
     );
 
   } catch (error: unknown) {
-    console.error('Batch validation error:', error);
-    const message = error instanceof Error ? error.message : 'Unknown error';
+    const message = error instanceof Error 
+      ? error.message 
+      : (typeof error === 'object' && error !== null ? JSON.stringify(error) : 'Unknown error');
+    console.error('Batch validation error:', message, error);
     return new Response(
       JSON.stringify({ error: message }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
