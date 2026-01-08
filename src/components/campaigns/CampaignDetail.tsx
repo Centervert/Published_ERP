@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { RecipientSelector } from './RecipientSelector';
+import { RecipientSummary } from './RecipientSummary';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import {
@@ -1519,12 +1520,54 @@ export function CampaignDetail({ campaign, onBack, onCancelScheduled }: Campaign
                   </div>
                 )}
               </div>
-              <p className="text-xs text-muted-foreground mt-2">
-                {selectedListIds.length === 0 && selectedImprintIds.length === 0
-                  ? 'Sending to all active contacts'
-                  : `Sending to ${selectedImprintIds.length > 0 ? `${selectedImprintIds.length} imprint(s)` : ''}${selectedImprintIds.length > 0 && selectedListIds.length > 0 ? ' and ' : ''}${selectedListIds.length > 0 ? `${selectedListIds.length} list(s)` : ''}`}
-                {additionalRecipients.length > 0 && ` + ${additionalRecipients.length} additional recipient(s)`}
-              </p>
+              {/* Recipient Summary with Validation Breakdown */}
+              {healthCounts && (
+                <div className="mt-4">
+                  <RecipientSummary
+                    {...(() => {
+                      // Calculate counts based on selection
+                      if (selectedListIds.length === 0 && selectedImprintIds.length === 0) {
+                        return {
+                          sendable: healthCounts.total.sendable,
+                          excluded: healthCounts.total.excluded,
+                          notValidated: healthCounts.total.notValidated,
+                          exclusionReasons: healthCounts.exclusionReasons,
+                        };
+                      }
+                      
+                      // Aggregate by selected lists
+                      if (selectedListIds.length > 0) {
+                        const aggregated = selectedListIds.reduce((acc, id) => ({
+                          sendable: acc.sendable + (healthCounts.byList[id]?.sendable || 0),
+                          notValidated: acc.notValidated + (healthCounts.byList[id]?.notValidated || 0),
+                          excluded: acc.excluded + (healthCounts.byList[id]?.excluded || 0),
+                        }), { sendable: 0, notValidated: 0, excluded: 0 });
+                        return {
+                          ...aggregated,
+                          exclusionReasons: healthCounts.exclusionReasons, // Use total breakdown as approximation
+                        };
+                      }
+                      
+                      // Aggregate by selected imprints
+                      const aggregated = selectedImprintIds.reduce((acc, id) => ({
+                        sendable: acc.sendable + (healthCounts.byImprint[id]?.sendable || 0),
+                        notValidated: acc.notValidated + (healthCounts.byImprint[id]?.notValidated || 0),
+                        excluded: acc.excluded + (healthCounts.byImprint[id]?.excluded || 0),
+                      }), { sendable: 0, notValidated: 0, excluded: 0 });
+                      return {
+                        ...aggregated,
+                        exclusionReasons: healthCounts.exclusionReasons,
+                      };
+                    })()}
+                    qualityFilter={emailQualityFilter}
+                  />
+                  {additionalRecipients.length > 0 && (
+                    <p className="text-xs text-muted-foreground mt-2">
+                      + {additionalRecipients.length} additional test recipient(s)
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Test Recipients Section */}
