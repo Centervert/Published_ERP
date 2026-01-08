@@ -21,6 +21,10 @@ export interface Campaign {
   total_recipients: number;
   created_at: string;
   updated_at: string;
+  // Persisted recipient selections
+  scheduled_list_ids: string[] | null;
+  scheduled_imprint_ids: string[] | null;
+  scheduled_additional_recipients: string[] | null;
 }
 
 export interface CampaignStats {

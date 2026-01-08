@@ -100,6 +100,7 @@ export type Database = {
           scheduled_additional_recipients: string[] | null
           scheduled_at: string | null
           scheduled_imprint_ids: string[] | null
+          scheduled_list_ids: string[] | null
           sent_at: string | null
           status: Database["public"]["Enums"]["campaign_status"] | null
           subject: string
@@ -124,6 +125,7 @@ export type Database = {
           scheduled_additional_recipients?: string[] | null
           scheduled_at?: string | null
           scheduled_imprint_ids?: string[] | null
+          scheduled_list_ids?: string[] | null
           sent_at?: string | null
           status?: Database["public"]["Enums"]["campaign_status"] | null
           subject: string
@@ -148,6 +150,7 @@ export type Database = {
           scheduled_additional_recipients?: string[] | null
           scheduled_at?: string | null
           scheduled_imprint_ids?: string[] | null
+          scheduled_list_ids?: string[] | null
           sent_at?: string | null
           status?: Database["public"]["Enums"]["campaign_status"] | null
           subject?: string

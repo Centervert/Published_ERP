@@ -106,9 +106,13 @@ export function CampaignDetail({ campaign, onBack, onCancelScheduled }: Campaign
   const [testEmailAddress, setTestEmailAddress] = useState('');
   const [isSendingTestEmail, setIsSendingTestEmail] = useState(false);
   
-  // Form states
-  const [selectedListIds, setSelectedListIds] = useState<string[]>([]);
-  const [selectedImprintIds, setSelectedImprintIds] = useState<string[]>([]);
+  // Form states - initialize from saved campaign data
+  const [selectedListIds, setSelectedListIds] = useState<string[]>(
+    campaign.scheduled_list_ids || []
+  );
+  const [selectedImprintIds, setSelectedImprintIds] = useState<string[]>(
+    campaign.scheduled_imprint_ids || []
+  );
   // Initialize selectedImprintId from imprints list once loaded
   // 'parent' means Parent Company (Author Services), otherwise it's an imprint ID
   const [selectedImprintId, setSelectedImprintId] = useState<string>('parent');
@@ -136,8 +140,10 @@ export function CampaignDetail({ campaign, onBack, onCancelScheduled }: Campaign
   
   // AI subject generation state
   const [isGeneratingSubject, setIsGeneratingSubject] = useState(false);
-  // Additional recipients state
-  const [additionalRecipients, setAdditionalRecipients] = useState<string[]>([]);
+  // Additional recipients state - initialize from saved campaign data
+  const [additionalRecipients, setAdditionalRecipients] = useState<string[]>(
+    campaign.scheduled_additional_recipients || []
+  );
   const [newRecipientEmail, setNewRecipientEmail] = useState('');
   const [showAdditionalRecipients, setShowAdditionalRecipients] = useState(false);
   // Email quality filter state
@@ -157,10 +163,29 @@ export function CampaignDetail({ campaign, onBack, onCancelScheduled }: Campaign
     }
   };
 
-  // Track if user has explicitly confirmed recipients
-  const [recipientsConfirmed, setRecipientsConfirmed] = useState(false);
+  // Track if user has explicitly confirmed recipients - auto-confirm if saved selections exist
+  const [recipientsConfirmed, setRecipientsConfirmed] = useState(
+    Boolean(campaign.scheduled_list_ids?.length || campaign.scheduled_imprint_ids?.length)
+  );
   // Track if user has explicitly confirmed send time
   const [sendTimeConfirmed, setSendTimeConfirmed] = useState(false);
+  
+  // Save recipients to database when confirmed
+  const handleConfirmRecipients = async () => {
+    try {
+      await updateCampaign.mutateAsync({
+        id: campaign.id,
+        scheduled_list_ids: selectedListIds.length > 0 ? selectedListIds : null,
+        scheduled_imprint_ids: selectedImprintIds.length > 0 ? selectedImprintIds : null,
+        scheduled_additional_recipients: additionalRecipients.length > 0 ? additionalRecipients : null,
+      });
+      setRecipientsConfirmed(true);
+      setToOpen(false);
+    } catch (error) {
+      console.error('Error saving recipients:', error);
+      toast.error('Failed to save recipients');
+    }
+  };
   
   // Track unsaved changes
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -1125,7 +1150,7 @@ export function CampaignDetail({ campaign, onBack, onCancelScheduled }: Campaign
                       onListChange={setSelectedListIds}
                       onImprintChange={setSelectedImprintIds}
                       onQualityFilterChange={setEmailQualityFilter}
-                      onConfirm={() => { setRecipientsConfirmed(true); setToOpen(false); }}
+                      onConfirm={handleConfirmRecipients}
                     />
                   </div>
                 </CollapsibleContent>
