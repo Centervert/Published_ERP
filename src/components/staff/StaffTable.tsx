@@ -178,7 +178,13 @@ export function StaffTable({ onInvite }: StaffTableProps) {
         throw new Error(data.error);
       }
 
-      toast.success(`Invitation sent to ${inviteData.email}`);
+      // Show appropriate message based on whether user already existed
+      if (data?.alreadyExists) {
+        toast.success(`${inviteData.email} already has an account and has been linked`);
+      } else {
+        toast.success(`Invitation sent to ${inviteData.email}`);
+      }
+      
       setIsInviteDialogOpen(false);
       setInviteData({ email: '', fullName: '', role: 'member' });
       // Refetch staff data to show the linked user
