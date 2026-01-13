@@ -86,7 +86,11 @@ const statusColors: Record<string, string> = {
 };
 
 export function CampaignDetail({ campaign, onBack, onCancelScheduled }: CampaignDetailProps) {
-  const { data: stats, isLoading: statsLoading } = useCampaignStats(campaign.id);
+  // Auto-refresh stats every 10 seconds when campaign is sending
+  const { data: stats, isLoading: statsLoading } = useCampaignStats(
+    campaign.id,
+    { refetchInterval: campaign.status === 'sending' ? 10000 : undefined }
+  );
   const { lists } = useLists();
   const { imprints } = useImprints();
   const { company } = useCompany();
@@ -625,6 +629,206 @@ export function CampaignDetail({ campaign, onBack, onCancelScheduled }: Campaign
                 <p className="font-medium text-amber-800 dark:text-amber-300">Need to make changes?</p>
                 <p className="text-sm text-amber-700 dark:text-amber-400 mt-1">
                   Click "Cancel Schedule" above to return this campaign to draft status. You can then edit and reschedule it.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // For sending campaigns, show live progress view
+  if (campaign.status === 'sending') {
+    return (
+      <div className="p-6 space-y-6 max-w-6xl">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={handleBack}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div className="flex-1">
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-semibold tracking-tight">{campaign.name}</h1>
+              <Badge variant="secondary" className={statusColors[campaign.status]}>
+                <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                Sending
+              </Badge>
+            </div>
+            <p className="text-muted-foreground">{campaign.subject}</p>
+          </div>
+        </div>
+
+        {/* Sending Progress Card */}
+        <Card className="border-yellow-200 bg-yellow-50 dark:bg-yellow-950/30 dark:border-yellow-800">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-4">
+              <div className="h-16 w-16 rounded-full bg-yellow-500/20 flex items-center justify-center">
+                <Loader2 className="h-8 w-8 text-yellow-600 dark:text-yellow-400 animate-spin" />
+              </div>
+              <div className="flex-1">
+                <p className="text-lg font-semibold text-yellow-800 dark:text-yellow-300">
+                  Campaign is sending...
+                </p>
+                <p className="text-yellow-600 dark:text-yellow-400">
+                  {campaign.total_recipients?.toLocaleString() || 0} recipients • Metrics update in real-time
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Live Stats */}
+        <div className="grid gap-4 md:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Campaign Details</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">From</span>
+                <span>{campaign.from_name} &lt;{campaign.from_email}&gt;</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Subject</span>
+                <span className="text-right max-w-[250px] truncate">{campaign.subject}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Recipients</span>
+                <span>{campaign.total_recipients?.toLocaleString() || '—'}</span>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                Live Performance
+                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {statsLoading ? (
+                <div className="flex items-center justify-center h-20">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : stats ? (
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-green-600">{stats.delivered}</div>
+                    <div className="text-xs text-muted-foreground">Delivered</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-blue-600">{stats.openedHuman}</div>
+                    <div className="text-xs text-muted-foreground">Opened</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-purple-600">{stats.clicked}</div>
+                    <div className="text-xs text-muted-foreground">Clicked</div>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center text-muted-foreground py-4">
+                  Waiting for first events...
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Detailed Live Stats */}
+        {stats && (
+          <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-6">
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-2">
+                  <Send className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">Queued</span>
+                </div>
+                <div className="text-2xl font-bold mt-1">{campaign.total_recipients || 0}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-2">
+                  <Send className="h-4 w-4 text-green-500" />
+                  <span className="text-sm text-muted-foreground">Delivered</span>
+                </div>
+                <div className="text-2xl font-bold mt-1">{stats.delivered}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-2">
+                  <Eye className="h-4 w-4 text-blue-500" />
+                  <span className="text-sm text-muted-foreground">Opened</span>
+                </div>
+                <div className="text-2xl font-bold mt-1">{stats.openedHuman}</div>
+                {stats.opened !== stats.openedHuman && (
+                  <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
+                    <Bot className="h-3 w-3" />
+                    <span>+{stats.opened - stats.openedHuman} bot</span>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-2">
+                  <MousePointer className="h-4 w-4 text-purple-500" />
+                  <span className="text-sm text-muted-foreground">Clicked</span>
+                </div>
+                <div className="text-2xl font-bold mt-1">{stats.clicked}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 text-orange-500" />
+                  <span className="text-sm text-muted-foreground">Bounced</span>
+                </div>
+                <div className="text-2xl font-bold mt-1">{stats.bounced}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-2">
+                  <UserMinus className="h-4 w-4 text-red-500" />
+                  <span className="text-sm text-muted-foreground">Unsubscribed</span>
+                </div>
+                <div className="text-2xl font-bold mt-1">{stats.unsubscribed}</div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Email Preview */}
+        {campaign.html_content && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Email Preview</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="border rounded-lg overflow-hidden bg-white">
+                <iframe
+                  srcDoc={campaign.html_content}
+                  className="w-full h-[500px] border-0"
+                  title="Email Preview"
+                />
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Info */}
+        <Card className="border-blue-200 bg-blue-50 dark:bg-blue-950/30 dark:border-blue-800">
+          <CardContent className="pt-6">
+            <div className="flex items-start gap-3">
+              <Clock className="h-5 w-5 text-blue-600 mt-0.5" />
+              <div>
+                <p className="font-medium text-blue-800 dark:text-blue-300">Sending in progress</p>
+                <p className="text-sm text-blue-700 dark:text-blue-400 mt-1">
+                  Emails are being sent to recipients. This page will automatically update as delivery events are received.
+                  The campaign status will change to "Published" once all emails have been sent.
                 </p>
               </div>
             </div>

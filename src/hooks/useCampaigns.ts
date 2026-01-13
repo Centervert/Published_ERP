@@ -252,7 +252,7 @@ export function useCampaigns() {
   };
 }
 
-export function useCampaignStats(campaignId: string | null) {
+export function useCampaignStats(campaignId: string | null, options?: { refetchInterval?: number }) {
   return useQuery({
     queryKey: ['campaign-stats', campaignId],
     queryFn: async () => {
@@ -303,6 +303,7 @@ export function useCampaignStats(campaignId: string | null) {
       return stats;
     },
     enabled: !!campaignId,
+    refetchInterval: options?.refetchInterval,
   });
 }
 
