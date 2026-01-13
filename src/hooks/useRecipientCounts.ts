@@ -22,7 +22,8 @@ export function useRecipientCounts() {
             .from('contacts')
             .select('*', { count: 'exact', head: true })
             .eq('status', 'active')
-            .eq('imprint_id', imprint.id);
+            .eq('imprint_id', imprint.id)
+            .not('email_validation_result', 'in', '(undeliverable,do_not_send)');
           
           if (!error && count !== null) {
             counts[imprint.id] = count;
@@ -72,7 +73,8 @@ export function useRecipientCounts() {
       const { count, error } = await supabase
         .from('contacts')
         .select('*', { count: 'exact', head: true })
-        .eq('status', 'active');
+        .eq('status', 'active')
+        .not('email_validation_result', 'in', '(undeliverable,do_not_send)');
       
       if (error) throw error;
       return count || 0;
