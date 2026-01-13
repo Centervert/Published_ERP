@@ -1,6 +1,25 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
+// Circuit breaker to protect the database/auth during outages or overload.
+let dbDownUntil = 0;
+const DB_COOLDOWN_MS = 60_000;
+const DB_TIMEOUT_MS = 3000;
+
+const fetchWithTimeout: typeof fetch = (input, init = {}) => {
+  const controller = new AbortController();
+  const t = setTimeout(() => controller.abort(), DB_TIMEOUT_MS);
+  return fetch(input, { ...init, signal: controller.signal }).finally(() => clearTimeout(t));
+};
+
+function createAdminClient() {
+  return createClient(
+    Deno.env.get("SUPABASE_URL") ?? "",
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+    { global: { fetch: fetchWithTimeout } },
+  );
+}
+
 // 1x1 transparent GIF
 const TRANSPARENT_GIF = new Uint8Array([
   0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0x01, 0x00, 0x01, 0x00, 
@@ -102,12 +121,21 @@ serve(async (req) => {
   
   // Log the open event
   if (campaignId && email) {
+    // If we've recently seen DB timeouts, skip logging to avoid piling on.
+    if (Date.now() < dbDownUntil) {
+      return new Response(TRANSPARENT_GIF, {
+        headers: {
+          "Content-Type": "image/gif",
+          "Cache-Control": "no-cache, no-store, must-revalidate",
+          "Pragma": "no-cache",
+          "Expires": "0",
+        },
+      });
+    }
+
     try {
-      const supabase = createClient(
-        Deno.env.get("SUPABASE_URL") ?? "",
-        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
-      );
-      
+      const supabase = createAdminClient();
+
       const { error } = await supabase.from("email_events").insert({
         campaign_id: campaignId,
         contact_id: contactId,
@@ -117,17 +145,19 @@ serve(async (req) => {
         user_agent: userAgent,
         is_bot: isBotRequest,
       });
-      
+
       if (error) {
         console.error("[Track Pixel] Error logging event:", error);
+        dbDownUntil = Date.now() + DB_COOLDOWN_MS;
       } else {
         console.log(`[Track Pixel] Open event logged successfully (is_bot: ${isBotRequest})`);
       }
     } catch (err) {
       console.error("[Track Pixel] Exception:", err);
+      dbDownUntil = Date.now() + DB_COOLDOWN_MS;
     }
   }
-  
+
   // Return 1x1 transparent GIF
   return new Response(TRANSPARENT_GIF, {
     headers: {

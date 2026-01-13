@@ -3,6 +3,17 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import { crypto } from "https://deno.land/std@0.190.0/crypto/mod.ts";
 import { encode as encodeHex } from "https://deno.land/std@0.190.0/encoding/hex.ts";
 
+// Circuit breaker to protect the database/auth during outages or overload.
+let dbDownUntil = 0;
+const DB_COOLDOWN_MS = 60_000;
+const DB_TIMEOUT_MS = 3000;
+
+const fetchWithTimeout: typeof fetch = (input, init = {}) => {
+  const controller = new AbortController();
+  const t = setTimeout(() => controller.abort(), DB_TIMEOUT_MS);
+  return fetch(input, { ...init, signal: controller.signal }).finally(() => clearTimeout(t));
+};
+
 // HMAC-SHA256 verification
 async function verifySignature(signingKey: string, timestamp: string, token: string, signature: string): Promise<boolean> {
   const encoder = new TextEncoder();
@@ -47,8 +58,10 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
     const webhookSigningKey = Deno.env.get("MAILGUN_WEBHOOK_SIGNING_KEY") ?? "";
-    
-    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    const supabase = createClient(supabaseUrl, supabaseKey, {
+      global: { fetch: fetchWithTimeout },
+    });
 
     // Determine content type and parse accordingly
     const contentType = req.headers.get("content-type") || "";
@@ -199,15 +212,28 @@ serve(async (req) => {
         });
     }
 
+    // If the DB is struggling, don't add more pressure (auth depends on DB health).
+    if (Date.now() < dbDownUntil) {
+      console.warn("[mailgun-webhook] DB cooldown active; skipping DB writes");
+      return new Response(JSON.stringify({ success: true, skipped: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // Find contact by email if we don't have contact_id
     let resolvedContactId = contactId;
     if (!resolvedContactId && recipient) {
-      const { data: contact } = await supabase
+      const { data: contact, error: lookupError } = await supabase
         .from("contacts")
         .select("id")
         .eq("email", recipient.toLowerCase())
         .maybeSingle();
-      
+
+      if (lookupError) {
+        console.error("[mailgun-webhook] Contact lookup error:", lookupError);
+        dbDownUntil = Date.now() + DB_COOLDOWN_MS;
+      }
+
       if (contact) {
         resolvedContactId = contact.id;
       }

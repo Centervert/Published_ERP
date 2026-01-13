@@ -1,6 +1,25 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
+// Circuit breaker to protect the database/auth during outages or overload.
+let dbDownUntil = 0;
+const DB_COOLDOWN_MS = 60_000;
+const DB_TIMEOUT_MS = 3000;
+
+const fetchWithTimeout: typeof fetch = (input, init = {}) => {
+  const controller = new AbortController();
+  const t = setTimeout(() => controller.abort(), DB_TIMEOUT_MS);
+  return fetch(input, { ...init, signal: controller.signal }).finally(() => clearTimeout(t));
+};
+
+function createAdminClient() {
+  return createClient(
+    Deno.env.get("SUPABASE_URL") ?? "",
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+    { global: { fetch: fetchWithTimeout } },
+  );
+}
+
 serve(async (req) => {
   const url = new URL(req.url);
   
@@ -14,14 +33,22 @@ serve(async (req) => {
   
   // Log the click event
   if (campaignId && email && targetUrl) {
+    const decodedUrl = decodeURIComponent(targetUrl);
+
+    // If we've recently seen DB timeouts, skip logging to avoid piling on.
+    if (Date.now() < dbDownUntil) {
+      return new Response(null, {
+        status: 302,
+        headers: {
+          "Location": decodedUrl,
+          "Cache-Control": "no-cache, no-store, must-revalidate",
+        },
+      });
+    }
+
     try {
-      const supabase = createClient(
-        Deno.env.get("SUPABASE_URL") ?? "",
-        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
-      );
-      
-      const decodedUrl = decodeURIComponent(targetUrl);
-      
+      const supabase = createAdminClient();
+
       const { error } = await supabase.from("email_events").insert({
         campaign_id: campaignId,
         contact_id: contactId,
@@ -31,13 +58,14 @@ serve(async (req) => {
         ip_address: req.headers.get("x-forwarded-for") || req.headers.get("cf-connecting-ip"),
         user_agent: req.headers.get("user-agent"),
       });
-      
+
       if (error) {
         console.error("[Track Click] Error logging event:", error);
+        dbDownUntil = Date.now() + DB_COOLDOWN_MS;
       } else {
         console.log("[Track Click] Click event logged successfully");
       }
-      
+
       // Redirect to original URL
       return new Response(null, {
         status: 302,
@@ -48,16 +76,16 @@ serve(async (req) => {
       });
     } catch (err) {
       console.error("[Track Click] Exception:", err);
+      dbDownUntil = Date.now() + DB_COOLDOWN_MS;
+
       // Still redirect even if logging fails
-      if (targetUrl) {
-        return new Response(null, {
-          status: 302,
-          headers: { "Location": decodeURIComponent(targetUrl) },
-        });
-      }
+      return new Response(null, {
+        status: 302,
+        headers: { "Location": decodedUrl },
+      });
     }
   }
-  
+
   // Fallback if no URL provided
   return new Response("Missing parameters", { status: 400 });
 });
