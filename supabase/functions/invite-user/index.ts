@@ -161,12 +161,30 @@ serve(async (req) => {
 
     // Check if user already exists
     const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
-    const existingUser = existingUsers?.users?.find(u => u.email === email);
+    const existingUser = existingUsers?.users?.find(u => u.email?.toLowerCase() === email.toLowerCase());
     
     if (existingUser) {
+      // User exists - link to staff record if not already linked
+      const { error: linkExistingError } = await supabaseAdmin
+        .from("staff")
+        .update({ user_id: existingUser.id })
+        .eq("email", email.toLowerCase())
+        .is("user_id", null);
+      
+      if (linkExistingError) {
+        console.warn(`[invite-user] Could not link existing user to staff:`, linkExistingError);
+      } else {
+        console.log(`[invite-user] Linked existing user ${email} to staff record`);
+      }
+      
       return new Response(
-        JSON.stringify({ error: "A user with this email already exists" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ 
+          success: true, 
+          message: `User already exists and has been linked to staff record`,
+          userId: existingUser.id,
+          alreadyExists: true
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
