@@ -54,12 +54,8 @@ export function useCampaigns() {
       if (error) throw error;
       return data as unknown as Campaign[];
     },
-    // Auto-refresh every 10 seconds when any campaign is sending
-    refetchInterval: (query) => {
-      const data = query.state.data as Campaign[] | undefined;
-      const hasSending = data?.some(c => c.status === 'sending');
-      return hasSending ? 10000 : false;
-    },
+    // Auto-refresh every 10 seconds when any campaign is sending or sending status exists
+    refetchInterval: 10000,
   });
 
   const createCampaign = useMutation({
