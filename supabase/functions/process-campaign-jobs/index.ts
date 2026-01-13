@@ -449,7 +449,8 @@ serve(async (req) => {
             .from("contacts")
             .select("id, email, first_name, last_name, imprint_id, assigned_asc, assigned_asc_text, staff_asc_id")
             .in("id", batch)
-            .not("status", "in", "(bounced,complained,unsubscribed)");
+            .not("status", "in", "(bounced,complained,unsubscribed)")
+            .not("email_validation_result", "in", "(undeliverable,do_not_send)");
           
           if (batchContacts) {
             addUniqueContacts(batchContacts);
@@ -470,6 +471,7 @@ serve(async (req) => {
           .select("id, email, first_name, last_name, imprint_id, assigned_asc, assigned_asc_text, staff_asc_id")
           .in("imprint_id", imprintIds)
           .not("status", "in", "(bounced,complained,unsubscribed)")
+          .not("email_validation_result", "in", "(undeliverable,do_not_send)")
           .range(offset, offset + pageSize - 1);
         
         if (imprintContacts && imprintContacts.length > 0) {
