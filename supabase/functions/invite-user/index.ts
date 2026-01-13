@@ -165,24 +165,31 @@ serve(async (req) => {
     
     if (existingUser) {
       // User exists - link to staff record if not already linked
-      const { error: linkExistingError } = await supabaseAdmin
+      // Use ilike for case-insensitive email matching
+      const { data: updateResult, error: linkExistingError } = await supabaseAdmin
         .from("staff")
         .update({ user_id: existingUser.id })
-        .eq("email", email.toLowerCase())
-        .is("user_id", null);
+        .ilike("email", email)
+        .is("user_id", null)
+        .select();
       
       if (linkExistingError) {
-        console.warn(`[invite-user] Could not link existing user to staff:`, linkExistingError);
-      } else {
-        console.log(`[invite-user] Linked existing user ${email} to staff record`);
+        console.error(`[invite-user] Could not link existing user to staff:`, linkExistingError);
+        return new Response(
+          JSON.stringify({ error: `Failed to link user to staff record: ${linkExistingError.message}` }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
       }
+      
+      console.log(`[invite-user] Linked existing user ${email} to staff record. Updated rows:`, updateResult?.length || 0);
       
       return new Response(
         JSON.stringify({ 
           success: true, 
           message: `User already exists and has been linked to staff record`,
           userId: existingUser.id,
-          alreadyExists: true
+          alreadyExists: true,
+          linkedRecords: updateResult?.length || 0
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
