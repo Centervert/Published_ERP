@@ -78,3 +78,7 @@ verify_jwt = true
 # Batch email validation - requires auth
 [functions.validate-email-batch]
 verify_jwt = true
+
+# Process campaign jobs - worker API key auth (cron job)
+[functions.process-campaign-jobs]
+verify_jwt = false
