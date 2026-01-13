@@ -1602,6 +1602,7 @@ export type Database = {
         }[]
       }
       get_contact_health_stats: { Args: never; Returns: Json }
+      get_recipient_health_counts: { Args: never; Returns: Json }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
