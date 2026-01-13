@@ -1601,6 +1601,7 @@ export type Database = {
           tier_percentage: number
         }[]
       }
+      get_campaign_stats: { Args: { _campaign_id: string }; Returns: Json }
       get_contact_health_stats: { Args: never; Returns: Json }
       get_recipient_health_counts: { Args: never; Returns: Json }
       has_role: {

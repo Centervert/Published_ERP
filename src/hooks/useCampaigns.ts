@@ -260,49 +260,15 @@ export function useCampaignStats(campaignId: string | null, options?: { refetchI
     queryFn: async () => {
       if (!campaignId) return null;
       
-      const { data, error } = await supabase
-        .from('email_events')
-        .select('event_type, email, is_bot')
-        .eq('campaign_id', campaignId);
+      // Use server-side aggregation to bypass the 1,000 row limit
+      const { data, error } = await supabase.rpc('get_campaign_stats', {
+        _campaign_id: campaignId
+      });
       
       if (error) throw error;
-
-      const stats: CampaignStats = {
-        sent: 0,
-        delivered: 0,
-        opened: 0,
-        openedHuman: 0,
-        clicked: 0,
-        bounced: 0,
-        complained: 0,
-        unsubscribed: 0,
-      };
-
-      // Track unique opens/clicks by email (all and human-only)
-      const uniqueOpensAll = new Set<string>();
-      const uniqueOpensHuman = new Set<string>();
-      const uniqueClicks = new Set<string>();
-
-      data.forEach((event: { event_type: string; email: string; is_bot: boolean | null }) => {
-        if (event.event_type === 'sent') stats.sent++;
-        else if (event.event_type === 'delivered') stats.delivered++;
-        else if (event.event_type === 'opened') {
-          uniqueOpensAll.add(event.email);
-          if (!event.is_bot) {
-            uniqueOpensHuman.add(event.email);
-          }
-        }
-        else if (event.event_type === 'clicked') uniqueClicks.add(event.email);
-        else if (event.event_type === 'bounced') stats.bounced++;
-        else if (event.event_type === 'complained') stats.complained++;
-        else if (event.event_type === 'unsubscribed') stats.unsubscribed++;
-      });
-
-      stats.opened = uniqueOpensAll.size;
-      stats.openedHuman = uniqueOpensHuman.size;
-      stats.clicked = uniqueClicks.size;
-
-      return stats;
+      
+      // The RPC returns a JSON object with the stats
+      return data as unknown as CampaignStats;
     },
     enabled: !!campaignId,
     refetchInterval: options?.refetchInterval,
