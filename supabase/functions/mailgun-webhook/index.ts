@@ -55,6 +55,13 @@ serve(async (req) => {
   }
 
   try {
+    // Optional kill-switch (set to "true" temporarily if you need to stop webhook DB writes).
+    if ((Deno.env.get("PAUSE_EMAIL_EVENT_WEBHOOKS") ?? "").toLowerCase() === "true") {
+      return new Response(JSON.stringify({ success: true, paused: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
     const webhookSigningKey = Deno.env.get("MAILGUN_WEBHOOK_SIGNING_KEY") ?? "";
@@ -190,10 +197,13 @@ serve(async (req) => {
           updateContactStatus = "bounced";
           incrementColumn = "bounce_count";
         } else {
-          eventType = "soft_bounced";
+          // Temporary failures are noisy and not supported by the DB constraint; ignore.
+          return new Response(JSON.stringify({ success: true, ignored: "temporary_failure" }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
         }
         break;
-        
+
       case "complained":
         eventType = "complained";
         updateContactStatus = "complained";
@@ -263,6 +273,7 @@ serve(async (req) => {
 
     if (insertError) {
       console.error("[mailgun-webhook] Error inserting event:", insertError);
+      dbDownUntil = Date.now() + DB_COOLDOWN_MS;
     } else {
       console.log(`[mailgun-webhook] Inserted ${eventType} event for ${recipient}`);
     }
