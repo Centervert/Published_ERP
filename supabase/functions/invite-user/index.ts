@@ -277,6 +277,20 @@ serve(async (req) => {
     const mailgunResult = await mailgunResponse.json();
     console.log(`[invite-user] Invitation email sent successfully to ${email}, Mailgun ID: ${mailgunResult.id}`);
 
+    // Step 4: Link the staff record to the new user by matching email
+    const { error: staffLinkError } = await supabaseAdmin
+      .from("staff")
+      .update({ user_id: newUser.user?.id })
+      .eq("email", email.toLowerCase())
+      .is("user_id", null);
+    
+    if (staffLinkError) {
+      console.warn(`[invite-user] Could not auto-link staff record for ${email}:`, staffLinkError);
+      // Don't fail the request - the invite was still sent successfully
+    } else {
+      console.log(`[invite-user] Staff record linked to new user ${email}`);
+    }
+
     return new Response(
       JSON.stringify({ 
         success: true, 

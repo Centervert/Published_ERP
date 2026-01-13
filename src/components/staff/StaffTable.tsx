@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { StaffWithUser, useStaff } from '@/hooks/useStaff';
 import { useUsers, useHasRole, ROLE_DISPLAY_NAMES, AppRole } from '@/hooks/useUsers';
 import {
@@ -64,6 +65,7 @@ export function StaffTable({ onInvite }: StaffTableProps) {
     role: 'member' as AppRole,
   });
 
+  const queryClient = useQueryClient();
   const { staff, isLoading, toggleActive, linkStaffToUser } = useStaff();
   const { users, updateUserRole } = useUsers();
   const { hasRole: canManage } = useHasRole(['super_admin', 'admin']);
@@ -179,6 +181,8 @@ export function StaffTable({ onInvite }: StaffTableProps) {
       toast.success(`Invitation sent to ${inviteData.email}`);
       setIsInviteDialogOpen(false);
       setInviteData({ email: '', fullName: '', role: 'member' });
+      // Refetch staff data to show the linked user
+      queryClient.invalidateQueries({ queryKey: ['staff'] });
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to send invitation';
       toast.error(errorMessage);
