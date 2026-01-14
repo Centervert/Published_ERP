@@ -5,96 +5,26 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Export mode configuration type
-interface ExportConfig {
-  tables: string[] | null;
-  contactLimit: number;
-  skipLargeTables: boolean;
-  largeTableLimit: number;
-}
+// All available tables in order of export priority
+const ALL_TABLES = [
+  // Core config (small)
+  "company", "imprints", "staff", "profiles", "user_roles",
+  // CRM structure (small)
+  "lists", "tags", "templates", "campaigns", "campaign_lists",
+  // Products (small)
+  "products", "package_items", "commission_tiers",
+  // Dev (small)
+  "dev_documents", "dev_document_versions", "dev_items", "dev_meetings", "dev_meeting_links",
+  // User connections (small)
+  "user_email_connections", "import_jobs",
+  // CRM data (medium-large)
+  "contacts", "contact_links", "contact_lists", "contact_tags", "contact_notes", "contact_tasks",
+  "deals", "books",
+  // Activity (large)
+  "contact_activity", "contact_communications", "email_events",
+];
 
-// Export modes with different table configurations
-const EXPORT_CONFIGS: Record<string, ExportConfig> = {
-  // Quick export - just essential tables, limited rows
-  quick: {
-    tables: ["company", "imprints", "staff", "profiles", "user_roles", "lists", "tags", "templates", "campaigns", "products"],
-    contactLimit: 1000,
-    skipLargeTables: true,
-    largeTableLimit: 0,
-  },
-  // Standard export - main tables with reasonable limits
-  standard: {
-    tables: null, // all tables
-    contactLimit: 10000,
-    skipLargeTables: false,
-    largeTableLimit: 5000,
-  },
-  // Full export - everything (may timeout with very large datasets)
-  full: {
-    tables: null,
-    contactLimit: 50000,
-    skipLargeTables: false,
-    largeTableLimit: 20000,
-  },
-  // Contacts only - paginated export of contacts
-  contacts: {
-    tables: ["contacts"],
-    contactLimit: 100000,
-    skipLargeTables: true,
-    largeTableLimit: 0,
-  },
-};
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function exportTable(
-  supabase: any,
-  tableName: string,
-  limit: number = 5000,
-  orderBy?: string
-): Promise<{ data: unknown[]; count: number; truncated: boolean }> {
-  try {
-    const pageSize = 500;
-    let allRows: unknown[] = [];
-    let offset = 0;
-    let hasMore = true;
-
-    // First get total count
-    const { count: totalCount } = await supabase
-      .from(tableName)
-      .select("*", { count: "exact", head: true });
-
-    while (hasMore && allRows.length < limit) {
-      let query = supabase.from(tableName).select("*");
-      
-      if (orderBy) {
-        query = query.order(orderBy, { ascending: false });
-      }
-      
-      const { data, error } = await query.range(offset, offset + pageSize - 1);
-
-      if (error) {
-        console.error(`Error exporting ${tableName}:`, error.message);
-        return { data: [], count: totalCount || 0, truncated: false };
-      }
-
-      if (data && data.length > 0) {
-        allRows = allRows.concat(data);
-        offset += pageSize;
-        hasMore = data.length === pageSize;
-      } else {
-        hasMore = false;
-      }
-    }
-
-    const truncated = (totalCount || 0) > allRows.length;
-    console.log(`Exported ${tableName}: ${allRows.length}/${totalCount || 0} rows${truncated ? ' (truncated)' : ''}`);
-    
-    return { data: allRows, count: totalCount || allRows.length, truncated };
-  } catch (err) {
-    console.error(`Error exporting ${tableName}:`, err);
-    return { data: [], count: 0, truncated: false };
-  }
-}
+const BATCH_SIZE = 25000; // Rows per batch/file
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function getTableCounts(supabase: any, tables: string[]): Promise<Record<string, number>> {
@@ -102,12 +32,70 @@ async function getTableCounts(supabase: any, tables: string[]): Promise<Record<s
   
   await Promise.all(
     tables.map(async (table) => {
-      const { count } = await supabase.from(table).select("*", { count: "exact", head: true });
-      counts[table] = count || 0;
+      try {
+        const { count } = await supabase.from(table).select("*", { count: "exact", head: true });
+        counts[table] = count || 0;
+      } catch {
+        counts[table] = 0;
+      }
     })
   );
   
   return counts;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function exportTableBatch(
+  supabase: any,
+  tableName: string,
+  batchIndex: number,
+  batchSize: number = BATCH_SIZE
+): Promise<{ data: unknown[]; hasMore: boolean; totalCount: number }> {
+  const offset = batchIndex * batchSize;
+  
+  try {
+    // Get total count first
+    const { count: totalCount } = await supabase
+      .from(tableName)
+      .select("*", { count: "exact", head: true });
+
+    // Fetch batch with pagination
+    const pageSize = 1000;
+    let allRows: unknown[] = [];
+    let currentOffset = offset;
+    const maxRows = offset + batchSize;
+
+    while (allRows.length < batchSize && currentOffset < (totalCount || 0)) {
+      const fetchSize = Math.min(pageSize, maxRows - currentOffset);
+      
+      const { data, error } = await supabase
+        .from(tableName)
+        .select("*")
+        .order("created_at", { ascending: true, nullsFirst: true })
+        .range(currentOffset, currentOffset + fetchSize - 1);
+
+      if (error) {
+        console.error(`Error fetching ${tableName} at offset ${currentOffset}:`, error.message);
+        break;
+      }
+
+      if (data && data.length > 0) {
+        allRows = allRows.concat(data);
+        currentOffset += data.length;
+      } else {
+        break;
+      }
+    }
+
+    const hasMore = (offset + allRows.length) < (totalCount || 0);
+    
+    console.log(`Batch ${batchIndex + 1} of ${tableName}: ${allRows.length} rows (offset: ${offset}, total: ${totalCount})`);
+    
+    return { data: allRows, hasMore, totalCount: totalCount || 0 };
+  } catch (err) {
+    console.error(`Error exporting batch from ${tableName}:`, err);
+    return { data: [], hasMore: false, totalCount: 0 };
+  }
 }
 
 Deno.serve(async (req) => {
@@ -154,126 +142,104 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Parse options
-    let mode = "quick"; // default to quick for safety
-    let countsOnly = false;
+    // Parse request body
+    let action = "counts";
+    let table = "";
+    let batchIndex = 0;
     
     try {
       const body = await req.json();
-      mode = body.mode || "quick";
-      countsOnly = body.countsOnly === true;
+      action = body.action || "counts";
+      table = body.table || "";
+      batchIndex = typeof body.batchIndex === "number" ? body.batchIndex : 0;
     } catch {
-      // No body, use defaults
+      // No body, default to counts
     }
 
-    const config = EXPORT_CONFIGS[mode as keyof typeof EXPORT_CONFIGS] || EXPORT_CONFIGS.quick;
-    
-    console.log(`Starting export (mode: ${mode}, countsOnly: ${countsOnly})`);
+    console.log(`Export action: ${action}, table: ${table}, batch: ${batchIndex}`);
 
-    // All available tables
-    const ALL_TABLES = [
-      // Core
-      "company", "imprints", "staff", "profiles", "user_roles",
-      // CRM
-      "contacts", "contact_links", "contact_lists", "contact_tags", "contact_notes", "contact_tasks",
-      // Marketing
-      "lists", "tags", "templates", "campaigns", "campaign_lists",
-      // Sales
-      "deals", "products", "package_items", "commission_tiers", "books",
-      // Activity (large)
-      "contact_activity", "contact_communications", "email_events",
-      // Import
-      "import_jobs",
-      // Dev
-      "dev_documents", "dev_document_versions", "dev_items", "dev_meetings", "dev_meeting_links",
-      // User
-      "user_email_connections",
-    ];
-
-    const tablesToExport = config.tables || ALL_TABLES;
-
-    // If counts only, just return the counts
-    if (countsOnly) {
+    // Action: Get all table counts and calculate batches needed
+    if (action === "counts" || action === "plan") {
       const counts = await getTableCounts(supabase, ALL_TABLES);
       const totalRows = Object.values(counts).reduce((sum, c) => sum + c, 0);
       
+      // Calculate batches needed per table
+      const batches: Array<{ table: string; batchIndex: number; estimatedRows: number }> = [];
+      
+      for (const tableName of ALL_TABLES) {
+        const count = counts[tableName] || 0;
+        if (count === 0) continue;
+        
+        const numBatches = Math.ceil(count / BATCH_SIZE);
+        for (let i = 0; i < numBatches; i++) {
+          const estimatedRows = Math.min(BATCH_SIZE, count - (i * BATCH_SIZE));
+          batches.push({ table: tableName, batchIndex: i, estimatedRows });
+        }
+      }
+      
       return new Response(
         JSON.stringify({
-          mode: "counts",
+          action: "plan",
           totalRows,
+          totalBatches: batches.length,
+          batchSize: BATCH_SIZE,
           tables: counts,
+          batches,
+          exportedBy: user.email,
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Large tables that need special handling
-    const LARGE_TABLES = ["contact_activity", "contact_communications", "email_events"];
-    
-    // Export tables
-    const exportData: Record<string, unknown[]> = {};
-    const exportMeta: Record<string, { count: number; exported: number; truncated: boolean }> = {};
-
-    for (const table of tablesToExport) {
-      // Skip large tables if configured
-      if (config.skipLargeTables && LARGE_TABLES.includes(table)) {
-        const { count } = await supabase.from(table).select("*", { count: "exact", head: true });
-        exportMeta[table] = { count: count || 0, exported: 0, truncated: true };
-        exportData[table] = [];
-        console.log(`Skipped ${table}: ${count} rows`);
-        continue;
+    // Action: Export a single batch of a single table
+    if (action === "batch") {
+      if (!table || !ALL_TABLES.includes(table)) {
+        return new Response(
+          JSON.stringify({ error: `Invalid table: ${table}` }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
       }
 
-      // Determine limit based on table
-      let limit = 5000;
-      if (table === "contacts") {
-        limit = config.contactLimit;
-      } else if (LARGE_TABLES.includes(table)) {
-        limit = config.largeTableLimit || 5000;
-      }
-
-      const orderBy = LARGE_TABLES.includes(table) || table === "contacts" ? "created_at" : undefined;
+      const result = await exportTableBatch(supabase, table, batchIndex);
       
-      const result = await exportTable(supabase, table, limit, orderBy);
-      exportData[table] = result.data;
-      exportMeta[table] = {
-        count: result.count,
-        exported: result.data.length,
-        truncated: result.truncated,
+      const batchNumber = batchIndex + 1;
+      const totalBatches = Math.ceil(result.totalCount / BATCH_SIZE);
+      
+      const exportPackage = {
+        metadata: {
+          table,
+          batchNumber,
+          totalBatches,
+          totalTableRows: result.totalCount,
+          rowsInBatch: result.data.length,
+          hasMore: result.hasMore,
+          offsetStart: batchIndex * BATCH_SIZE,
+          offsetEnd: (batchIndex * BATCH_SIZE) + result.data.length,
+          exportedAt: new Date().toISOString(),
+          exportedBy: user.email,
+        },
+        data: result.data,
       };
+
+      const filename = totalBatches > 1 
+        ? `${table}_batch_${batchNumber}.json`
+        : `${table}.json`;
+
+      return new Response(
+        JSON.stringify(exportPackage),
+        {
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+            "Content-Disposition": `attachment; filename="${filename}"`,
+          },
+        }
+      );
     }
 
-    const totalRows = Object.values(exportMeta).reduce((sum, m) => sum + m.count, 0);
-    const exportedRows = Object.values(exportMeta).reduce((sum, m) => sum + m.exported, 0);
-    const truncatedTables = Object.entries(exportMeta)
-      .filter(([_, m]) => m.truncated)
-      .map(([t, m]) => `${t} (${m.exported}/${m.count})`);
-
-    const exportPackage = {
-      metadata: {
-        exportedAt: new Date().toISOString(),
-        exportedBy: user.email,
-        mode,
-        tableCount: Object.keys(exportMeta).length,
-        totalRows,
-        exportedRows,
-        truncatedTables,
-        tables: exportMeta,
-      },
-      data: exportData,
-    };
-
-    console.log(`Export complete: ${exportedRows}/${totalRows} rows from ${Object.keys(exportMeta).length} tables`);
-
     return new Response(
-      JSON.stringify(exportPackage),
-      {
-        headers: {
-          ...corsHeaders,
-          "Content-Type": "application/json",
-          "Content-Disposition": `attachment; filename="database_export_${mode}_${new Date().toISOString().split('T')[0]}.json"`,
-        },
-      }
+      JSON.stringify({ error: "Invalid action. Use 'counts', 'plan', or 'batch'" }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
     console.error("Export error:", error);
