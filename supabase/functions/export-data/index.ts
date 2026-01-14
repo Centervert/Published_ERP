@@ -5,7 +5,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Tables grouped by expected size for parallel processing
+// Tables grouped by expected size for parallel processing - reduced limits for faster export
 const SMALL_TABLES = [
   "profiles", "user_roles", "company", "commission_tiers", "tags", "lists",
   "imprints", "staff", "user_email_connections", "templates", "campaigns",
@@ -18,11 +18,11 @@ const MEDIUM_TABLES = [
   "contact_notes", "contact_tasks", "import_jobs",
 ];
 
-// Large tables - limit rows to avoid timeout
+// Large tables - reduced limits significantly to avoid timeout
 const LARGE_TABLES_CONFIG: Record<string, { limit: number; orderBy: string }> = {
-  "contact_activity": { limit: 10000, orderBy: "created_at" },
-  "contact_communications": { limit: 10000, orderBy: "created_at" },
-  "email_events": { limit: 50000, orderBy: "created_at" },
+  "contact_activity": { limit: 2000, orderBy: "created_at" },
+  "contact_communications": { limit: 2000, orderBy: "created_at" },
+  "email_events": { limit: 5000, orderBy: "created_at" },
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -32,11 +32,11 @@ async function exportTable(
   config?: { limit: number; orderBy: string }
 ): Promise<{ data: unknown[]; count: number; truncated: boolean }> {
   try {
-    const pageSize = 1000;
+    const pageSize = 500; // Reduced for faster queries
     let allRows: unknown[] = [];
     let offset = 0;
     let hasMore = true;
-    const maxRows = config?.limit || 100000;
+    const maxRows = config?.limit || 5000; // Reduced default max
 
     while (hasMore && allRows.length < maxRows) {
       let query = supabase.from(tableName).select("*");
