@@ -5,55 +5,93 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// All tables to export in dependency order
-const TABLES_TO_EXPORT = [
-  // Core tables (no dependencies)
-  "profiles",
-  "user_roles",
-  "company",
-  "commission_tiers",
-  "tags",
-  "lists",
-  
-  // Company/Brands
-  "imprints",
-  "staff",
-  "user_email_connections",
-  
-  // CRM
-  "contacts",
-  "contact_links",
-  "contact_activity",
-  "contact_lists",
-  "contact_tags",
-  
-  // Sales
-  "deals",
-  "books",
-  "products",
-  "package_items",
-  
-  // CRM continued (depends on deals)
-  "contact_communications",
-  "contact_notes",
-  "contact_tasks",
-  
-  // Marketing
-  "templates",
-  "campaigns",
-  "campaign_lists",
-  "email_events",
-  
-  // Import
-  "import_jobs",
-  
-  // Development
-  "dev_documents",
-  "dev_document_versions",
-  "dev_items",
-  "dev_meetings",
-  "dev_meeting_links",
+// Tables grouped by expected size for parallel processing
+const SMALL_TABLES = [
+  "profiles", "user_roles", "company", "commission_tiers", "tags", "lists",
+  "imprints", "staff", "user_email_connections", "templates", "campaigns",
+  "campaign_lists", "products", "package_items", "books", "deals",
+  "dev_documents", "dev_document_versions", "dev_items", "dev_meetings", "dev_meeting_links",
 ];
+
+const MEDIUM_TABLES = [
+  "contacts", "contact_links", "contact_lists", "contact_tags",
+  "contact_notes", "contact_tasks", "import_jobs",
+];
+
+// Large tables - limit rows to avoid timeout
+const LARGE_TABLES_CONFIG: Record<string, { limit: number; orderBy: string }> = {
+  "contact_activity": { limit: 10000, orderBy: "created_at" },
+  "contact_communications": { limit: 10000, orderBy: "created_at" },
+  "email_events": { limit: 50000, orderBy: "created_at" },
+};
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function exportTable(
+  supabase: any,
+  tableName: string,
+  config?: { limit: number; orderBy: string }
+): Promise<{ data: unknown[]; count: number; truncated: boolean }> {
+  try {
+    const pageSize = 1000;
+    let allRows: unknown[] = [];
+    let offset = 0;
+    let hasMore = true;
+    const maxRows = config?.limit || 100000;
+
+    while (hasMore && allRows.length < maxRows) {
+      let query = supabase.from(tableName).select("*");
+      
+      if (config?.orderBy) {
+        query = query.order(config.orderBy, { ascending: false });
+      }
+      
+      const { data, error } = await query.range(offset, offset + pageSize - 1);
+
+      if (error) {
+        console.error(`Error exporting ${tableName}:`, error.message);
+        return { data: [], count: 0, truncated: false };
+      }
+
+      if (data && data.length > 0) {
+        allRows = allRows.concat(data);
+        offset += pageSize;
+        hasMore = data.length === pageSize;
+      } else {
+        hasMore = false;
+      }
+    }
+
+    const truncated = hasMore && allRows.length >= maxRows;
+    console.log(`Exported ${tableName}: ${allRows.length} rows${truncated ? ' (truncated)' : ''}`);
+    
+    return { data: allRows, count: allRows.length, truncated };
+  } catch (err) {
+    console.error(`Error exporting ${tableName}:`, err);
+    return { data: [], count: 0, truncated: false };
+  }
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function exportTablesBatch(
+  supabase: any,
+  tables: string[],
+  batchSize: number = 5
+): Promise<Record<string, { data: unknown[]; count: number; truncated: boolean }>> {
+  const results: Record<string, { data: unknown[]; count: number; truncated: boolean }> = {};
+  
+  for (let i = 0; i < tables.length; i += batchSize) {
+    const batch = tables.slice(i, i + batchSize);
+    const batchResults = await Promise.all(
+      batch.map(table => exportTable(supabase, table))
+    );
+    
+    batch.forEach((table, idx) => {
+      results[table] = batchResults[idx];
+    });
+  }
+  
+  return results;
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -61,7 +99,6 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Get the authorization header
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return new Response(
@@ -70,10 +107,8 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Create Supabase client with user's auth token
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Verify user is admin
@@ -89,7 +124,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Check if user is admin or super_admin
     const { data: roles } = await supabase
       .from("user_roles")
       .select("role")
@@ -103,82 +137,76 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Parse request body for options
-    let options = { tables: TABLES_TO_EXPORT, format: "json" };
+    // Parse options
+    let skipLargeTables = false;
     try {
       const body = await req.json();
-      if (body.tables && Array.isArray(body.tables)) {
-        options.tables = body.tables;
-      }
+      skipLargeTables = body.skipLargeTables === true;
     } catch {
-      // No body or invalid JSON, use defaults
+      // No body, use defaults
     }
 
-    console.log(`Exporting ${options.tables.length} tables...`);
+    console.log(`Starting export (skipLargeTables: ${skipLargeTables})`);
 
-    // Export each table
-    const exportData: Record<string, unknown[]> = {};
-    const exportMeta: Record<string, { count: number; exportedAt: string }> = {};
+    // Export small tables in parallel batches of 5
+    const smallResults = await exportTablesBatch(supabase, SMALL_TABLES, 5);
     
-    for (const tableName of options.tables) {
-      try {
-        // Fetch all data from the table (paginated for large tables)
-        let allRows: unknown[] = [];
-        let offset = 0;
-        const pageSize = 1000;
-        let hasMore = true;
+    // Export medium tables in parallel batches of 3
+    const mediumResults = await exportTablesBatch(supabase, MEDIUM_TABLES, 3);
 
-        while (hasMore) {
-          const { data, error } = await supabase
-            .from(tableName)
-            .select("*")
-            .range(offset, offset + pageSize - 1);
-
-          if (error) {
-            console.error(`Error exporting ${tableName}:`, error);
-            exportData[tableName] = [];
-            exportMeta[tableName] = { count: 0, exportedAt: new Date().toISOString() };
-            break;
-          }
-
-          if (data && data.length > 0) {
-            allRows = allRows.concat(data);
-            offset += pageSize;
-            hasMore = data.length === pageSize;
-          } else {
-            hasMore = false;
-          }
-        }
-
-        exportData[tableName] = allRows;
-        exportMeta[tableName] = { 
-          count: allRows.length, 
-          exportedAt: new Date().toISOString() 
-        };
-        
-        console.log(`Exported ${tableName}: ${allRows.length} rows`);
-      } catch (err) {
-        console.error(`Error exporting ${tableName}:`, err);
-        exportData[tableName] = [];
-        exportMeta[tableName] = { count: 0, exportedAt: new Date().toISOString() };
+    // Export large tables one at a time with limits
+    const largeResults: Record<string, { data: unknown[]; count: number; truncated: boolean }> = {};
+    
+    if (!skipLargeTables) {
+      for (const [table, config] of Object.entries(LARGE_TABLES_CONFIG)) {
+        largeResults[table] = await exportTable(supabase, table, config);
+      }
+    } else {
+      // Just get counts for large tables
+      for (const table of Object.keys(LARGE_TABLES_CONFIG)) {
+        const { count } = await supabase.from(table).select("*", { count: "exact", head: true });
+        largeResults[table] = { data: [], count: count || 0, truncated: true };
+        console.log(`Skipped ${table}: ${count} rows (counts only)`);
       }
     }
 
-    // Build the export package
+    // Combine all results
+    const allResults = { ...smallResults, ...mediumResults, ...largeResults };
+
+    // Build export package
+    const exportData: Record<string, unknown[]> = {};
+    const exportMeta: Record<string, { count: number; truncated: boolean; exportedAt: string }> = {};
+    
+    for (const [table, result] of Object.entries(allResults)) {
+      exportData[table] = result.data;
+      exportMeta[table] = {
+        count: result.count,
+        truncated: result.truncated,
+        exportedAt: new Date().toISOString(),
+      };
+    }
+
+    const totalRows = Object.values(exportMeta).reduce((sum, m) => sum + m.count, 0);
+    const truncatedTables = Object.entries(exportMeta)
+      .filter(([_, m]) => m.truncated)
+      .map(([t]) => t);
+
     const exportPackage = {
       metadata: {
         exportedAt: new Date().toISOString(),
         exportedBy: user.email,
-        tableCount: options.tables.length,
-        totalRows: Object.values(exportMeta).reduce((sum, m) => sum + m.count, 0),
+        tableCount: Object.keys(exportMeta).length,
+        totalRows,
+        truncatedTables,
         tables: exportMeta,
       },
       data: exportData,
     };
 
-    // Return as downloadable JSON
+    console.log(`Export complete: ${totalRows} rows from ${Object.keys(exportMeta).length} tables`);
+
     return new Response(
-      JSON.stringify(exportPackage, null, 2),
+      JSON.stringify(exportPackage),
       {
         headers: {
           ...corsHeaders,
