@@ -44,6 +44,17 @@ async function getTableCounts(supabase: any, tables: string[]): Promise<Record<s
   return counts;
 }
 
+// Tables that have created_at column for ordering
+const TABLES_WITH_CREATED_AT = [
+  "company", "imprints", "staff", "profiles", "user_roles",
+  "lists", "tags", "templates", "campaigns",
+  "products", "commission_tiers",
+  "dev_documents", "dev_document_versions", "dev_items", "dev_meetings", "dev_meeting_links",
+  "user_email_connections", "import_jobs",
+  "contacts", "contact_links", "contact_notes", "contact_tasks", "contact_activity", "contact_communications",
+  "deals", "books", "email_events"
+];
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function exportTableBatch(
   supabase: any,
@@ -64,15 +75,21 @@ async function exportTableBatch(
     let allRows: unknown[] = [];
     let currentOffset = offset;
     const maxRows = offset + batchSize;
+    const hasCreatedAt = TABLES_WITH_CREATED_AT.includes(tableName);
 
     while (allRows.length < batchSize && currentOffset < (totalCount || 0)) {
       const fetchSize = Math.min(pageSize, maxRows - currentOffset);
       
-      const { data, error } = await supabase
+      let query = supabase
         .from(tableName)
-        .select("*")
-        .order("created_at", { ascending: true, nullsFirst: true })
-        .range(currentOffset, currentOffset + fetchSize - 1);
+        .select("*");
+      
+      // Only order by created_at if the table has that column
+      if (hasCreatedAt) {
+        query = query.order("created_at", { ascending: true, nullsFirst: true });
+      }
+      
+      const { data, error } = await query.range(currentOffset, currentOffset + fetchSize - 1);
 
       if (error) {
         console.error(`Error fetching ${tableName} at offset ${currentOffset}:`, error.message);
