@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Download, Loader2, Database } from 'lucide-react';
+import { Download, Loader2, Database, FileText } from 'lucide-react';
 
 export default function Settings() {
   const { user } = useAuth();
@@ -136,6 +136,30 @@ export default function Settings() {
                 Export All Data
               </>
             )}
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FileText className="h-5 w-5" />
+            Architecture Audit
+          </CardTitle>
+          <CardDescription>
+            Download the annotated architecture discovery document with corrections.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            This document contains the full system architecture audit with corrections 
+            to counts, missing items, and security recommendations.
+          </p>
+          <Button asChild>
+            <a href="/discovery-architecture-annotated.md" download>
+              <Download className="mr-2 h-4 w-4" />
+              Download Architecture Audit
+            </a>
           </Button>
         </CardContent>
       </Card>
