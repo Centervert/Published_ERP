@@ -1122,6 +1122,54 @@ export type Database = {
           },
         ]
       }
+      export_jobs: {
+        Row: {
+          batch_size: number
+          completed_at: string | null
+          completed_batches: number
+          created_at: string
+          created_by: string | null
+          error: string | null
+          file_paths: string[] | null
+          id: string
+          started_at: string | null
+          status: string
+          table_name: string
+          total_batches: number
+          total_rows: number
+        }
+        Insert: {
+          batch_size?: number
+          completed_at?: string | null
+          completed_batches?: number
+          created_at?: string
+          created_by?: string | null
+          error?: string | null
+          file_paths?: string[] | null
+          id?: string
+          started_at?: string | null
+          status?: string
+          table_name: string
+          total_batches?: number
+          total_rows?: number
+        }
+        Update: {
+          batch_size?: number
+          completed_at?: string | null
+          completed_batches?: number
+          created_at?: string
+          created_by?: string | null
+          error?: string | null
+          file_paths?: string[] | null
+          id?: string
+          started_at?: string | null
+          status?: string
+          table_name?: string
+          total_batches?: number
+          total_rows?: number
+        }
+        Relationships: []
+      }
       import_jobs: {
         Row: {
           column_mapping: Json | null

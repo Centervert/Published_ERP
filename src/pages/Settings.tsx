@@ -8,6 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Download, Loader2, Database, FileText, BarChart3, CheckCircle2, AlertCircle, XCircle, RotateCcw, FileDown } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
+import { ContactExportCard } from '@/components/settings/ContactExportCard';
 
 interface BatchInfo {
   table: string;
@@ -468,6 +469,9 @@ export default function Settings() {
           <Button disabled>Save Settings</Button>
         </CardContent>
       </Card>
+
+      {/* Smart Contacts Export - Background Processing */}
+      <ContactExportCard />
 
       <Card>
         <CardHeader>
