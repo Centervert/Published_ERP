@@ -82,3 +82,7 @@ verify_jwt = true
 # Process campaign jobs - worker API key auth (cron job)
 [functions.process-campaign-jobs]
 verify_jwt = false
+
+# Export contacts - background job processing
+[functions.export-contacts]
+verify_jwt = false
