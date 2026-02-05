@@ -3,6 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { HelmetProvider } from "react-helmet-async";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
@@ -23,19 +24,22 @@ import Development from "./pages/Development";
 import Unsubscribed from "./pages/Unsubscribed";
 import ContactHealth from "./pages/ContactHealth";
 import NotFound from "./pages/NotFound";
+import PublishWithPartnerGiveaway from "./pages/PublishWithPartnerGiveaway";
+import GiveawaySuccess from "./pages/GiveawaySuccess";
 
 const queryClient = new QueryClient();
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <AuthProvider>
-          <Routes>
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/auth/reset-password" element={<ResetPassword />} />
+  <HelmetProvider>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <AuthProvider>
+            <Routes>
+              <Route path="/auth" element={<Auth />} />
+              <Route path="/auth/reset-password" element={<ResetPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route
               path="/"
@@ -167,12 +171,16 @@ const App = () => (
             />
             {/* Public unsubscribe confirmation page */}
             <Route path="/unsubscribed" element={<Unsubscribed />} />
+            {/* Public giveaway pages */}
+            <Route path="/Publish_with_Partner_Giveaway" element={<PublishWithPartnerGiveaway />} />
+            <Route path="/giveaway-success" element={<GiveawaySuccess />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
+  </HelmetProvider>
 );
 
 export default App;

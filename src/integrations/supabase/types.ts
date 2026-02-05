@@ -1170,6 +1170,177 @@ export type Database = {
         }
         Relationships: []
       }
+      giveaway_analytics: {
+        Row: {
+          avg_time_on_page: number | null
+          conversion_rate: number | null
+          cta_clicks: number
+          date: string
+          id: string
+          page_views: number
+          questionnaire_completions: number
+          questionnaire_starts: number
+          traffic_source: string | null
+        }
+        Insert: {
+          avg_time_on_page?: number | null
+          conversion_rate?: number | null
+          cta_clicks?: number
+          date: string
+          id?: string
+          page_views?: number
+          questionnaire_completions?: number
+          questionnaire_starts?: number
+          traffic_source?: string | null
+        }
+        Update: {
+          avg_time_on_page?: number | null
+          conversion_rate?: number | null
+          cta_clicks?: number
+          date?: string
+          id?: string
+          page_views?: number
+          questionnaire_completions?: number
+          questionnaire_starts?: number
+          traffic_source?: string | null
+        }
+        Relationships: []
+      }
+      giveaway_entries: {
+        Row: {
+          city: string | null
+          created_at: string
+          email: string
+          entry_count: number
+          genres: string[] | null
+          has_published_before: boolean | null
+          id: string
+          ip_address: string | null
+          manuscript_file_name: string | null
+          manuscript_file_path: string | null
+          marketing_confidence: string | null
+          marketing_services_used: string[] | null
+          name: string
+          phone: string | null
+          phone_normalized: string | null
+          primary_marketing_reason: string | null
+          referral_code: string | null
+          referrer_email: string | null
+          referrer_name: string | null
+          state: string | null
+          traffic_source: string | null
+          user_agent: string | null
+          utm_campaign: string | null
+          utm_medium: string | null
+          utm_source: string | null
+          writing_stage: string | null
+        }
+        Insert: {
+          city?: string | null
+          created_at?: string
+          email: string
+          entry_count?: number
+          genres?: string[] | null
+          has_published_before?: boolean | null
+          id?: string
+          ip_address?: string | null
+          manuscript_file_name?: string | null
+          manuscript_file_path?: string | null
+          marketing_confidence?: string | null
+          marketing_services_used?: string[] | null
+          name: string
+          phone?: string | null
+          phone_normalized?: string | null
+          primary_marketing_reason?: string | null
+          referral_code?: string | null
+          referrer_email?: string | null
+          referrer_name?: string | null
+          state?: string | null
+          traffic_source?: string | null
+          user_agent?: string | null
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          writing_stage?: string | null
+        }
+        Update: {
+          city?: string | null
+          created_at?: string
+          email?: string
+          entry_count?: number
+          genres?: string[] | null
+          has_published_before?: boolean | null
+          id?: string
+          ip_address?: string | null
+          manuscript_file_name?: string | null
+          manuscript_file_path?: string | null
+          marketing_confidence?: string | null
+          marketing_services_used?: string[] | null
+          name?: string
+          phone?: string | null
+          phone_normalized?: string | null
+          primary_marketing_reason?: string | null
+          referral_code?: string | null
+          referrer_email?: string | null
+          referrer_name?: string | null
+          state?: string | null
+          traffic_source?: string | null
+          user_agent?: string | null
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          writing_stage?: string | null
+        }
+        Relationships: []
+      }
+      giveaway_page_views: {
+        Row: {
+          created_at: string
+          id: string
+          ip_address: string | null
+          questionnaire_completed: boolean
+          questionnaire_progress: number
+          questionnaire_started: boolean
+          session_id: string
+          time_on_page_seconds: number | null
+          traffic_source: string | null
+          user_agent: string | null
+          utm_campaign: string | null
+          utm_medium: string | null
+          utm_source: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          questionnaire_completed?: boolean
+          questionnaire_progress?: number
+          questionnaire_started?: boolean
+          session_id: string
+          time_on_page_seconds?: number | null
+          traffic_source?: string | null
+          user_agent?: string | null
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          questionnaire_completed?: boolean
+          questionnaire_progress?: number
+          questionnaire_started?: boolean
+          session_id?: string
+          time_on_page_seconds?: number | null
+          traffic_source?: string | null
+          user_agent?: string | null
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+        }
+        Relationships: []
+      }
       import_jobs: {
         Row: {
           column_mapping: Json | null
