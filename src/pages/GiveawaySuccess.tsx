@@ -44,41 +44,41 @@ const GiveawaySuccess = () => {
         <meta name="robots" content="noindex" />
       </Helmet>
 
-      <div className="min-h-screen bg-gradient-to-br from-[#171927] via-[#1e2235] to-[#171927] flex items-center justify-center p-4">
+       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <div className="max-w-2xl w-full text-center">
           {/* Success Icon */}
           <div className="mb-8">
-            <div className="w-24 h-24 mx-auto bg-[#FFA76C] rounded-full flex items-center justify-center animate-bounce">
-              <PartyPopper className="w-12 h-12 text-[#171927]" />
+             <div className="w-24 h-24 mx-auto bg-primary rounded-full flex items-center justify-center animate-bounce">
+               <PartyPopper className="w-12 h-12 text-primary-foreground" />
             </div>
           </div>
 
           {/* Congratulations Message */}
-          <h1 className="text-4xl md:text-5xl font-serif font-bold text-white mb-4">
+           <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
             Congratulations, {firstName}!
           </h1>
-          <p className="text-xl text-gray-300 mb-8">
+           <p className="text-xl text-muted-foreground mb-8">
             Your entry has been submitted successfully. You're one step closer to concierge publishing!
           </p>
 
           {/* Referral Card */}
-          <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 mb-8 border border-white/20">
-            <h2 className="text-lg font-semibold text-white mb-2">
+           <div className="bg-card rounded-2xl p-6 mb-8 border border-border shadow-sm">
+             <h2 className="text-lg font-semibold text-foreground mb-2">
               Increase Your Chances!
             </h2>
-            <p className="text-gray-300 text-sm mb-4">
+             <p className="text-muted-foreground text-sm mb-4">
               Share your unique referral link with friends. Each friend who enters gives you an additional chance to win (up to 5 referrals).
             </p>
 
-            <div className="flex items-center gap-2 bg-[#171927] rounded-lg p-3">
-              <code className="flex-1 text-[#FFA76C] text-sm truncate">
+             <div className="flex items-center gap-2 bg-secondary rounded-lg p-3">
+               <code className="flex-1 text-primary text-sm truncate">
                 {referralLink}
               </code>
               <Button
                 size="sm"
                 variant="ghost"
                 onClick={handleCopyReferralCode}
-                className="text-white hover:text-[#FFA76C] flex-shrink-0"
+                 className="text-foreground hover:text-primary flex-shrink-0"
               >
                 {copied ? (
                   <Check className="w-4 h-4" />
@@ -88,20 +88,20 @@ const GiveawaySuccess = () => {
               </Button>
             </div>
 
-            <p className="text-gray-400 text-xs mt-2">
-              Your referral code: <span className="font-mono text-[#FFA76C]">{state.referralCode}</span>
+             <p className="text-muted-foreground text-xs mt-2">
+               Your referral code: <span className="font-mono text-primary">{state.referralCode}</span>
             </p>
           </div>
 
           {/* Social Links */}
           <div className="mb-8">
-            <p className="text-gray-400 text-sm mb-4">Follow us for updates:</p>
+             <p className="text-muted-foreground text-sm mb-4">Follow us for updates:</p>
             <div className="flex justify-center gap-4">
               <a
                 href="https://instagram.com"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-[#FFA76C] hover:text-[#171927] transition-colors"
+                 className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center text-foreground hover:bg-primary hover:text-primary-foreground transition-colors"
               >
                 <Instagram className="w-5 h-5" />
               </a>
@@ -109,7 +109,7 @@ const GiveawaySuccess = () => {
                 href="https://facebook.com"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-[#FFA76C] hover:text-[#171927] transition-colors"
+                 className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center text-foreground hover:bg-primary hover:text-primary-foreground transition-colors"
               >
                 <Facebook className="w-5 h-5" />
               </a>
@@ -117,7 +117,7 @@ const GiveawaySuccess = () => {
                 href="https://authorservices.com"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-[#FFA76C] hover:text-[#171927] transition-colors"
+                 className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center text-foreground hover:bg-primary hover:text-primary-foreground transition-colors"
               >
                 <Globe className="w-5 h-5" />
               </a>
@@ -128,7 +128,7 @@ const GiveawaySuccess = () => {
           <Link to="/">
             <Button
               size="lg"
-              className="bg-[#FFA76C] hover:bg-[#ff9a52] text-[#171927] font-semibold"
+               className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
             >
               Explore Our Services
               <ArrowRight className="w-4 h-4 ml-2" />
@@ -136,7 +136,7 @@ const GiveawaySuccess = () => {
           </Link>
 
           {/* Footer */}
-          <p className="text-gray-500 text-sm mt-12">
+           <p className="text-muted-foreground text-sm mt-12">
             © {new Date().getFullYear()} Author Services. All rights reserved.
           </p>
         </div>

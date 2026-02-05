@@ -35,7 +35,7 @@ const PublishWithPartnerGiveaway = () => {
         <meta property="og:type" content="website" />
       </Helmet>
 
-      <div className="min-h-screen bg-white">
+       <div className="min-h-screen bg-background">
         {/* Hero Section */}
         <GiveawayHero onEnterClick={handleEnterClick} />
 
@@ -46,8 +46,8 @@ const PublishWithPartnerGiveaway = () => {
         <GiveawayEligibility />
 
         {/* Footer */}
-        <footer className="bg-[#171927] py-8 text-center">
-          <p className="text-gray-400 text-sm">
+         <footer className="bg-primary py-8 text-center">
+           <p className="text-primary-foreground/70 text-sm">
             © {new Date().getFullYear()} Author Services. All rights reserved.
           </p>
         </footer>
